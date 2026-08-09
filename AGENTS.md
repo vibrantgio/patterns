@@ -7,11 +7,15 @@ toast, alert, card, accordion, breadcrumb, hero, feature, pricing and
 testimonial.
 
 **Layer.** Tier 4 of ADR-001's stack, `mvu → spectrum → prism → pulse →
-cadence → markdown`, alongside markdown. It imports `prism/button`,
-`prism/coordination`, `prism/layout`, `prism/list`, `prism/theme` and
-`prism/tokens`, plus `pulse/depth` and `pulse/tween`; mvu it uses only
-indirectly, through those. Nothing in the design system imports cadence —
-the workbench applications are its consumers.
+cadence → markdown`, alongside markdown: composed patterns, and the top of
+the design system proper. Its root module imports `prism`, `pulse` and
+`spectrum`, and reaches `font`, `mvu` and `svg` through them. No other
+repository's root module imports it; outside the tier table it is imported
+by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`
+and `watchlist`. Both directions are measured rather than typed —
+`scripts/check-layers.sh --edges` reports the graph and
+`scripts/sync-agents.sh` renders these sentences from it — so correcting
+them here changes nothing.
 
 **Read the canonical guide before you write code against this module.** It is
 the organization's one agent guide — the module inventory with current tags,
