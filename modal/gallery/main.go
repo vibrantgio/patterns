@@ -41,8 +41,8 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/modal"
+	"github.com/vibrantgio/mvu/stream"
 	"github.com/vibrantgio/prism/button"
-	"github.com/vibrantgio/prism/coordination"
 	"github.com/vibrantgio/spectrum/theme"
 	"github.com/vibrantgio/spectrum/tokens"
 )
@@ -85,12 +85,17 @@ func run(w *app.Window) error {
 	shaper := tokens.DefaultTypography.Shaper()
 	d := &demo{win: w, shaper: shaper}
 
-	// Static theme — emits once synchronously, so .First() returns immediately
-	// and the modal's CombineLatest fires as soon as Open emits.
+	// Static theme — emits once synchronously, so .First() returns immediately.
 	th := rx.Of(theme.Default())
 
+	// Open is ADR-008's third destination: a current value several consumers
+	// may watch, carried by mvu/stream.Value rather than a bus. The seed is
+	// the part that matters here — a subscriber sees `false` the moment it
+	// subscribes, so the modal's CombineLatest fires on the first frame
+	// instead of waiting for an emission. prism/coordination is deprecated
+	// and this demo was one of its last two users in the organization.
 	var openObs rx.Observable[bool]
-	d.openObserver, openObs = coordination.Subject[bool](coordination.BufCapSignal)
+	d.openObserver, openObs = stream.Value(false)
 
 	// The trigger is itself a prism/button — dogfooding the same component the
 	// modal's footer actions use.
