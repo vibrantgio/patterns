@@ -218,6 +218,7 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 		Anchor:    anchor,
 		Content:   content,
 		Placement: popover.Top,
+		Arbiter:   popover.NewArbiter(),
 		OnDismiss: func(_ layout.Context) { dismissed++ },
 	})
 
@@ -270,6 +271,7 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 		Anchor:    anchor,
 		Content:   content,
 		Placement: popover.Bottom,
+		Arbiter:   popover.NewArbiter(),
 		OnDismiss: func(_ layout.Context) { dismissed++ },
 	})
 
@@ -316,37 +318,89 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 }
 
 // TestArbitrationDismissesPriorPopover verifies the Specific contract that
-// opening a second popover dismisses the first via the prism/coordination
-// arbitration channel. We subscribe two live popovers (B after A), then
-// drive A's widget for a frame: A observes that arbitration top is no
-// longer A and invokes its OnDismiss.
+// opening a second popover dismisses the first, and pins the two properties
+// G0C.1 bought by making arbitration frame state rather than a Subject.
+//
+// The claim is now a layout-time event — a popover takes top on the first
+// frame it is drawn open — so entering B into the tree is what "opening B"
+// means here. Both widgets are laid out against one gtx, the way mvu lays
+// out its layers, and the assertions are that:
+//
+//   - A is dismissed in the same frame B claims, in BOTH tree orders. The
+//     claimant dismisses the incumbent from inside its own layout pass, so
+//     the incumbent does not have to be reached later in the tree, or on a
+//     later frame, to find out that it lost.
+//   - the dismissal fires exactly once. It is an event, not a per-frame poll
+//     of "am I still top", which is what the Subject-era code did.
 func TestArbitrationDismissesPriorPopover(t *testing.T) {
-	var aDismissed int
 	anchor := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
 	content := fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 80, 36)
 
-	aWidget := livePopover(t, popover.Props{
-		Open:      rx.Of(true),
-		Anchor:    anchor,
-		Content:   content,
-		Placement: popover.Top,
-		OnDismiss: func(_ layout.Context) { aDismissed++ },
-	})
-	// Subscribing B sets arbitration top to B; A's next frame should
-	// observe the change and fire OnDismiss.
-	_ = livePopover(t, popover.Props{
-		Open:      rx.Of(true),
-		Anchor:    anchor,
-		Content:   content,
-		Placement: popover.Bottom,
-		OnDismiss: func(_ layout.Context) {},
-	})
+	for _, tc := range []struct {
+		name          string
+		claimantFirst bool
+	}{
+		{"incumbent laid out first", false},
+		{"claimant laid out first", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var aDismissed, bDismissed int
+			// One arbitration set for this test: the scope of arbitration is
+			// the scope of the value, so the test cannot disturb, or be
+			// disturbed by, any other popover in the process.
+			arb := popover.NewArbiter()
 
-	r := new(gioinput.Router)
-	ops := new(op.Ops)
-	driveFrame(aWidget, ops, r, canvasSize)
+			aWidget := livePopover(t, popover.Props{
+				Open:      rx.Of(true),
+				Anchor:    anchor,
+				Content:   content,
+				Placement: popover.Top,
+				Arbiter:   arb,
+				OnDismiss: func(_ layout.Context) { aDismissed++ },
+			})
+			bWidget := livePopover(t, popover.Props{
+				Open:      rx.Of(true),
+				Anchor:    anchor,
+				Content:   content,
+				Placement: popover.Bottom,
+				Arbiter:   arb,
+				OnDismiss: func(_ layout.Context) { bDismissed++ },
+			})
 
-	if aDismissed == 0 {
-		t.Fatalf("opening a second popover did not dismiss the first; aDismissed = %d", aDismissed)
+			r := new(gioinput.Router)
+			ops := new(op.Ops)
+
+			// Frame 1: only A is in the tree, so only A has claimed top.
+			driveFrame(aWidget, ops, r, canvasSize)
+			if aDismissed != 0 {
+				t.Fatalf("A dismissed before B entered the tree; aDismissed = %d", aDismissed)
+			}
+
+			// Frame 2: B enters the tree and claims.
+			frame := func(gtx layout.Context) layout.Dimensions {
+				if tc.claimantFirst {
+					bWidget(gtx)
+					aWidget(gtx)
+				} else {
+					aWidget(gtx)
+					bWidget(gtx)
+				}
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
+			driveFrame(frame, ops, r, canvasSize)
+			if aDismissed != 1 {
+				t.Fatalf("B's claim did not dismiss A in the same frame; aDismissed = %d, want 1", aDismissed)
+			}
+			if bDismissed != 0 {
+				t.Fatalf("the claimant dismissed itself; bDismissed = %d, want 0", bDismissed)
+			}
+
+			// Frame 3: A has not yet been closed by its caller, so it is
+			// still drawn and still not top — and must not be told again.
+			driveFrame(frame, ops, r, canvasSize)
+			if aDismissed != 1 {
+				t.Fatalf("dismissal re-fired on a later frame; aDismissed = %d, want 1 (it is an event, not a poll)", aDismissed)
+			}
+		})
 	}
 }

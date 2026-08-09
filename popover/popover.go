@@ -1,8 +1,11 @@
 // Package popover provides the Cadence Popover pattern: an anchored
 // elevated surface placed adjacent to a caller-supplied anchor widget,
 // with a small triangular tail glyph pointing at the anchor. Outside-
-// click dismissal and popover-vs-popover arbitration are coordinated via
-// prism/coordination — opening a second popover dismisses the first.
+// click dismissal and popover-vs-popover arbitration are frame state:
+// opening a second popover dismisses the first, through a plain Arbiter
+// written and read during layout on the frame goroutine. See ADR-008 and
+// arbitration.go; before G0C.1 this ran through a prism/coordination
+// Subject that nothing ever subscribed to.
 //
 // Elevation (goal G-E2): the popover surface (and its tail) fills at
 // SurfaceAt(Level3) (Neutral step 400), the deepest rung of the ladder.
@@ -60,8 +63,9 @@ const outsideMargin = unit.Dp(8192)
 // Props configures a Popover. Anchor must be non-nil; Content may be nil
 // (the surface renders as an empty rounded rectangle of minimum size).
 // OnDismiss is invoked when (a) a pointer.Press lands outside both the
-// anchor and surface bounds, or (b) another popover takes arbitration
-// top. OnDismiss may be nil.
+// anchor and surface bounds, or (b) another popover in the same Arbiter
+// takes arbitration top. Either way it is called once per dismissal, during
+// layout, and must not draw. OnDismiss may be nil.
 type Props struct {
 	// Open emits true to show the popover and false to hide it. A nil
 	// Open is treated as a constant false (popover never opens).
@@ -71,6 +75,12 @@ type Props struct {
 	Content   layout.Widget
 	Placement Placement
 	OnDismiss func(gtx layout.Context)
+
+	// Arbiter is the set of popovers this one arbitrates within: opening it
+	// dismisses whichever popover of the same set was open. Give each window
+	// its own (see Arbiter). A nil Arbiter joins the package-level default
+	// set, which is correct for a single-window process.
+	Arbiter *Arbiter
 }
 
 type resolvedTokens struct {
@@ -84,7 +94,7 @@ type resolvedTokens struct {
 }
 
 // Popover returns an rx.Observable[layout.Widget] that emits a new widget
-// whenever the theme or Open state changes. State (the arbitration id,
+// whenever the theme or Open state changes. State (the arbitration hold,
 // event tags) persists across emissions in the rx.Defer scope.
 func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	open := props.Open
@@ -101,27 +111,28 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	})
 	inputs := rx.CombineLatest2(resolved, open)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
-		st := newState()
+		st := newState(props)
 		return rx.Map(inputs, func(next rx.Tuple2[resolvedTokens, bool]) layout.Widget {
 			tok, openNow := next.First, next.Second
-
-			// Open transition: claim arbitration top.
-			if openNow && !st.opened {
-				setTop(st.id)
-				st.opened = true
-			}
-			if !openNow && st.opened {
-				clearTop(st.id)
-				st.opened = false
-			}
-
 			return func(gtx layout.Context) layout.Dimensions {
-				live := openNow && isTop(st.id)
-				// Arbitration: another popover overtook us while we
-				// remained open; fire OnDismiss so the caller flips Open.
-				if openNow && !live {
-					fire(gtx, props.OnDismiss)
+				// Arbitration is frame state. The claim and the release
+				// happen here, on the frame goroutine that will draw the
+				// result, rather than where the Open observable emitted on
+				// another one. The emitted widget is re-invoked every frame
+				// until the next emission replaces it, so both transitions
+				// are guarded by st.holds and run exactly once.
+				switch {
+				case openNow && !st.holds:
+					st.holds = true
+					st.arb.claim(gtx, st)
+				case !openNow && st.holds:
+					st.holds = false
+					st.arb.release(st)
 				}
+				// A popover overtaken by a later claimant was dismissed at
+				// that moment; it keeps drawing until the caller's Open
+				// catches up, but it is no longer live and takes no input.
+				live := openNow && st.arb.isTop(st)
 				return drawPopover(gtx, props, tok, st, openNow, live)
 			}
 		})
@@ -141,26 +152,35 @@ func Render(
 	rad tokens.RadiusScale,
 ) layout.Widget {
 	tok := resolvedTokens{color: colors, spacing: sp, radius: rad}
-	st := newState()
+	st := newState(props)
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawPopover(gtx, props, tok, st, open, false)
 	}
 }
 
-// popoverState holds the per-subscription arbitration id, the transition
-// tracker, and the three event tags routed by processInput. One instance
-// is owned by each Popover subscription (and by static Render invocations,
-// where input handling is inert).
+// popoverState holds this popover's arbitration set and hold flag, the
+// dismissal callback the arbiter fires when someone else takes top, and the
+// three event tags routed by processInput. One instance is owned by each
+// Popover subscription (and by static Render invocations, where input
+// handling and arbitration are both inert). Its address is also the
+// popover's identity inside the Arbiter.
 type popoverState struct {
-	id     int64
-	opened bool
+	arb     *Arbiter
+	dismiss func(gtx layout.Context)
+	holds   bool
 
 	outsideTag int
 	anchorTag  int
 	surfaceTag int
 }
 
-func newState() *popoverState { return &popoverState{id: allocID()} }
+func newState(props Props) *popoverState {
+	arb := props.Arbiter
+	if arb == nil {
+		arb = &defaultArbiter
+	}
+	return &popoverState{arb: arb, dismiss: props.OnDismiss}
+}
 
 // drawPopover lays out the anchor at the canvas centre, then — when open —
 // the floating surface adjacent to the anchor per Placement plus a
