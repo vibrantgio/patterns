@@ -8,8 +8,8 @@ testimonial.
 
 **Layer.** Tier 4 of ADR-001's stack, `mvu → spectrum → prism → pulse →
 cadence → markdown`, alongside markdown: composed patterns, and the top of
-the design system proper. Its root module imports `prism`, `pulse` and
-`spectrum`, and reaches `font`, `mvu` and `svg` through them. No other
+the design system proper. Its root module imports `mvu`, `prism`, `pulse`
+and `spectrum`, and reaches `font` and `svg` through them. No other
 repository's root module imports it; outside the tier table it is imported
 by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`
 and `watchlist`. Both directions are measured rather than typed —

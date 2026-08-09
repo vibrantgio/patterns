@@ -1,20 +1,44 @@
 // Package toast provides the Cadence Toast pattern: a position-anchored
-// column of transient notifications. Application code calls the
-// package-scoped Notify entry point to emit a toast; one or more active
-// Stack subscriptions render the queued toasts in their chosen corner.
-// Each toast auto-dismisses after a configurable Lifetime, fading out
+// column of transient notifications. A toast request is an event, so it
+// becomes a message: widget code calls [Notify], which lands a [Requested]
+// on the frame's ops queue, the application's Update reduces it onto a
+// [Queue] it holds in its model, and [Stack] renders that queue through
+// Props.Toasts. Each toast auto-dismisses after its Lifetime, which is a
+// second message ([Expired], carried by the [Expire] command), fading out
 // via pulse/tween over a trailing fade window resolved from the theme's
 // motion scale (Theme.Motion's DurSlow stop).
+//
+//	// in the application's Update
+//	case toast.Requested:
+//	    q, t := model.toasts.Add(m)
+//	    model.toasts = q
+//	    return model, toast.Expire(t.ID, t.Lifetime)
+//	case toast.Expired:
+//	    model.toasts = model.toasts.Remove(m.ID)
+//
+//	// in the application's composition root
+//	toast.Stack(th, toast.Props{
+//	    Position: toast.TopRight,
+//	    Toasts:   rx.Map(modelObs, func(m Model) []toast.Toast { return m.toasts.Items() }),
+//	})
+//
+// The queue is model state, so a toast is reproducible from a message log,
+// assertable through Update without a frame, and visible in any model dump.
+// What stays on the frame goroutine is the alpha: the fade is derived from
+// Toast.At and gtx.Now during layout and belongs to nobody but the frame,
+// while the *disappearance* is the model's (ADR-008 destinations 1 and 2 in
+// one component).
+//
+// Until G0C.3 the entry point was a package-scoped Notify(level, text)
+// publishing to a process-global Subject that every Stack subscribed. That
+// signature is gone rather than deprecated: a message needs the frame's
+// *op.Ops and the old one had no way to reach it, so the only shim that
+// could have delivered anything was another process-global. See Notify.
 //
 // The package follows the Phase 4 Composition contract: Stack is a
 // callable Go function consuming a Prism theme observable, returning a
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
-//
-// The Subject behind Notify is process-global: every active Stack
-// receives every Toast. Per-stack routing (channels, topics) is out of
-// scope for this package; callers that want it can wrap Notify and
-// Stack in their own filter.
 //
 // Elevation (goal G-E2): each toast's base fills at SurfaceAt(Level2)
 // (Neutral step 300), tinted 20% with the level accent and ringed by a
@@ -28,8 +52,6 @@ package toast
 import (
 	"image"
 	"image/color"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"gioui.org/font"
@@ -41,7 +63,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/coordination"
+	"github.com/vibrantgio/mvu"
 	"github.com/vibrantgio/pulse/depth"
 	"github.com/vibrantgio/pulse/tween"
 	"github.com/vibrantgio/spectrum/theme"
@@ -70,8 +92,8 @@ const (
 	BottomLeft
 )
 
-// DefaultLifetime is the auto-dismiss duration applied when Props.Lifetime
-// is zero or negative.
+// DefaultLifetime is the auto-dismiss duration Queue.Add applies to a
+// Requested that names none.
 const DefaultLifetime = 4 * time.Second
 
 // The trailing slice of Lifetime during which a toast tweens its alpha
@@ -81,17 +103,150 @@ const DefaultLifetime = 4 * time.Second
 // long enough that the fade is perceptible at 60 fps. It reaches the
 // frame path as resolvedTokens.fade.
 
-// Toast is a single notification value. Notify constructs one and pushes
-// it onto the package-scoped Subject; every active Stack receives it.
+// Toast is one queued notification. It is model state: Queue.Add builds it
+// from a Requested and nothing mutates it afterwards.
+//
+// At is the instant the toast was asked for — gtx.Now inside a frame,
+// time.Now elsewhere — and it is what the fade is measured from. A zero At
+// disables fading for that toast (the Render path, and any Toast built by
+// hand): it paints fully opaque until something removes it from the queue.
 type Toast struct {
-	ID    int64
-	Level Level
-	Text  string
+	ID       int64
+	Level    Level
+	Text     string
+	At       time.Time
+	Lifetime time.Duration
 }
+
+// Requested is the message a toast request becomes. Notify lands one from
+// inside a frame; Request builds one for a command goroutine. Lifetime is
+// optional and defaults to DefaultLifetime when Queue.Add sees it zero.
+type Requested struct {
+	Level    Level
+	Text     string
+	At       time.Time
+	Lifetime time.Duration
+}
+
+// Expired retires the toast with the given ID. The Expire command emits it
+// once the toast's Lifetime has run; an application may also emit it itself
+// to dismiss a toast early.
+type Expired struct{ ID int64 }
+
+// Notify asks for a toast from inside a frame. It lands a Requested on the
+// frame's ops queue, stamped with the frame's own clock, and the
+// application's Update queues it — the same path prism/button's OnClick
+// messages take.
+//
+// The message is collected off gtx.Ops, and mvu's collector is keyed on the
+// exact buffer the frame is being recorded into: a call made from a widget
+// recording somewhere else — inside a prism/cache.FrameCache body, most of
+// all — is dropped silently. Emit from the widget that owns gtx.Ops.
+//
+// This replaces the pre-G0C.3 Notify(level, text), which published to a
+// process-global Subject. The signature change is deliberate and is not a
+// deprecation: the new path needs gtx and the old signature cannot supply
+// it, so every call site has to be visited. Callers see "not enough
+// arguments in call to toast.Notify", which names the fix.
+func Notify(gtx layout.Context, level Level, text string) {
+	mvu.MessageOp{Message: Requested{Level: level, Text: text, At: gtx.Now}}.Add(gtx.Ops)
+}
+
+// Request builds the same message from outside a frame — a command
+// goroutine, a test — stamping it with the wall clock. A command that
+// returns one raises a toast without touching the renderer or knowing which
+// goroutine it is on:
+//
+//	mvu.Do(func() (mvu.Message, error) {
+//	    if err := save(path, doc); err != nil {
+//	        return toast.Request(toast.Error, "Save failed"), nil
+//	    }
+//	    return toast.Request(toast.Success, "Saved"), nil
+//	})
+func Request(level Level, text string) Requested {
+	return Requested{Level: level, Text: text, At: time.Now()}
+}
+
+// Expire is the command that retires toast id after it has been up for the
+// given duration. rx.Timer (not time.Sleep) keeps it cancellable, so
+// quitting the app with a toast on screen does not block the runner's
+// teardown. Removing a toast the application already removed is a no-op, so
+// a late timer is harmless and needs no generation guard.
+func Expire(id int64, after time.Duration) mvu.Command {
+	return mvu.Command{Observable: rx.Map(rx.Timer[int](after), func(int) any {
+		return Expired{ID: id}
+	})}
+}
+
+// Queue is the toast queue an application holds in its model: oldest first,
+// newest last. The zero Queue is empty and ready to use.
+//
+// It is a value, and Add and Remove return a new one whose slice is freshly
+// allocated at exactly its own length — so no Queue ever aliases another,
+// a previous model still shows the toasts that were up when it was current,
+// and an append by a caller holding Items cannot reach into it.
+type Queue struct {
+	items []Toast
+	next  int64
+}
+
+// Add queues r and returns the new Queue together with the Toast it queued.
+// The returned toast's ID is what Expire and Expired name, and its Lifetime
+// is r's or DefaultLifetime — read it rather than re-deriving it, so the
+// timer and the fade cannot disagree.
+func (q Queue) Add(r Requested) (Queue, Toast) {
+	q.next++
+	t := Toast{ID: q.next, Level: r.Level, Text: r.Text, At: r.At, Lifetime: r.Lifetime}
+	if t.Lifetime <= 0 {
+		t.Lifetime = DefaultLifetime
+	}
+	items := make([]Toast, 0, len(q.items)+1)
+	q.items = append(append(items, q.items...), t)
+	return q, t
+}
+
+// Remove drops the toast with the given ID. An ID that is not queued is a
+// no-op: an Expired arriving after the toast was dismissed some other way
+// changes nothing.
+func (q Queue) Remove(id int64) Queue {
+	for i, t := range q.items {
+		if t.ID != id {
+			continue
+		}
+		items := make([]Toast, 0, len(q.items)-1)
+		items = append(items, q.items[:i]...)
+		q.items = append(items, q.items[i+1:]...)
+		return q
+	}
+	return q
+}
+
+// Items returns the queued toasts, oldest first — the value an application
+// maps onto Props.Toasts.
+func (q Queue) Items() []Toast { return q.items }
+
+// Len reports how many toasts are queued.
+func (q Queue) Len() int { return len(q.items) }
 
 // Props configures a Stack.
 type Props struct {
 	Position Position
+
+	// Toasts is the queue to render, normally derived from the model:
+	// rx.Map(modelObs, func(m Model) []toast.Toast { return m.toasts.Items() }).
+	//
+	// A Stack with no Toasts renders an empty column forever. That is the
+	// one place this component is not additive across G0C.3: a caller that
+	// kept passing only Position used to receive every toast in the process
+	// through the package Subject and now receives none, with nothing to
+	// fail at compile time. It is the reason cadence's next tag is a minor
+	// bump rather than a patch.
+	Toasts rx.Observable[[]Toast]
+
+	// Lifetime is the fallback auto-dismiss duration for toasts that carry
+	// none of their own — hand-built queues, demos, goldens. Toast.Lifetime
+	// wins where it is set, which is everything Queue.Add produces, and
+	// DefaultLifetime applies when neither is.
 	Lifetime time.Duration
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
@@ -109,31 +264,6 @@ type Props struct {
 	Shaper *text.Shaper
 }
 
-// Package-scoped Subject for notifications. Notify is a free function so
-// any code with the package imported can emit toasts; Stack subscriptions
-// fan-in via the Subject's Observable side.
-//
-// Being process-global, this Subject outlives every Stack built on it, so
-// each Stack subscription holds one of its coordination.MaxSubscribers slots
-// for as long as it is subscribed — and only that long. Unsubscribe releases
-// the slot (prism/coordination, G0B.1); a bare rx.Subject would not, which is
-// what capped a whole test binary at eight Stacks over its lifetime.
-var (
-	publish       rx.Observer[Toast]
-	Notifications rx.Observable[Toast]
-	nextID        atomic.Int64
-)
-
-func init() {
-	publish, Notifications = coordination.Subject[Toast](coordination.BufCapSignal)
-}
-
-// Notify emits a Toast onto the package-scoped Subject. Every active
-// Stack subscription receives it on the next frame.
-func Notify(level Level, textValue string) {
-	publish.Next(Toast{ID: nextID.Add(1), Level: level, Text: textValue})
-}
-
 type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
@@ -146,19 +276,16 @@ type resolvedTokens struct {
 	elevation tokens.ElevationScale
 	// fade is the trailing fade window, the motion scale's DurSlow stop.
 	// Zero (the Render path) disables fading: toasts paint fully opaque
-	// until expiry.
+	// until they leave the queue.
 	fade time.Duration
 }
 
-// Stack returns an rx.Observable[layout.Widget] that renders a positioned
-// column of the toasts queued via Notify. The widget closure prunes
-// expired toasts on each frame, scheduling the next invalidation at the
-// earliest interesting time (fade-start or expiry).
+// Stack returns an rx.Observable[layout.Widget] that renders Props.Toasts as
+// a positioned column. It holds no state of its own: the queue arrives from
+// the model, and the only thing the frame decides is each toast's alpha.
+// Expiry is not the widget's job — a toast past its Lifetime paints nothing
+// and waits for the Expired message to take it out of the model.
 func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
-	lifetime := props.Lifetime
-	if lifetime <= 0 {
-		lifetime = DefaultLifetime
-	}
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelMedium text style and the
 	// theme's cached shaper (ADR-003: the theme owns the typeface); the
@@ -184,27 +311,21 @@ func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 			},
 		)
 	})
-	return rx.Defer(func() rx.Observable[layout.Widget] {
-		st := newStackState()
-		// Each Notify emission mutates st (queuing the new toast) and
-		// surfaces as a struct{} ping. StartWith seeds CombineLatest so
-		// the first layout.Widget emits before any Notify.
-		pings := rx.Map(Notifications, func(t Toast) struct{} {
-			st.enqueue(t)
-			return struct{}{}
-		}).StartWith(struct{}{})
-		return rx.Map(rx.CombineLatest2(resolved, pings), func(n rx.Tuple2[resolvedTokens, struct{}]) layout.Widget {
-			tok := n.First
-			// Props.Shaper is an explicit override; the theme's shaper is
-			// the default.
-			shaper := props.Shaper
-			if shaper == nil {
-				shaper = tok.shaper
-			}
-			return func(gtx layout.Context) layout.Dimensions {
-				return drawStackLive(gtx, shaper, props, lifetime, tok, st)
-			}
-		})
+	toasts := props.Toasts
+	if toasts == nil {
+		toasts = rx.Of([]Toast(nil))
+	}
+	return rx.Map(rx.CombineLatest2(resolved, toasts), func(n rx.Tuple2[resolvedTokens, []Toast]) layout.Widget {
+		tok, queued := n.First, n.Second
+		// Props.Shaper is an explicit override; the theme's shaper is
+		// the default.
+		shaper := props.Shaper
+		if shaper == nil {
+			shaper = tok.shaper
+		}
+		return func(gtx layout.Context) layout.Dimensions {
+			return drawStackLive(gtx, shaper, props, tok, queued)
+		}
 	})
 }
 
@@ -212,8 +333,7 @@ func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // pre-resolved tokens. Intended for golden-image testing and static
 // demonstrations; production code should use Stack, which takes the
 // shaper and the same text style off the theme. The returned widget
-// performs no input handling, no fading, and does not consume the
-// package-scoped Subject.
+// performs no input handling, no fading, and schedules no invalidation.
 //
 // label is the LabelMedium role's whole text style — typeface, weight,
 // size and line height all reach the shaper, exactly as they do on the
@@ -231,96 +351,58 @@ func Render(
 ) layout.Widget {
 	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, style: label}
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawStackStatic(gtx, shaper, props, toasts, tok)
+		return drawStackStatic(gtx, shaper, props, tok, toasts)
 	}
 }
 
-// stackState holds the per-subscription FIFO queue. items[0] is the
-// oldest toast; items[len-1] is the newest. enqueue is callable from any
-// goroutine (the rx Map running off the Subject's scheduler); the widget
-// closure mutates items only at frame time.
-type stackState struct {
-	mu    sync.Mutex
-	items []activeToast
+// placed is one queued toast plus the alpha this frame paints it at. Alpha
+// is the whole of the per-frame state a stack has, and it is derived, not
+// stored: nothing here survives the frame it was computed on.
+type placed struct {
+	toast Toast
+	alpha float64
 }
 
-type activeToast struct {
-	toast   Toast
-	addedAt time.Time // zero until the first frame that observes the toast
-}
-
-func newStackState() *stackState { return &stackState{} }
-
-// enqueue appends t to the queue with a zero addedAt. The widget closure
-// stamps addedAt on the frame it first sees the toast, so expiry math
-// runs against gtx.Now instead of wall-clock time — keeping the lifetime
-// assertion deterministic under synthetic clocks.
-func (s *stackState) enqueue(t Toast) {
-	s.mu.Lock()
-	s.items = append(s.items, activeToast{toast: t})
-	s.mu.Unlock()
-}
-
-// snapshot returns a copy of the queue trimmed to non-expired entries.
-// addedAt is stamped on the first observation (zero → now). The earliest
-// expiry instant is returned so the caller can schedule InvalidateCmd.
-// fade is the trailing fade window (resolvedTokens.fade). If no toasts
-// remain the returned time is zero.
-func (s *stackState) snapshot(now time.Time, lifetime, fade time.Duration) (items []activeToast, nextWake time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := s.items[:0]
-	for _, it := range s.items {
-		if it.addedAt.IsZero() {
-			it.addedAt = now
-		}
-		expiresAt := it.addedAt.Add(lifetime)
-		if !now.Before(expiresAt) {
-			continue
-		}
-		out = append(out, it)
-		// Wake at the start of fade or at expiry, whichever is sooner.
-		wake := expiresAt.Add(-fade)
-		if wake.Before(now) {
-			wake = expiresAt
-		}
-		if nextWake.IsZero() || wake.Before(nextWake) {
-			nextWake = wake
-		}
-	}
-	for i := len(out); i < len(s.items); i++ {
-		s.items[i] = activeToast{}
-	}
-	s.items = out
-	return append([]activeToast(nil), out...), nextWake
-}
-
-// drawStackLive prunes expired toasts, schedules the next invalidation,
-// and paints the surviving toasts with per-toast fade alpha.
+// drawStackLive computes each toast's fade alpha, schedules the next
+// invalidation, and paints. It never prunes: a toast whose lifetime has run
+// paints at alpha 0 until the Expired message takes it out of the model, so
+// the queue on screen and the queue in the model are the same list.
 func drawStackLive(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	props Props,
-	lifetime time.Duration,
 	tok resolvedTokens,
-	st *stackState,
+	queued []Toast,
 ) layout.Dimensions {
 	now := gtx.Now
-	items, nextWake := st.snapshot(now, lifetime, tok.fade)
-	if len(items) > 0 {
-		// Always re-invalidate at the next wake; during the fade we
-		// also redraw every frame so the alpha animates smoothly.
-		if !nextWake.IsZero() {
-			gtx.Execute(op.InvalidateCmd{At: nextWake})
+	items := make([]placed, len(queued))
+	var nextFade time.Time
+	fading := false
+	for i, t := range queued {
+		lifetime := lifetimeOf(t, props)
+		items[i] = placed{toast: t, alpha: fadeAlpha(t.At, lifetime, tok.fade, now)}
+		if t.At.IsZero() || tok.fade <= 0 {
+			continue
 		}
-		for _, it := range items {
-			if now.Sub(it.addedAt) >= lifetime-tok.fade {
-				gtx.Execute(op.InvalidateCmd{})
-				break
+		switch start := t.At.Add(lifetime - tok.fade); {
+		case now.Before(start):
+			// Wake once, when this toast starts fading.
+			if nextFade.IsZero() || start.Before(nextFade) {
+				nextFade = start
 			}
+		case items[i].alpha > 0:
+			fading = true
 		}
 	}
-	return paintStack(gtx, shaper, props, tok, items, lifetime, now)
+	// A toast mid-fade redraws every frame so the alpha animates; otherwise
+	// one scheduled wake at the earliest fade start is enough. Everything
+	// past expiry is the model's business and arrives as a message.
+	if fading {
+		gtx.Execute(op.InvalidateCmd{})
+	} else if !nextFade.IsZero() {
+		gtx.Execute(op.InvalidateCmd{At: nextFade})
+	}
+	return paintStack(gtx, shaper, props, tok, items)
 }
 
 // drawStackStatic paints the supplied toasts at full opacity with no
@@ -329,15 +411,27 @@ func drawStackStatic(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	props Props,
-	toasts []Toast,
 	tok resolvedTokens,
+	toasts []Toast,
 ) layout.Dimensions {
-	items := make([]activeToast, len(toasts))
+	items := make([]placed, len(toasts))
 	for i, t := range toasts {
-		items[i] = activeToast{toast: t}
+		items[i] = placed{toast: t, alpha: 1}
 	}
-	// addedAt remains zero → fadeAlpha returns 1.0 → full opacity.
-	return paintStack(gtx, shaper, props, tok, items, 0, time.Time{})
+	return paintStack(gtx, shaper, props, tok, items)
+}
+
+// lifetimeOf resolves the auto-dismiss duration for one toast: its own
+// Lifetime (everything Queue.Add produces has one), else the stack-wide
+// Props.Lifetime, else DefaultLifetime.
+func lifetimeOf(t Toast, props Props) time.Duration {
+	if t.Lifetime > 0 {
+		return t.Lifetime
+	}
+	if props.Lifetime > 0 {
+		return props.Lifetime
+	}
+	return DefaultLifetime
 }
 
 // Toast surface metrics. The toast is a transient notification surface,
@@ -351,16 +445,13 @@ const (
 )
 
 // paintStack lays out the column of toasts at the anchored corner of the
-// canvas. lifetime and now drive the fade alpha for live frames; both
-// zero means "fully opaque" (the Render path).
+// canvas, each at the alpha its placed entry carries.
 func paintStack(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	props Props,
 	tok resolvedTokens,
-	items []activeToast,
-	lifetime time.Duration,
-	now time.Time,
+	items []placed,
 ) layout.Dimensions {
 	canvas := gtx.Constraints.Max
 	edgePad := gtx.Dp(unit.Dp(tok.spacing.S4))
@@ -408,7 +499,7 @@ func paintStack(
 			Min: image.Pt(width, gtx.Dp(unit.Dp(toastMinHDp))),
 			Max: image.Pt(width, canvas.Y),
 		}
-		dims := paintToast(toastGtx, shaper, tok, items[idx], lifetime, now)
+		dims := paintToast(toastGtx, shaper, tok, items[idx])
 		macros[vis] = macro.Stop()
 		heights[vis] = dims.Size.Y
 	}
@@ -450,14 +541,12 @@ func paintToast(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	tok resolvedTokens,
-	it activeToast,
-	lifetime time.Duration,
-	now time.Time,
+	it placed,
 ) layout.Dimensions {
 	padH := gtx.Dp(unit.Dp(tok.spacing.S3))
 	padV := gtx.Dp(unit.Dp(tok.spacing.S2))
 	r := gtx.Dp(unit.Dp(tok.radius.Md))
-	alpha := fadeAlpha(it, lifetime, tok.fade, now)
+	alpha := it.alpha
 
 	accent := accentColor(it.toast.Level, tok.color)
 	fill := withAlpha(tintSurface(tok.color.SurfaceAt(tokens.Level2), accent), alpha)
@@ -512,16 +601,17 @@ func paintToast(
 	return layout.Dimensions{Size: image.Pt(w, h)}
 }
 
-// fadeAlpha returns the toast's current alpha in [0,1]. lifetime==0 (the
-// Render path) or addedAt zero means "fully opaque". Inside the live
-// path, the alpha tweens from 1.0 to 0.0 across the final fade window
-// (the theme's DurSlow stop) of the lifetime via pulse/tween.LerpFloat64;
-// a zero fade window paints fully opaque until expiry.
-func fadeAlpha(it activeToast, lifetime, fade time.Duration, now time.Time) float64 {
-	if lifetime <= 0 || it.addedAt.IsZero() {
+// fadeAlpha returns a toast's alpha in [0,1] for a frame at now. A zero at
+// (the Render path, or a hand-built Toast) means "fully opaque". Otherwise
+// the alpha tweens from 1.0 to 0.0 across the final fade window (the
+// theme's DurSlow stop) of the lifetime via pulse/tween.LerpFloat64, and
+// stays at 0 past expiry while the Expired message travels the loop; a zero
+// fade window paints fully opaque until then.
+func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float64 {
+	if at.IsZero() || lifetime <= 0 {
 		return 1
 	}
-	age := now.Sub(it.addedAt)
+	age := now.Sub(at)
 	if age >= lifetime {
 		return 0
 	}

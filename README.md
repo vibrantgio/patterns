@@ -111,7 +111,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `modal` | A centred dialog over a full-window scrim, its surface a level-2 fill from the elevation ladder: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's and tooltip's single register it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` joins a package-level default, which is right for a single-window process. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
 | `popover` | An anchored elevated surface with a triangular tail pointing at a caller-supplied anchor. Outside-click dismissal and popover-vs-popover arbitration are frame state, not a bus: `Props.Arbiter` names the set a popover arbitrates within — one per window — and opening a second popover in that set dismisses the first, in the same frame, from inside the claimant's own layout pass. A nil `Arbiter` joins a package-level default, which is right for a single-window process. |
 | `tooltip` | A hover/focus annotation next to a trigger after a delay. `DefaultDelay` resolves from the token motion scale's `DurXSlow` stop (500 ms), and the live form re-times from the theme's `Motion` observable. Arbitration keeps exactly one tooltip visible, and is frame state rather than a bus: `Props.Arbiter` names the set — one per window — and a tooltip is visible exactly while it holds that set's top, so the claim a finished dwell makes *is* the previous tooltip's dismissal. A nil `Arbiter` joins a package-level default, which is right for a single-window process. |
-| `toast` | A position-anchored column of transient notifications, each on a level-2 surface with a `pulse/depth` cast shadow — a toast floats and can leave, which is exactly what ADR-005 reserves shadows for. Application code calls the package-scoped `Notify`; any active `Stack` renders the queue in its chosen corner and each toast fades out through `pulse/tween` across the theme's `DurSlow` stop at the end of its `Lifetime` (`DefaultLifetime`, 4 s). |
+| `toast` | A position-anchored column of transient notifications, each on a level-2 surface with a `pulse/depth` cast shadow — a toast floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `toast.Queue` in the model, `Props.Toasts` carries that queue back to the `Stack`, and `Expire` brings the removal back as `Expired` at the end of the toast's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `pulse/tween` across the theme's `DurSlow` stop. |
 | `alert` | A tinted-surface banner with a leading variant icon, a title and an arbitrary body widget. Info, Success, Warning, Error. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
@@ -205,7 +205,8 @@ shell's dimensions — the modal scrim and the toast column both need the whole
 window. Both `feeds` and `watchlist` do exactly this:
 
 ```go
-toastObs := toast.Stack(th, toast.Props{Position: toast.TopRight})
+toastsObs := rx.Map(modelObs, func(m Model) []toast.Toast { return m.toasts.Items() })
+toastObs := toast.Stack(th, toast.Props{Position: toast.TopRight, Toasts: toastsObs})
 
 return rx.Map(rx.CombineLatest3(shellObs, modalObs, toastObs),
 	func(n rx.Tuple3[layout.Widget, layout.Widget, layout.Widget]) layout.Widget {
@@ -224,9 +225,25 @@ return rx.Map(rx.CombineLatest3(shellObs, modalObs, toastObs),
 )
 ```
 
-Anywhere in the application, `toast.Notify(toast.Success, "Feed added")` puts a
-toast in that column. It publishes onto a `prism/coordination` subject, so the
-toast appears on the frame after the one that called it.
+A toast request is an event, so it is a message. Inside a frame,
+`toast.Notify(gtx, toast.Success, "Feed added")` lands `toast.Requested` on the
+ops queue; from a command goroutine, `toast.Request(toast.Success, "Saved")` is
+the message to return. The application reduces both onto a `toast.Queue` it
+holds in its model, and the expiry comes back the same way:
+
+```go
+case toast.Requested:
+	queue, t := model.toasts.Add(m)
+	model.toasts = queue
+	return model, toast.Expire(t.ID, t.Lifetime)
+case toast.Expired:
+	model.toasts = model.toasts.Remove(m.ID)
+```
+
+Until v0.4.1 the entry point was a package-scoped `Notify(level, text)`
+publishing to a process-global subject that every `Stack` subscribed. That is
+gone: a message needs the frame's `*op.Ops` and the old signature had no way to
+reach one, so there is no shim — every call site takes a `gtx` now.
 
 ## For coding assistants
 
