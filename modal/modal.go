@@ -238,6 +238,14 @@ type Props struct {
 	// is describing a decision dialog. Say so with Decision and get the inert
 	// backdrop and the key bindings that belong with it; the X goes away on
 	// its own. HideClose keeps working for panels that genuinely want no X.
+	//
+	// The deprecation window is EMPTY: as of G0B.2 no caller in any of the
+	// twenty-one vibrantgio repositories sets this field. The last two —
+	// mindchat's settings and rename modals — were both decision dialogs
+	// wearing a panel's clothes and now say Decision instead. Nothing but
+	// this package's own tests, which exist to keep the field honest for
+	// outside callers, references it. Whoever removes it need only delete
+	// the field, showsClose's second term, and those tests.
 	HideClose bool
 
 	// DynamicFocusTags, if non-nil, is called every frame and its tags join

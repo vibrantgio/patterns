@@ -962,6 +962,11 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 // TestHideCloseStillWorksOnAPanel is the deprecation window: the field keeps
 // compiling AND keeps its meaning for the archetype it belongs to, so an
 // existing caller is not silently changed underneath.
+//
+// As of G0B.2 the in-org caller list is EMPTY — this test and its two
+// neighbours above are the field's only remaining users anywhere in the
+// twenty-one repositories. It is kept for callers outside the organization,
+// and it is the thing to delete first when the field goes.
 func TestHideCloseStillWorksOnAPanel(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
