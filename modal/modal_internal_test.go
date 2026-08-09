@@ -49,11 +49,11 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 		// fonts (F4.4b).
 		Shaper: shaper,
 	}
-	st := newState()
+	st := newState(props)
 	st.pushed = true
 	st.wantInitialFocus = true
-	stackPush(st.id)
-	t.Cleanup(func() { stackPop(st.id) })
+	st.arb.push(st)
+	t.Cleanup(func() { st.arb.pop(st) })
 
 	tok := resolvedTokens{
 		color:   tokens.DefaultLight,
@@ -175,12 +175,12 @@ func liveButton(t *testing.T, shaper *text.Shaper, label string, clk *widget.Cli
 // close button (unless hidden), then DynamicFocusTags, then ActionFocusTags.
 func TestFocusTagsIncludesDynamicBeforeStatic(t *testing.T) {
 	var dyn, act int
-	st := newState()
 	props := Props{
 		HideClose:        true,
 		DynamicFocusTags: func() []event.Tag { return []event.Tag{&dyn} },
 		ActionFocusTags:  []event.Tag{&act},
 	}
+	st := newState(props)
 	tags := focusTags(props, st)
 	if len(tags) != 2 || tags[0] != &dyn || tags[1] != &act {
 		t.Fatalf("focusTags = %v, want [dynamic static]", tags)
@@ -249,8 +249,8 @@ func TestAffordancesAreDerivedFromIntent(t *testing.T) {
 // Tab cycle and out of the key filters too.
 func TestFocusTagsDropTheCloseTag(t *testing.T) {
 	var act int
-	st := newState()
 	props := Props{ActionFocusTags: []event.Tag{&act}, Decision: &Decision{}}
+	st := newState(props)
 	tags := focusTags(props, st)
 	if len(tags) != 1 || tags[0] != &act {
 		t.Fatalf("focusTags on a decision = %v, want just the action tag", tags)

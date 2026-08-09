@@ -54,9 +54,13 @@
 // the panel it opens.
 //
 // Tab and Shift+Tab cycle keyboard focus within the modal's focusable items
-// and do not escape to background content. Only the topmost modal on the
-// coordination stack receives input; modals underneath remain painted but
-// inert.
+// and do not escape to background content. Only the topmost modal in the
+// [Arbiter] receives input; modals underneath remain painted but inert. The
+// stack is frame state — a plain slice written and read during layout, on the
+// goroutine Gio runs a frame on. Before G0C.2b it was a prism/coordination
+// Subject that nothing in any of the twenty-one repositories subscribed to,
+// beside a mutex-guarded slice this package read synchronously anyway; see
+// ADR-008 and arbitration.go.
 //
 // Focus ownership: the close affordance and each footer action own their own
 // focus tag and focus ring (the close button is a prism/button; actions
@@ -225,6 +229,14 @@ type Props struct {
 	// for the two archetypes and [Decision] for the destructive-default rule.
 	Decision *Decision
 
+	// Arbiter is the stack this modal joins while it is open: the modal in
+	// front of that stack takes keyboard and pointer input and the ones
+	// beneath it stay painted and inert. The value is the scope, so a window
+	// gets one of its own (see [Arbiter]). A nil Arbiter joins the
+	// package-level default stack, which is correct for a single-window
+	// process and only for that.
+	Arbiter *Arbiter
+
 	// HideClose, when true, omits the top-right close button on a PANEL. Use
 	// it when the footer Actions already provide explicit dismissal (e.g. a
 	// Cancel button) — Escape and a scrim click still trigger OnClose.
@@ -330,9 +342,9 @@ type resolvedTokens struct {
 
 // Modal returns an rx.Observable[layout.Widget] that emits a new widget
 // whenever the theme or Open state changes. The widget renders a scrim and
-// centered surface when open, or no pixels at all when closed. State
-// (focus tags, the modal-stack id, the close-button clickable) persists
-// across emissions in the rx.Defer scope.
+// centered surface when open, or no pixels at all when closed. State (the
+// arbitration set and stack hold, focus tags, the close-button clickable)
+// persists across emissions in the rx.Defer scope.
 func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	open := props.Open
 	if open == nil {
@@ -360,7 +372,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 	})
 
 	return rx.Defer(func() rx.Observable[layout.Widget] {
-		st := newState()
+		st := newState(props)
 
 		// The close affordance is a GHOST prism/button icon-only variant — a
 		// panel's X is present without being the subject, which is what the
@@ -397,22 +409,11 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 				shaper = tok.shaper
 			}
 
-			// Transition tracking — push on open, pop on close.
-			if openNow && !st.pushed {
-				stackPush(st.id)
-				st.pushed = true
-				st.wantInitialFocus = true
-			}
-			if !openNow && st.pushed {
-				stackPop(st.id)
-				st.pushed = false
-			}
-
 			return func(gtx layout.Context) layout.Dimensions {
+				live := st.track(openNow)
 				if !openNow {
 					return layout.Dimensions{Size: gtx.Constraints.Max}
 				}
-				live := isTop(st.id)
 				return drawModal(gtx, shaper, props, tok, st, live, closeW)
 			}
 		})
@@ -446,7 +447,7 @@ func Render(
 	d tokens.Density,
 ) layout.Widget {
 	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, title: title}
-	st := newState()
+	st := newState(props)
 	// Static, inert close affordance: the same icon painter and the same GHOST
 	// register the live path uses, rendered through button.RenderIcon so
 	// goldens stay text-free and deterministic. Radius is threaded straight
@@ -463,11 +464,16 @@ func Render(
 	}
 }
 
-// modalState holds per-subscription stable tags and the open-flag tracker.
-// One instance is owned by each Modal subscription (and by static Render
-// invocations, where focus and input handling are inert).
+// modalState holds this modal's arbitration set and stack hold, its
+// per-subscription stable tags, and the open-flag tracker. One instance is
+// owned by each Modal subscription (and by static Render invocations, where
+// focus, input handling and arbitration are all inert). Its address is also
+// the modal's identity inside the Arbiter.
 type modalState struct {
-	id               int64
+	arb *Arbiter
+	// pushed says this modal is currently on arb's stack. It is the edge
+	// over Open: one opening buys one push, and the matching pop is exact
+	// because of it.
 	pushed           bool
 	wantInitialFocus bool
 
@@ -480,8 +486,40 @@ type modalState struct {
 	closeClick widget.Clickable
 }
 
-func newState() *modalState {
-	return &modalState{id: allocStackID()}
+func newState(props Props) *modalState {
+	arb := props.Arbiter
+	if arb == nil {
+		arb = &defaultArbiter
+	}
+	return &modalState{arb: arb}
+}
+
+// track advances st's membership of the stack for this frame and reports
+// whether st takes input: only when it is open AND in front. Modals behind it
+// keep painting and get false, which is the whole of "painted but inert" —
+// live gates event.Op registration and key draining, never drawing.
+//
+// It is called from inside the layout pass, on the frame goroutine that will
+// draw the result, rather than where the Open observable emitted on another
+// one. The emitted widget is re-invoked every frame until the next emission
+// replaces it, so both transitions are guarded by st.pushed — the edge over
+// Open — and run exactly once. Two consequences a reader has to know: a modal
+// that is open but never laid out neither joins the stack nor covers
+// anything, and symmetrically one whose Open goes false while it is off the
+// tree keeps its place until it is laid out again. Compose the modal into the
+// tree unconditionally — the closed widget paints nothing — and neither can
+// arise; every application in this organization already does.
+func (st *modalState) track(open bool) bool {
+	switch {
+	case open && !st.pushed:
+		st.pushed = true
+		st.wantInitialFocus = true
+		st.arb.push(st)
+	case !open && st.pushed:
+		st.pushed = false
+		st.arb.pop(st)
+	}
+	return open && st.arb.isTop(st)
 }
 
 // focusCount returns the number of focusable elements: the close button

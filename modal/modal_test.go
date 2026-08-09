@@ -1034,3 +1034,126 @@ func TestIntentIsDerivedFromDecision(t *testing.T) {
 		t.Errorf("Intent.String() pair = %q, want %q", got, want)
 	}
 }
+
+// ---- The modal stack ----
+
+// TestACoveredModalIsInertEvenWhileFocused is the exported half of what
+// G0C.2b had to keep exactly, driven through the whole live pipeline. Two
+// panels are open at once in one Arbiter, and the one behind answers neither
+// a key nor a press — even though a widget of its own still holds keyboard
+// focus, which is the case where being covered is the only thing that stops
+// it.
+//
+// The front panel here is deliberately X-less and action-less, so it declares
+// no focus tags and never asks for focus: that is what leaves focus stranded
+// on the covered panel's close button and makes the assertion discriminating.
+// With a focusable front panel the router would move focus forward and the
+// covered panel could not answer a key whether the stack existed or not.
+//
+// The modal in front is the one laid out LAST, which is also the one painted
+// last and therefore on top. Push order is layout order, so the stack and the
+// paint agree by construction — before G0C.2b push order was the order the
+// Open observables happened to emit in, which was related to neither.
+func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
+	var backClosed, frontClosed int
+	arb := modal.NewArbiter()
+	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
+
+	back := liveModal(t, modal.Props{
+		Open:    rx.Of(true),
+		Title:   panelTitle,
+		Body:    body,
+		Arbiter: arb,
+		OnClose: func(_ layout.Context) { backClosed++ },
+	})
+	front := liveModal(t, modal.Props{
+		Open:      rx.Of(true),
+		Title:     panelTitle,
+		Body:      body,
+		HideClose: true,
+		Arbiter:   arb,
+		OnClose:   func(_ layout.Context) { frontClosed++ },
+	})
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	both := func(gtx layout.Context) layout.Dimensions {
+		back(gtx)
+		return front(gtx)
+	}
+
+	// Frame 1: only the first panel is in the tree, so it is the front one
+	// and asks for initial focus on its close button.
+	driveFrame(back, ops, r, canvasSize)
+	// Frame 2: that focus request lands.
+	driveFrame(back, ops, r, canvasSize)
+	// Frame 3: the second panel joins and covers it. It declares no focus
+	// tags, so focus stays where it is — on the covered panel.
+	driveFrame(both, ops, r, canvasSize)
+	driveFrame(both, ops, r, canvasSize)
+
+	r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+	driveFrame(both, ops, r, canvasSize)
+	if backClosed != 0 {
+		t.Errorf("Escape reached a covered modal that still held focus: backClosed = %d, want 0", backClosed)
+	}
+
+	// And the panel in front does answer: a corner press is guaranteed
+	// scrim, and a panel dismisses on its backdrop.
+	corner := f32.Pt(4, 4)
+	r.Queue(
+		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+		pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+	)
+	driveFrame(both, ops, r, canvasSize)
+	if frontClosed != 1 {
+		t.Errorf("the backdrop press did not reach the modal in front: frontClosed = %d, want 1", frontClosed)
+	}
+	if backClosed != 0 {
+		t.Errorf("the backdrop press reached the covered modal too: backClosed = %d, want 0", backClosed)
+	}
+}
+
+// TestACoveredModalIsStillPainted is the other half of "painted but inert":
+// losing the front costs a modal its input, never its pixels. live gates
+// event.Op registration and key draining and nothing else, which is also why
+// no golden in this package could move when the stack changed mechanism.
+func TestACoveredModalIsStillPainted(t *testing.T) {
+	arb := modal.NewArbiter()
+	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+
+	back := liveModal(t, modal.Props{
+		Open:    rx.Of(true),
+		Title:   panelTitle,
+		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+		Arbiter: arb,
+	})
+	front := liveModal(t, modal.Props{
+		Open:    rx.Of(true),
+		Title:   panelTitle,
+		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+		Arbiter: arb,
+	})
+
+	imgBoth := golden.Capture(t, canvasSize, scene(func(gtx layout.Context) layout.Dimensions {
+		back(gtx)
+		return front(gtx)
+	}, bg))
+	// The covered panel keeps its place on the stack across this second
+	// capture — nothing pops it — so the only difference between the two
+	// images is the pixels it contributes.
+	imgFront := golden.Capture(t, canvasSize, scene(front, bg))
+
+	if n := golden.PixelDiff(imgBoth, imgFront); n == 0 {
+		t.Fatal("the covered modal painted nothing; it must stay visible and only go inert")
+	}
+	// A corner is scrim in both images: one scrim over the background in the
+	// second, two in the first, so the covered panel's dimming is measurable
+	// exactly where its surface is not.
+	bothCorner := imgBoth.RGBAAt(4, 4)
+	frontCorner := imgFront.RGBAAt(4, 4)
+	if bothCorner.R >= frontCorner.R {
+		t.Errorf("the covered modal's scrim did not darken the corner: two scrims R = %d, one scrim R = %d",
+			bothCorner.R, frontCorner.R)
+	}
+}
