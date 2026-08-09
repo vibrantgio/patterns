@@ -1,8 +1,14 @@
 // Package tooltip provides the Cadence Tooltip pattern: a small hover/
 // focus annotation rendered adjacent to a caller-supplied trigger after
-// a short delay. Hover or focus exit hides the tooltip; opening another
-// tooltip via prism/coordination arbitration hides the previous one so
-// only one tooltip is visible across the window at a time.
+// a short delay. Hover or focus exit hides the tooltip; showing another
+// tooltip hides the previous one so only one tooltip is visible across the
+// window at a time.
+//
+// Arbitration is frame state: a plain Arbiter written and read during
+// layout on the frame goroutine, in which a tooltip is visible exactly
+// while it holds top. See ADR-008 and arbitration.go; before G0C.2 this ran
+// through a mutex plus a prism/coordination Subject that nothing ever
+// subscribed to.
 //
 // The package follows the Phase 4 Composition contract: Tooltip is a
 // callable Go function consuming a Prism theme observable, returning a
@@ -83,6 +89,12 @@ type Props struct {
 	// forest out on the one goroutine that runs the event loop, which is
 	// what makes sharing it correct. See spectrum/tokens.Typography.Shaper.
 	Shaper *text.Shaper
+
+	// Arbiter is the set of tooltips this one arbitrates within: showing it
+	// hides whichever tooltip of the same set was up. Give each window its
+	// own (see Arbiter). A nil Arbiter joins the package-level default set,
+	// which is correct for a single-window process.
+	Arbiter *Arbiter
 }
 
 type resolvedTokens struct {
@@ -97,9 +109,9 @@ type resolvedTokens struct {
 }
 
 // Tooltip returns an rx.Observable[layout.Widget] that emits a new widget
-// whenever the theme changes. State (the arbitration id, hover gesture,
-// focus tag, entry-time stamp, default shaper) persists across emissions
-// in the rx.Defer scope.
+// whenever the theme changes. State (the arbitration set and hold, hover
+// gesture, focus tag, dwell stamp) persists across emissions in the
+// rx.Defer scope.
 func Tooltip(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelSmall text style and the
@@ -122,7 +134,7 @@ func Tooltip(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 		)
 	})
 	return rx.Defer(func() rx.Observable[layout.Widget] {
-		st := newState()
+		st := newState(props)
 		return rx.Map(resolved, func(tok resolvedTokens) layout.Widget {
 			// Props.Shaper is an explicit override; the theme's shaper is
 			// the default. Same for Props.Delay over the theme's motion
@@ -170,19 +182,38 @@ func Render(
 	}
 }
 
-// tooltipState holds the per-subscription arbitration id, hover/focus
-// trackers, entry-time stamp, and the shown-flag tracker. One instance
-// is owned by each Tooltip subscription.
+// tooltipState holds this tooltip's arbitration set, the hover/focus
+// trackers, and the dwell timer's start and latch. One instance is owned by
+// each Tooltip subscription. Its address is also the tooltip's identity
+// inside the Arbiter — and, because a tooltip is visible exactly while it
+// holds top, that identity is the whole of its visible state: there is no
+// shown flag here to fall out of step with the register.
 type tooltipState struct {
-	id      int64
-	shown   bool
+	arb *Arbiter
+
+	// entryAt is when hover/focus entry happened, zero while the trigger
+	// has neither. It is both the dwell timer's start and the edge
+	// detector for entry and exit.
 	entryAt time.Time
+	// claimed says this dwell has already had its turn at the arbiter. The
+	// dwell test is a level — "entryAt + delay is in the past" stays true
+	// for as long as the pointer sits still — so without a latch a tooltip
+	// hidden by a later claimant would take top straight back on its next
+	// layout, and the two would trade the register every frame. One dwell
+	// buys one show; a fresh entry buys the next.
+	claimed bool
 
 	hov      gesture.Hover
 	focusTag int
 }
 
-func newState() *tooltipState { return &tooltipState{id: allocID()} }
+func newState(props Props) *tooltipState {
+	arb := props.Arbiter
+	if arb == nil {
+		arb = &defaultArbiter
+	}
+	return &tooltipState{arb: arb}
+}
 
 // drawTooltip runs the per-frame logic: process hover/focus events,
 // update entry-time and arbitration state, paint the trigger, and (when
@@ -228,32 +259,36 @@ func drawTooltip(
 		active = hovered || focused
 	}
 
-	// 3. Entry-time and arbitration transitions.
+	// 3. Dwell timer and arbitration. Both are frame state, written and
+	//    read here on the goroutine that will draw the result: the timer
+	//    runs on gtx.Now and the claim is a store into a plain register.
+	//    Nothing polls "am I still top" — losing top is not an event this
+	//    tooltip has to notice, because holding it is the only thing that
+	//    makes it paint. See ADR-008 and arbitration.go.
 	if live {
 		switch {
 		case active && st.entryAt.IsZero():
-			// Hover/focus entry: record the entry time and schedule a
-			// redraw at entry+delay so we wake to show even when no
-			// other input arrives.
+			// Hover/focus entry: start the dwell and schedule a redraw at
+			// entry+delay so we wake to show even when no other input
+			// arrives.
 			st.entryAt = gtx.Now
+			st.claimed = false
 			gtx.Execute(op.InvalidateCmd{At: st.entryAt.Add(delay)})
 		case !active && !st.entryAt.IsZero():
-			// Hover/focus exit: clear entry; release arbitration top if
-			// we held it.
+			// Hover/focus exit: end the dwell and give up top. release is a
+			// no-op for a tooltip that was already overtaken, so a
+			// straggler on its way out cannot hide its successor.
 			st.entryAt = time.Time{}
-			if st.shown {
-				clearTop(st.id)
-				st.shown = false
-			}
+			st.claimed = false
+			st.arb.release(st)
 		}
-		if active && !st.shown && !gtx.Now.Before(st.entryAt.Add(delay)) {
-			setTop(st.id)
-			st.shown = true
-		}
-		// Another tooltip overtook us while we remained active; drop the
-		// shown flag locally without touching arbitration.
-		if st.shown && !isTop(st.id) {
-			st.shown = false
+		// The dwell has run out: take top, which hides whichever tooltip
+		// held it. Guarded by claimed rather than by "am I visible" — the
+		// dwell test is a level, and one dwell buys exactly one show. See
+		// tooltipState.claimed.
+		if active && !st.claimed && !gtx.Now.Before(st.entryAt.Add(delay)) {
+			st.claimed = true
+			st.arb.claim(st)
 		}
 	}
 
@@ -272,8 +307,10 @@ func drawTooltip(
 		triggerOff.Pop()
 	}
 
-	// 5. Surface, only while shown.
-	if st.shown {
+	// 5. Surface, only while this tooltip holds arbitration top. Visibility
+	//    is read straight off the register rather than mirrored in a flag
+	//    beside it.
+	if st.arb.isTop(st) {
 		drawSurface(gtx, shaper, props, tok, triggerRect)
 	}
 
