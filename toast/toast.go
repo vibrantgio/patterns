@@ -112,6 +112,12 @@ type Props struct {
 // Package-scoped Subject for notifications. Notify is a free function so
 // any code with the package imported can emit toasts; Stack subscriptions
 // fan-in via the Subject's Observable side.
+//
+// Being process-global, this Subject outlives every Stack built on it, so
+// each Stack subscription holds one of its coordination.MaxSubscribers slots
+// for as long as it is subscribed — and only that long. Unsubscribe releases
+// the slot (prism/coordination, G0B.1); a bare rx.Subject would not, which is
+// what capped a whole test binary at eight Stacks over its lifetime.
 var (
 	publish       rx.Observer[Toast]
 	Notifications rx.Observable[Toast]
