@@ -16,9 +16,17 @@
 // layout.Widget. The source is intentionally short and free of opaque
 // configuration — copy it into your own app and modify as needed.
 //
-// Interaction: Escape and a backdrop click invoke Props.OnClose. Tab and
-// Shift+Tab cycle keyboard focus within the modal's focusable items and do
-// not escape to background content. Only the topmost modal on the
+// Interaction follows the modal's [Intent], which is the whole of this
+// package's dialog grammar: a dismissable panel (the zero value) or a
+// decision dialog ([Props.Decision] non-nil). A panel carries a ghost
+// close X top-right, and Escape and a backdrop click both invoke
+// Props.OnClose. A decision dialog carries no X, its backdrop is inert,
+// Escape invokes [Decision.Cancel], and Return activates
+// [Decision.DefaultAction]. The affordances are derived from the intent
+// rather than set severally — see Intent for why.
+//
+// Tab and Shift+Tab cycle keyboard focus within the modal's focusable items
+// and do not escape to background content. Only the topmost modal on the
 // coordination stack receives input; modals underneath remain painted but
 // inert.
 //
@@ -34,6 +42,7 @@
 package modal
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -58,6 +67,117 @@ import (
 	"github.com/vibrantgio/spectrum/typeset"
 )
 
+// Intent names the archetype a modal belongs to. Desktop dialogs come in
+// two, and their affordances travel together rather than varying
+// independently:
+//
+//   - A PANEL is a place you opened and can leave. Obsidian's and
+//     Claude.app's settings are the shape: a small quiet X top-right,
+//     Escape and a backdrop click both close it, changes apply live so a
+//     footer is optional, and an app accelerator (⌘,) opens it. Leaving
+//     costs nothing, so every cheap exit is offered.
+//
+//   - A DECISION is a question you must answer. Apple's alerts are the
+//     shape: right-aligned footer actions ending in a default that answers
+//     Return, Escape bound to Cancel, no X anywhere, and an inert backdrop.
+//     Dismissal is itself one of the answers, so a stray click must not
+//     give it.
+//
+// Exposing those affordances as independent booleans would permit every
+// wrong combination, including the one this package used to render: a
+// "Discard changes?" dialog wearing a panel's X over a backdrop that
+// dismissed it. So there are no such booleans. The intent is declared once,
+// by supplying [Props.Decision] or leaving it nil, and every affordance is
+// derived from it — which is why a decision dialog with a dismissing
+// backdrop cannot be written down in this API at all.
+//
+// Intent is a derived value, not a field: [Props.Intent] reports it. There
+// is nothing to keep in sync and nothing that can contradict the callbacks.
+type Intent int
+
+const (
+	// IntentPanel is the dismissable panel: a ghost close X, a dismissing
+	// backdrop, Escape closes, Return unclaimed. It is the zero value, so
+	// every Props written before this axis existed keeps its behaviour.
+	IntentPanel Intent = iota
+
+	// IntentDecision is the decision dialog: no X, an inert backdrop,
+	// Escape invokes Cancel, Return activates the default action.
+	IntentDecision
+)
+
+// String returns the archetype's name in the vocabulary the design system
+// uses everywhere else.
+func (i Intent) String() string {
+	switch i {
+	case IntentPanel:
+		return "panel"
+	case IntentDecision:
+		return "decision"
+	}
+	return fmt.Sprintf("Intent(%d)", int(i))
+}
+
+// Decision turns a modal into a decision dialog. Set it on [Props.Decision]
+// and the modal drops its close X, stops dismissing on a backdrop click, and
+// binds the two keys desktop conventions reserve for a dialog: Escape to
+// Cancel and Return to the default action.
+//
+// The callbacks here are the KEYBOARD bindings, not the footer. The footer is
+// still Props.Actions (with Props.ActionFocusTags), because an action's widget
+// is the caller's — a prism/button, a link, whatever the dialog needs. List
+// the same two actions in both places: Cancel and the primary, in that order,
+// right-aligned, the way both platforms order them.
+//
+// A decision dialog needs at least one focusable action in ActionFocusTags.
+// The modal's key bindings are registered against the tags it holds focus
+// with, so a decision that declares none is a dialog no key reaches.
+//
+// # The default action, and why it is derived
+//
+// Apple's rule, adopted wholesale: a destructive primary is never the
+// Return-bound default. When the primary destroys something, Cancel takes the
+// default — "Discard changes?" answering Return with Discard is the exact
+// failure this forbids.
+//
+// That rule is enforced by the shape of this struct rather than by
+// documentation alone: there is no field with which to nominate the default.
+// A caller says what the primary DOES (Confirm) and whether it destroys
+// (Destructive); [Decision.DefaultAction] derives which callback Return
+// reaches. Binding Return to a destructive primary is not a mistake you can
+// make here, because it is not a sentence this API can spell.
+type Decision struct {
+	// Confirm is the primary action — the one the dialog is asking for.
+	// It is the Return-bound default unless Destructive says otherwise.
+	Confirm func(gtx layout.Context)
+
+	// Destructive marks Confirm as destroying something the user cannot get
+	// back: discarding edits, deleting a record, ending a session. It moves
+	// the Return binding to Cancel and nothing else — the footer's own
+	// colours are the caller's to choose (prism/button's emphasis axis, or a
+	// role colour).
+	Destructive bool
+
+	// Cancel is the dismissing answer: what Escape invokes, and what Return
+	// invokes when Confirm is destructive. A nil Cancel falls back to
+	// Props.OnClose for Escape, so Escape always leaves.
+	Cancel func(gtx layout.Context)
+}
+
+// DefaultAction returns the callback Return activates: Confirm normally,
+// Cancel when Confirm is destructive.
+//
+// It returns nil when the destructive case has no Cancel to fall back to.
+// Nil means Return does nothing — the modal still CLAIMS the key, so it
+// cannot fall through to a focused destructive button. A dead Return is the
+// safe end of that trade.
+func (d Decision) DefaultAction() func(gtx layout.Context) {
+	if d.Destructive {
+		return d.Cancel
+	}
+	return d.Confirm
+}
+
 // Props configures a Modal. Body and OnClose may both be nil; Actions may
 // contain nil entries (skipped). Title may be empty (the header still
 // renders the close affordance).
@@ -71,9 +191,25 @@ type Props struct {
 	OnClose func(gtx layout.Context)
 	Actions []layout.Widget
 
-	// HideClose, when true, omits the top-right close button. Use it when
-	// the footer Actions already provide explicit dismissal (e.g. a Cancel
-	// button) — Escape and a scrim click still trigger OnClose.
+	// Decision, when non-nil, makes this a decision dialog rather than a
+	// dismissable panel: no close X, an inert backdrop, Escape to Cancel and
+	// Return to the default action. Leave it nil for a panel. See [Intent]
+	// for the two archetypes and [Decision] for the destructive-default rule.
+	Decision *Decision
+
+	// HideClose, when true, omits the top-right close button on a PANEL. Use
+	// it when the footer Actions already provide explicit dismissal (e.g. a
+	// Cancel button) — Escape and a scrim click still trigger OnClose.
+	//
+	// It is not consulted on a decision dialog, which never draws the X:
+	// hiding the close affordance is derived from the intent there, not
+	// requested. HideClose is therefore only ever additive — it can hide a
+	// panel's X, and it can never show a decision's.
+	//
+	// Deprecated: a modal that hides its X because its footer answers for it
+	// is describing a decision dialog. Say so with Decision and get the inert
+	// backdrop and the key bindings that belong with it; the X goes away on
+	// its own. HideClose keeps working for panels that genuinely want no X.
 	HideClose bool
 
 	// DynamicFocusTags, if non-nil, is called every frame and its tags join
@@ -110,6 +246,38 @@ type Props struct {
 	// forest out on the one goroutine that runs the event loop, which is
 	// what makes sharing it correct. See spectrum/tokens.Typography.Shaper.
 	Shaper *text.Shaper
+}
+
+// Intent reports which archetype these Props describe. It is derived from
+// Decision alone, so it can never disagree with the callbacks.
+func (p Props) Intent() Intent {
+	if p.Decision != nil {
+		return IntentDecision
+	}
+	return IntentPanel
+}
+
+// showsClose reports whether the header draws the close X. A decision dialog
+// never does; a panel does unless HideClose says otherwise.
+func (p Props) showsClose() bool {
+	return p.Intent() == IntentPanel && !p.HideClose
+}
+
+// dismissOnBackdrop reports whether a press on the scrim invokes OnClose.
+// Only a panel dismisses that way: on a decision dialog dismissal is one of
+// the answers, and a stray click must not give it.
+func (p Props) dismissOnBackdrop() bool {
+	return p.Intent() == IntentPanel
+}
+
+// onEscape returns the callback Escape invokes: Decision.Cancel on a decision
+// dialog, OnClose on a panel — and OnClose too when a decision names no
+// Cancel, so Escape always leaves.
+func (p Props) onEscape() func(gtx layout.Context) {
+	if p.Decision != nil && p.Decision.Cancel != nil {
+		return p.Decision.Cancel
+	}
+	return p.OnClose
 }
 
 type resolvedTokens struct {
@@ -158,17 +326,21 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		st := newState()
 
-		// The close affordance is a prism/button icon-only variant. The modal
-		// owns its clickable (&st.closeClick) so the focus trap stays keyed to
-		// a single tag and no doubled focus ring is drawn; OnClose is routed
-		// through the button's OnClick. Build once here in the rx.Defer scope
-		// and fold the latest emitted widget into the input pipeline — never
-		// subscribe inside the per-frame widget closure.
+		// The close affordance is a GHOST prism/button icon-only variant — a
+		// panel's X is present without being the subject, which is what the
+		// filled square it used to be got wrong: it out-weighed the title
+		// beside it. The modal owns its clickable (&st.closeClick) so the
+		// focus trap stays keyed to a single tag and no doubled focus ring is
+		// drawn; OnClose is routed through the button's OnClick. Build once
+		// here in the rx.Defer scope and fold the latest emitted widget into
+		// the input pipeline — never subscribe inside the per-frame widget
+		// closure.
 		closeBtn := rx.Of[layout.Widget](nil)
-		if !props.HideClose {
+		if props.showsClose() {
 			closeBtn = button.Button(th, button.Props{
 				Icon:        crossIcon,
 				Description: "Close",
+				Emphasis:    button.Ghost,
 				Clickable:   &st.closeClick,
 				OnClick:     props.OnClose,
 				// Pass the override through untouched: a nil Shaper lets
@@ -224,7 +396,9 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // itself is content-sized, and the close affordance is an icon-only
 // prism/button, which takes a density and no text style at all. Pass
 // tokens.DefaultTypography.TitleMedium and tokens.Comfortable for the
-// default desktop look.
+// default desktop look. On a decision dialog there is no close affordance to
+// size: the intent removes it, here as on the live path, so the two render
+// the same header.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -237,13 +411,13 @@ func Render(
 ) layout.Widget {
 	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, title: title}
 	st := newState()
-	// Static, inert close affordance: the same icon painter the live path
-	// uses, rendered through button.RenderIcon so goldens stay text-free and
-	// deterministic. Radius is threaded straight through (callers pass a sharp
-	// radius for golden determinism).
+	// Static, inert close affordance: the same icon painter and the same GHOST
+	// register the live path uses, rendered through button.RenderIcon so
+	// goldens stay text-free and deterministic. Radius is threaded straight
+	// through (callers pass a sharp radius for golden determinism).
 	var closeW layout.Widget
-	if !props.HideClose {
-		closeW = button.RenderIcon(crossIcon, colors, sp, rad, d, button.RenderState{})
+	if props.showsClose() {
+		closeW = button.RenderIcon(crossIcon, colors, sp, rad, d, button.RenderState{Emphasis: button.Ghost})
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		if !open {
@@ -278,7 +452,7 @@ func newState() *modalState {
 // (unless hidden) plus one per non-nil caller-declared action focus tag.
 func focusCount(props Props) int {
 	n := 0
-	if !props.HideClose {
+	if props.showsClose() {
 		n = 1
 	}
 	for _, t := range props.ActionFocusTags {
@@ -303,6 +477,17 @@ func drawModal(
 	canvas := gtx.Constraints.Max
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	gap := gtx.Dp(unit.Dp(tok.spacing.S3))
+
+	// The default action is drained BEFORE the footer lays out, and that
+	// ordering is the whole mechanism. Gio delivers a key event to the first
+	// caller whose filter matches and then removes it from the queue, and a
+	// focused widget.Clickable filters Return on its own tag — so whoever
+	// asks first wins. Asking here gives the desktop rule both platforms
+	// share: Return activates the DEFAULT action whatever holds focus, while
+	// Space activates the FOCUSED control. A panel claims neither key.
+	if live {
+		processDefaultAction(gtx, props, st)
+	}
 
 	// Scrim — full-canvas dimmer. Pointer events that miss the surface
 	// hit the scrim tag and trigger OnClose.
@@ -509,13 +694,17 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 		st.wantInitialFocus = false
 	}
 
-	// Backdrop click → OnClose.
+	// Backdrop click → OnClose, on a PANEL only. A decision dialog drains
+	// the presses (so they reach nothing behind the scrim) and answers
+	// none of them: dismissal is one of the decision's answers, and a stray
+	// click must not make it for you.
+	dismiss := props.dismissOnBackdrop()
 	for {
 		e, ok := gtx.Event(pointer.Filter{Target: &st.scrimTag, Kinds: pointer.Press})
 		if !ok {
 			break
 		}
-		if pe, ok := e.(pointer.Event); ok && pe.Kind == pointer.Press {
+		if pe, ok := e.(pointer.Event); ok && pe.Kind == pointer.Press && dismiss {
 			fire(gtx, props.OnClose)
 		}
 	}
@@ -532,8 +721,11 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 	// NOT also check st.closeClick.Clicked here — the button has already
 	// consumed the event, so this check would always be false.
 
-	// Escape → OnClose. Register the filter against every modal focus tag
-	// so the event fires whenever any modal element has focus.
+	// Escape → OnClose on a panel, Decision.Cancel on a decision dialog
+	// (falling back to OnClose when the decision names no Cancel, so Escape
+	// always leaves). Register the filter against every modal focus tag so
+	// the event fires whenever any modal element has focus.
+	escape := props.onEscape()
 	for _, tag := range tags {
 		for {
 			e, ok := gtx.Event(key.Filter{Focus: tag, Name: key.NameEscape})
@@ -541,7 +733,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 				break
 			}
 			if ke, ok := e.(key.Event); ok && ke.State == key.Press {
-				fire(gtx, props.OnClose)
+				fire(gtx, escape)
 			}
 		}
 	}
@@ -577,13 +769,44 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 	}
 }
 
+// processDefaultAction claims Return (and the numeric keypad's Enter) for a
+// decision dialog's default action. It is a no-op for a panel, which leaves
+// both keys to whatever holds focus.
+//
+// The claim is unconditional within a decision dialog — it happens even when
+// [Decision.DefaultAction] resolves to nil, which is the destructive-primary
+// case with no Cancel. Letting Return fall through there would hand it to
+// whichever footer button has focus, and on a "Discard changes?" dialog that
+// is precisely the destruction Apple's rule forbids Return to reach. A dead
+// Return is the safe end of the trade.
+func processDefaultAction(gtx layout.Context, props Props, st *modalState) {
+	if props.Decision == nil {
+		return
+	}
+	act := props.Decision.DefaultAction()
+	for _, tag := range focusTags(props, st) {
+		for {
+			e, ok := gtx.Event(
+				key.Filter{Focus: tag, Name: key.NameReturn},
+				key.Filter{Focus: tag, Name: key.NameEnter},
+			)
+			if !ok {
+				break
+			}
+			if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+				fire(gtx, act)
+			}
+		}
+	}
+}
+
 // focusTags returns the ordered slice of focus tags belonging to this modal:
 // the close button first, then the caller-declared action focus tags. Action
 // tags are owned by the action widgets themselves (Props.ActionFocusTags); the
 // modal only sequences them for Tab cycling and the Escape trap.
 func focusTags(props Props, st *modalState) []event.Tag {
 	tags := make([]event.Tag, 0, focusCount(props))
-	if !props.HideClose {
+	if props.showsClose() {
 		tags = append(tags, &st.closeClick)
 	}
 	if props.DynamicFocusTags != nil {

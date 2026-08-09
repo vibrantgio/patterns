@@ -4,6 +4,7 @@ import (
 	"context"
 	"image"
 	"image/color"
+	"reflect"
 	"testing"
 
 	"gioui.org/f32"
@@ -79,50 +80,74 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// modalTitle is the header text every modal golden carries. It was blank
-// until F4.4b, on the theory that font rasterisation was non-deterministic;
-// F4.2 pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image.
+// The header text the goldens carry. It was blank until F4.4b, on the theory
+// that font rasterisation was non-deterministic; F4.2 pinned the faces by
+// configuration and F4.3 moved every golden onto DeterministicShaper, so Latin
+// text in Roboto rasterises identically on every machine. ASCII only, per
+// F4.2 — no symbol reaches a stored image.
 //
-// The header row is drawn whether or not Title is set (only the label itself
-// is skipped when empty), so filling it in moves no geometry: the close cross
-// stays where it was and the surface keeps its size.
-const modalTitle = "Discard changes?"
+// There are two of them because G0A.2 split the fixture set by intent, and a
+// fixture's title is half of what makes it that intent legible. "Discard
+// changes?" is a question you must answer; "Preferences" is a place you
+// opened. Before the split every golden carried the question AND a panel's X
+// over a dismissing scrim, which is the wrong screen the goal was called to
+// fix — the images were recording it.
+const (
+	panelTitle    = "Preferences"
+	decisionTitle = "Discard changes?"
+	// modalTitle is the interaction tests' title; those tests are mostly
+	// decisions, and none of them looks at pixels.
+	modalTitle = decisionTitle
+)
 
 // ---- Golden tests ----
 
-// TestModalGolden records or diffs the four Measurable goldens. The cross,
-// scrim, surface, and action rectangles are deterministic clip shapes; the
-// title carries the TitleMedium role.
+// TestModalGolden records or diffs the stored goldens, re-cut by G0A.2 to show
+// one fixture of each intent rather than four of one:
+//
+//   - light-open / dark-open / light-closed are PANELS — a title and a quiet
+//     ghost X, the surface you can leave.
+//   - light-with-actions is the DECISION — the question, the footer that
+//     answers it, and no X anywhere.
+//
+// The cross, scrim, surface, and action rectangles are deterministic clip
+// shapes; the title carries the TitleMedium role.
 func TestModalGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
-	action1 := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
-	action2 := fixedRect(color.NRGBA{R: 220, G: 100, B: 100, A: 255}, 60, 28)
+	cancel := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
+	discard := fixedRect(color.NRGBA{R: 220, G: 100, B: 100, A: 255}, 60, 28)
 
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	darkBG := color.NRGBA{R: 20, G: 20, B: 20, A: 255}
 
 	cases := []struct {
-		name    string
-		open    bool
-		actions []layout.Widget
-		colors  tokens.ColorTokens
-		bg      color.NRGBA
+		name     string
+		open     bool
+		title    string
+		decision *modal.Decision
+		actions  []layout.Widget
+		colors   tokens.ColorTokens
+		bg       color.NRGBA
 	}{
-		{"light-open", true, nil, tokens.DefaultLight, lightBG},
-		{"dark-open", true, nil, tokens.DefaultDark, darkBG},
-		{"light-closed", false, nil, tokens.DefaultLight, lightBG},
-		{"light-with-actions", true, []layout.Widget{action1, action2}, tokens.DefaultLight, lightBG},
+		{"light-open", true, panelTitle, nil, nil, tokens.DefaultLight, lightBG},
+		{"dark-open", true, panelTitle, nil, nil, tokens.DefaultDark, darkBG},
+		{"light-closed", false, panelTitle, nil, nil, tokens.DefaultLight, lightBG},
+		// The destructive primary is marked, so Return would reach Cancel and
+		// not Discard. Nothing about that is visible here — the fixture states
+		// it because a fixture is also documentation of the intended call.
+		{"light-with-actions", true, decisionTitle,
+			&modal.Decision{Destructive: true}, []layout.Widget{cancel, discard},
+			tokens.DefaultLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			props := modal.Props{
-				Title:   modalTitle,
-				Body:    body,
-				Actions: tc.actions,
-				Shaper:  shaper,
+				Title:    tc.title,
+				Body:     body,
+				Actions:  tc.actions,
+				Decision: tc.decision,
+				Shaper:   shaper,
 			}
 			w := modal.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
@@ -169,7 +194,7 @@ func TestModalCompactGolden(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	obs := modal.Modal(rx.Of(densityTheme(tokens.Compact)), modal.Props{
 		Open:   rx.Of(true),
-		Title:  modalTitle,
+		Title:  panelTitle,
 		Body:   body,
 		Shaper: defaultShaper(t),
 	})
@@ -317,6 +342,9 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 // TestBackdropClickInvokesOnClose verifies Measurable (c) — pressing inside
 // the scrim region but outside the modal surface invokes OnClose. A press
 // inside the surface must NOT invoke OnClose.
+//
+// This is the PANEL half of the intent contract; TestBackdropClickOnDecisionIsInert
+// is the other half.
 func TestBackdropClickInvokesOnClose(t *testing.T) {
 	var closed int
 	w := liveModal(t, modal.Props{
@@ -603,5 +631,401 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 
 	if n := golden.PixelDiff(imgA, imgB); n != 0 {
 		t.Errorf("focusing different footer actions changed %d pixel(s); the modal must draw no focus ring around actions (doubled/outer-ring regression)", n)
+	}
+}
+
+// ---- G0A.2: the two intents ----
+
+// scrimPress queues a press-and-release near the top-left corner — guaranteed
+// scrim, never surface — and drives one frame.
+func scrimPress(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
+	corner := f32.Pt(4, 4)
+	r.Queue(
+		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+		pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+	)
+	driveFrame(w, ops, r, canvasSize)
+}
+
+// pressReturn queues a Return press-and-release and drives one frame. Both
+// halves go in one frame because a focused widget.Clickable registers its
+// activation on the release that follows a matching press — so a test that
+// only queued the press would prove nothing about whether the modal took the
+// key away from the button.
+func pressReturn(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
+	r.Queue(
+		key.Event{Name: key.NameReturn, State: key.Press},
+		key.Event{Name: key.NameReturn, State: key.Release},
+	)
+	driveFrame(w, ops, r, canvasSize)
+}
+
+// openFrames drives the two frames an opening modal needs: the first registers
+// the tags and requests initial focus, the second applies it.
+func openFrames(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
+	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, canvasSize)
+}
+
+// TestBackdropClickOnDecisionIsInert is the decision half of the scrim
+// contract: on a decision dialog, dismissal is one of the answers, so a stray
+// click on the backdrop must not give it. Neither OnClose nor Cancel may fire.
+func TestBackdropClickOnDecisionIsInert(t *testing.T) {
+	var closed, cancelled int
+	var clk widget.Clickable
+	w := liveModal(t, modal.Props{
+		Open:            rx.Of(true),
+		Title:           modalTitle,
+		Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+		Actions:         []layout.Widget{liveButtonAction(t, "Cancel", &clk)},
+		ActionFocusTags: []event.Tag{&clk},
+		Decision:        &modal.Decision{Cancel: func(_ layout.Context) { cancelled++ }},
+		OnClose:         func(_ layout.Context) { closed++ },
+	})
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	openFrames(w, ops, r)
+	scrimPress(w, ops, r)
+
+	if closed != 0 || cancelled != 0 {
+		t.Errorf("backdrop click on a decision dialog fired OnClose=%d Cancel=%d, want 0 and 0: "+
+			"the scrim must be inert when dismissal is one of the decision's answers", closed, cancelled)
+	}
+}
+
+// TestBackdropClickOnPanelCloses is the panel half stated in the intent's own
+// terms, next to its opposite. TestBackdropClickInvokesOnClose covers the same
+// ground from the older Measurable (c); this one exists so the pair reads as
+// one contract and a future change cannot silence half of it unnoticed.
+func TestBackdropClickOnPanelCloses(t *testing.T) {
+	var closed int
+	w := liveModal(t, modal.Props{
+		Open:    rx.Of(true),
+		Title:   modalTitle,
+		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+		OnClose: func(_ layout.Context) { closed++ },
+	})
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	openFrames(w, ops, r)
+	scrimPress(w, ops, r)
+
+	if closed == 0 {
+		t.Error("backdrop click on a panel did not invoke OnClose; a panel is a place you can leave")
+	}
+}
+
+// TestEscapeWorksOnBothIntents pins the clause that survives the split:
+// whatever the archetype, Escape leaves. On a panel it invokes OnClose; on a
+// decision dialog it invokes Cancel, which is Apple's binding and the reason a
+// decision needs no X.
+func TestEscapeWorksOnBothIntents(t *testing.T) {
+	t.Run("panel", func(t *testing.T) {
+		var closed int
+		w := liveModal(t, modal.Props{
+			Open:    rx.Of(true),
+			Title:   modalTitle,
+			Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+			OnClose: func(_ layout.Context) { closed++ },
+		})
+		r := new(gioinput.Router)
+		ops := new(op.Ops)
+		openFrames(w, ops, r)
+		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+		driveFrame(w, ops, r, canvasSize)
+		if closed != 1 {
+			t.Errorf("Escape on a panel: OnClose called %d times, want 1", closed)
+		}
+	})
+
+	t.Run("decision", func(t *testing.T) {
+		var closed, cancelled, confirmed int
+		var clk widget.Clickable
+		w := liveModal(t, modal.Props{
+			Open:            rx.Of(true),
+			Title:           modalTitle,
+			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+			Actions:         []layout.Widget{liveButtonAction(t, "Cancel", &clk)},
+			ActionFocusTags: []event.Tag{&clk},
+			Decision: &modal.Decision{
+				Confirm: func(_ layout.Context) { confirmed++ },
+				Cancel:  func(_ layout.Context) { cancelled++ },
+			},
+			OnClose: func(_ layout.Context) { closed++ },
+		})
+		r := new(gioinput.Router)
+		ops := new(op.Ops)
+		openFrames(w, ops, r)
+		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+		driveFrame(w, ops, r, canvasSize)
+		if cancelled != 1 {
+			t.Errorf("Escape on a decision dialog: Cancel called %d times, want 1", cancelled)
+		}
+		if confirmed != 0 {
+			t.Errorf("Escape invoked Confirm %d times; Escape is the dismissing answer", confirmed)
+		}
+		if closed != 0 {
+			t.Errorf("Escape invoked OnClose %d times; a decision that names a Cancel routes Escape there", closed)
+		}
+	})
+
+	t.Run("decision without a Cancel still leaves", func(t *testing.T) {
+		var closed int
+		var clk widget.Clickable
+		w := liveModal(t, modal.Props{
+			Open:            rx.Of(true),
+			Title:           modalTitle,
+			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+			Actions:         []layout.Widget{liveButtonAction(t, "OK", &clk)},
+			ActionFocusTags: []event.Tag{&clk},
+			Decision:        &modal.Decision{Confirm: func(_ layout.Context) {}},
+			OnClose:         func(_ layout.Context) { closed++ },
+		})
+		r := new(gioinput.Router)
+		ops := new(op.Ops)
+		openFrames(w, ops, r)
+		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
+		driveFrame(w, ops, r, canvasSize)
+		if closed != 1 {
+			t.Errorf("Escape on a Cancel-less decision: OnClose called %d times, want 1", closed)
+		}
+	})
+}
+
+// TestReturnActivatesTheDefaultAction verifies the non-destructive case:
+// Return reaches Confirm, and it reaches it even though a footer button holds
+// focus — the desktop rule is that Return answers the DEFAULT action while
+// Space answers the focused control. The focused button's own OnClick must
+// therefore stay silent.
+func TestReturnActivatesTheDefaultAction(t *testing.T) {
+	var confirmed, cancelled, buttonClicked int
+	var clk widget.Clickable
+	action, err := button.Button(rx.Of(theme.Default()), button.Props{
+		Label:     "Cancel",
+		Clickable: &clk,
+		Shaper:    defaultShaper(t),
+		OnClick:   func(_ layout.Context) { buttonClicked++ },
+	}).First()
+	if err != nil {
+		t.Fatalf("action button: %v", err)
+	}
+
+	w := liveModal(t, modal.Props{
+		Open:            rx.Of(true),
+		Title:           modalTitle,
+		Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+		Actions:         []layout.Widget{action},
+		ActionFocusTags: []event.Tag{&clk},
+		Decision: &modal.Decision{
+			Confirm: func(_ layout.Context) { confirmed++ },
+			Cancel:  func(_ layout.Context) { cancelled++ },
+		},
+	})
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	openFrames(w, ops, r)
+	pressReturn(w, ops, r)
+
+	if confirmed != 1 {
+		t.Errorf("Return on a decision dialog: Confirm called %d times, want 1", confirmed)
+	}
+	if cancelled != 0 {
+		t.Errorf("Return invoked Cancel %d times; Confirm is not destructive, so it is the default", cancelled)
+	}
+	if buttonClicked != 0 {
+		t.Errorf("Return also activated the focused footer button %d times; the modal must claim "+
+			"Return before the footer lays out, leaving Space to the focused control", buttonClicked)
+	}
+}
+
+// TestReturnNeverReachesADestructivePrimary is Apple's rule, tested at the
+// only place it can be broken. "Discard changes?" answering Return with
+// Discard is the exact failure this forbids.
+func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
+	t.Run("Cancel takes the default", func(t *testing.T) {
+		var discarded, cancelled int
+		var clk widget.Clickable
+		w := liveModal(t, modal.Props{
+			Open:            rx.Of(true),
+			Title:           modalTitle,
+			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+			Actions:         []layout.Widget{liveButtonAction(t, "Discard", &clk)},
+			ActionFocusTags: []event.Tag{&clk},
+			Decision: &modal.Decision{
+				Confirm:     func(_ layout.Context) { discarded++ },
+				Destructive: true,
+				Cancel:      func(_ layout.Context) { cancelled++ },
+			},
+		})
+		r := new(gioinput.Router)
+		ops := new(op.Ops)
+		openFrames(w, ops, r)
+		pressReturn(w, ops, r)
+
+		if discarded != 0 {
+			t.Errorf("Return reached the destructive Confirm %d times; it must never", discarded)
+		}
+		if cancelled != 1 {
+			t.Errorf("Return: Cancel called %d times, want 1 — a destructive primary hands the default to Cancel", cancelled)
+		}
+	})
+
+	t.Run("no Cancel means a dead Return, not a fall-through", func(t *testing.T) {
+		var discarded, buttonClicked int
+		var clk widget.Clickable
+		action, err := button.Button(rx.Of(theme.Default()), button.Props{
+			Label:     "Discard",
+			Clickable: &clk,
+			Shaper:    defaultShaper(t),
+			OnClick:   func(_ layout.Context) { buttonClicked++ },
+		}).First()
+		if err != nil {
+			t.Fatalf("action button: %v", err)
+		}
+		w := liveModal(t, modal.Props{
+			Open:            rx.Of(true),
+			Title:           modalTitle,
+			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+			Actions:         []layout.Widget{action},
+			ActionFocusTags: []event.Tag{&clk},
+			Decision: &modal.Decision{
+				Confirm:     func(_ layout.Context) { discarded++ },
+				Destructive: true,
+			},
+		})
+		r := new(gioinput.Router)
+		ops := new(op.Ops)
+		openFrames(w, ops, r)
+		pressReturn(w, ops, r)
+
+		if discarded != 0 || buttonClicked != 0 {
+			t.Errorf("Return fell through on a destructive decision with no Cancel: Confirm=%d, focused button=%d; "+
+				"the modal must claim the key and do nothing rather than let it reach the destruction",
+				discarded, buttonClicked)
+		}
+	})
+}
+
+// TestPanelLeavesReturnToTheFocusedControl is the negative of the two tests
+// above: a panel claims no default action, so Return still activates whatever
+// holds focus — which on an opening panel is its close button.
+func TestPanelLeavesReturnToTheFocusedControl(t *testing.T) {
+	var closed int
+	w := liveModal(t, modal.Props{
+		Open:    rx.Of(true),
+		Title:   modalTitle,
+		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
+		OnClose: func(_ layout.Context) { closed++ },
+	})
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	openFrames(w, ops, r)
+	pressReturn(w, ops, r)
+
+	if closed != 1 {
+		t.Errorf("Return on a panel with its close button focused: OnClose called %d times, want 1", closed)
+	}
+}
+
+// TestDecisionDrawsNoCloseAffordance checks the derivation in pixels rather
+// than in predicates: the same Props with and without a Decision differ, and
+// the difference is the X — a decision dialog rendered next to a panel whose
+// close button is hidden by HideClose is pixel-identical.
+func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
+	shaper := defaultShaper(t)
+	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
+	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+
+	render := func(p modal.Props) layout.Widget {
+		p.Title, p.Body, p.Shaper = modalTitle, body, shaper
+		return modal.Render(shaper, p, true, tokens.DefaultLight, tokens.Spacing, sharpRadius,
+			tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	}
+
+	panel := golden.Capture(t, canvasSize, scene(render(modal.Props{}), bg))
+	decision := golden.Capture(t, canvasSize, scene(render(modal.Props{Decision: &modal.Decision{}}), bg))
+	hidden := golden.Capture(t, canvasSize, scene(render(modal.Props{HideClose: true}), bg))
+
+	if n := golden.PixelDiff(panel, decision); n == 0 {
+		t.Error("a decision dialog renders identically to a panel; it must drop the close X")
+	}
+	if n := golden.PixelDiff(decision, hidden); n != 0 {
+		t.Errorf("a decision dialog differs from a close-less panel by %d pixel(s); "+
+			"hiding the X is exactly what the intent derives", n)
+	}
+}
+
+// TestHideCloseStillWorksOnAPanel is the deprecation window: the field keeps
+// compiling AND keeps its meaning for the archetype it belongs to, so an
+// existing caller is not silently changed underneath.
+func TestHideCloseStillWorksOnAPanel(t *testing.T) {
+	shaper := defaultShaper(t)
+	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
+	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+
+	with := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper},
+		true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	without := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper, HideClose: true},
+		true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+
+	if n := golden.PixelDiff(golden.Capture(t, canvasSize, scene(with, bg)), golden.Capture(t, canvasSize, scene(without, bg))); n == 0 {
+		t.Error("HideClose no longer hides a panel's close button; the deprecation window must keep it working")
+	}
+}
+
+// TestDefaultActionDerivation is the rule as a unit: which callback Return
+// reaches, for every shape a Decision can take. There is no field with which
+// to override any row of this table — that absence is the enforcement.
+func TestDefaultActionDerivation(t *testing.T) {
+	confirm := func(layout.Context) {}
+	cancel := func(layout.Context) {}
+	name := func(f func(layout.Context)) string {
+		switch {
+		case f == nil:
+			return "nil"
+		case reflect.ValueOf(f).Pointer() == reflect.ValueOf(confirm).Pointer():
+			return "Confirm"
+		default:
+			return "Cancel"
+		}
+	}
+
+	cases := []struct {
+		name string
+		d    modal.Decision
+		want string
+	}{
+		{"a plain confirmation defaults to Confirm", modal.Decision{Confirm: confirm, Cancel: cancel}, "Confirm"},
+		{"a destructive primary hands the default to Cancel", modal.Decision{Confirm: confirm, Destructive: true, Cancel: cancel}, "Cancel"},
+		{"a destructive primary with no Cancel has no default at all", modal.Decision{Confirm: confirm, Destructive: true}, "nil"},
+		{"an empty decision has no default", modal.Decision{}, "nil"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := name(tc.d.DefaultAction()); got != tc.want {
+				t.Errorf("DefaultAction() = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestIntentIsDerivedFromDecision pins the single source of truth: there is no
+// intent field to fall out of step with the callbacks.
+func TestIntentIsDerivedFromDecision(t *testing.T) {
+	if got := (modal.Props{}).Intent(); got != modal.IntentPanel {
+		t.Errorf("Props{}.Intent() = %v, want %v", got, modal.IntentPanel)
+	}
+	if got := (modal.Props{HideClose: true}).Intent(); got != modal.IntentPanel {
+		t.Errorf("HideClose does not make a decision dialog: Intent() = %v, want %v", got, modal.IntentPanel)
+	}
+	if got := (modal.Props{Decision: &modal.Decision{}}).Intent(); got != modal.IntentDecision {
+		t.Errorf("Props{Decision: …}.Intent() = %v, want %v", got, modal.IntentDecision)
+	}
+	if got, want := modal.IntentPanel.String()+"/"+modal.IntentDecision.String(), "panel/decision"; got != want {
+		t.Errorf("Intent.String() pair = %q, want %q", got, want)
 	}
 }

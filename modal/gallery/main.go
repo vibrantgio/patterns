@@ -1,11 +1,20 @@
-// Command gallery shows the Cadence Modal in action. The header close
-// affordance and the footer Cancel/OK actions are all prism/button
-// instances that own their own focus ring; the modal sequences them into
-// one Tab cycle (× → Cancel → OK → ×) via Props.ActionFocusTags.
+// Command gallery shows the Cadence Modal in action, as a DECISION dialog —
+// the archetype a "Confirm action" question belongs to. Props.Decision is what
+// says so, and everything else follows from it: no close X, an inert backdrop,
+// Escape bound to Cancel, Return to the default action. The footer Cancel/OK
+// actions are prism/button instances that own their own focus ring; the modal
+// sequences them into one Tab cycle (Cancel → OK → Cancel) via
+// Props.ActionFocusTags.
 //
-// Exercise it: hover the × for the Primary overlay; press Tab to move the focus
-// ring across the controls; activate any with Enter/Space; press Escape or
-// click the dimmed backdrop to dismiss; click "Open dialog" to bring it back.
+// Exercise it: press Tab to move the focus ring across the controls; activate
+// the focused one with Space; press Return anywhere to take the default (OK,
+// which is not destructive); press Escape to Cancel; click the dimmed backdrop
+// and watch nothing happen, because a decision is not dismissed by a stray
+// click. Click "Open dialog" to bring it back.
+//
+// The two buttons wear different emphasis registers, which is the other half
+// of the same idea: OK is Filled, the one action the surface is about, and
+// Cancel is Tonal beside it.
 //
 // Run it from the root of the cadence repository:
 //
@@ -42,7 +51,7 @@ func main() {
 	go func() {
 		w := new(app.Window)
 		w.Option(
-			app.Title("Cadence — Modal (GX.4 close button)"),
+			app.Title("Cadence — Modal (decision dialog)"),
 			app.Size(unit.Dp(560), unit.Dp(440)),
 		)
 		if err := run(w); err != nil {
@@ -84,7 +93,7 @@ func run(w *app.Window) error {
 	d.openObserver, openObs = coordination.Subject[bool](coordination.BufCapSignal)
 
 	// The trigger is itself a prism/button — dogfooding the same component the
-	// modal's close affordance now uses.
+	// modal's footer actions use.
 	var err error
 	d.openBtn, err = button.Button(th, button.Props{
 		Label:   "Open dialog",
@@ -96,8 +105,9 @@ func run(w *app.Window) error {
 	}
 
 	// Dismiss the dialog: bump a visible counter and drive Open false so the
-	// modal actually hides. Shared by the close button, Escape/backdrop
-	// (Props.OnClose), and the footer actions' own OnClick.
+	// modal actually hides. Shared by every route out — Escape and Return
+	// (Decision.Cancel and Decision.Confirm) and the footer actions' own
+	// OnClick.
 	closeDialog := func() {
 		d.mu.Lock()
 		d.closes++
@@ -111,6 +121,7 @@ func run(w *app.Window) error {
 	// to the modal's Tab cycle with no doubled outer ring (GX.5).
 	cancelBtn, err := button.Button(th, button.Props{
 		Label:     "Cancel",
+		Emphasis:  button.Tonal,
 		Shaper:    shaper,
 		Clickable: &d.cancelClk,
 		OnClick:   func(_ layout.Context) { closeDialog() },
@@ -128,15 +139,21 @@ func run(w *app.Window) error {
 		return err
 	}
 
-	// Live modal. OnClose (close button, Escape, backdrop) also dismisses.
+	// Live modal, declared as a decision dialog. Confirm is not destructive,
+	// so it is what Return reaches; mark it Destructive and the default would
+	// move to Cancel without another line changing.
 	modalObs := modal.Modal(th, modal.Props{
 		Open:            openObs,
 		Title:           "Confirm action",
 		Body:            d.body,
 		Actions:         []layout.Widget{footerSlot(cancelBtn), footerSlot(okBtn)},
 		ActionFocusTags: []event.Tag{&d.cancelClk, &d.okClk},
-		Shaper:          shaper,
-		OnClose:         func(_ layout.Context) { closeDialog() },
+		Decision: &modal.Decision{
+			Confirm: func(_ layout.Context) { closeDialog() },
+			Cancel:  func(_ layout.Context) { closeDialog() },
+		},
+		Shaper:  shaper,
+		OnClose: func(_ layout.Context) { closeDialog() },
 	})
 	sub := modalObs.Subscribe(rx.GoroutineContext(), func(mw layout.Widget, _ error, done bool) {
 		if !done && mw != nil {
@@ -171,10 +188,10 @@ func (d *demo) body(gtx layout.Context) layout.Dimensions {
 	mat := m.Stop()
 	lbl := widget.Label{}
 	return lbl.Layout(gtx, d.shaper, font.Font{}, unit.Sp(15),
-		"The × in the header is a prism/button icon variant. It takes focus when "+
-			"the dialog opens — press Tab to cycle the focus ring × → Cancel → OK → ×. "+
-			"Hover the × for the Primary overlay; click it, press Enter/Space while it "+
-			"is focused, press Escape, or click the dimmed backdrop to close.",
+		"This is a decision dialog, so it has no close ×: the footer answers it. "+
+			"Tab cycles the focus ring Cancel → OK → Cancel; Space activates the "+
+			"focused button; Return takes the default (OK) from wherever focus is; "+
+			"Escape is Cancel. Clicking the dimmed backdrop does nothing.",
 		mat)
 }
 
@@ -194,7 +211,7 @@ func (d *demo) frame(gtx layout.Context) layout.Dimensions {
 
 	// Trigger button + dismissal counter, near the top. Visible whenever the
 	// modal is closed; when open, the scrim is painted over them and absorbs
-	// the clicks (so the backdrop dismisses instead).
+	// the clicks — and on this decision dialog it answers none of them.
 	layout.Inset{Top: unit.Dp(28), Left: unit.Dp(28), Right: unit.Dp(28)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {

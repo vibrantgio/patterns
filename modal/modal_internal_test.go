@@ -3,6 +3,7 @@ package modal
 import (
 	"context"
 	"image"
+	"reflect"
 	"testing"
 
 	"gioui.org/io/event"
@@ -189,5 +190,72 @@ func TestFocusTagsIncludesDynamicBeforeStatic(t *testing.T) {
 	tags = focusTags(props, st)
 	if len(tags) != 3 || tags[0] != &st.closeClick || tags[1] != &dyn || tags[2] != &act {
 		t.Fatalf("focusTags with close = %v, want [close dynamic static]", tags)
+	}
+}
+
+// TestAffordancesAreDerivedFromIntent is the dialog grammar as one table: the
+// four cells the two archetypes fill, read straight off the predicates the
+// component uses. The row that matters most is the last one — there is no
+// Props anywhere in this table with a decision's intent and a dismissing
+// backdrop, because there is no field that could produce one.
+func TestAffordancesAreDerivedFromIntent(t *testing.T) {
+	onClose := func(layout.Context) {}
+	cancel := func(layout.Context) {}
+
+	cases := []struct {
+		name             string
+		props            Props
+		wantIntent       Intent
+		wantClose        bool
+		wantDismiss      bool
+		wantEscapeCancel bool // Escape routes to Decision.Cancel rather than OnClose
+	}{
+		{"a bare panel", Props{OnClose: onClose},
+			IntentPanel, true, true, false},
+		{"a panel that hides its X", Props{OnClose: onClose, HideClose: true},
+			IntentPanel, false, true, false},
+		{"a decision", Props{OnClose: onClose, Decision: &Decision{Cancel: cancel}},
+			IntentDecision, false, false, true},
+		{"a decision that asked for its X back", Props{OnClose: onClose, HideClose: false, Decision: &Decision{Cancel: cancel}},
+			IntentDecision, false, false, true},
+		{"a decision with no Cancel", Props{OnClose: onClose, Decision: &Decision{}},
+			IntentDecision, false, false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.props.Intent(); got != tc.wantIntent {
+				t.Errorf("Intent() = %v, want %v", got, tc.wantIntent)
+			}
+			if got := tc.props.showsClose(); got != tc.wantClose {
+				t.Errorf("showsClose() = %v, want %v", got, tc.wantClose)
+			}
+			if got := tc.props.dismissOnBackdrop(); got != tc.wantDismiss {
+				t.Errorf("dismissOnBackdrop() = %v, want %v", got, tc.wantDismiss)
+			}
+			esc := tc.props.onEscape()
+			if esc == nil {
+				t.Fatal("onEscape() = nil; Escape must always have somewhere to go")
+			}
+			isCancel := reflect.ValueOf(esc).Pointer() == reflect.ValueOf(cancel).Pointer()
+			if isCancel != tc.wantEscapeCancel {
+				t.Errorf("onEscape() routes to Cancel = %v, want %v", isCancel, tc.wantEscapeCancel)
+			}
+		})
+	}
+}
+
+// TestFocusTagsDropTheCloseTagOnADecision pairs with the table above: the
+// close button is not merely unpainted on a decision dialog, it is out of the
+// Tab cycle and out of the key filters too.
+func TestFocusTagsDropTheCloseTag(t *testing.T) {
+	var act int
+	st := newState()
+	props := Props{ActionFocusTags: []event.Tag{&act}, Decision: &Decision{}}
+	tags := focusTags(props, st)
+	if len(tags) != 1 || tags[0] != &act {
+		t.Fatalf("focusTags on a decision = %v, want just the action tag", tags)
+	}
+	if got := focusCount(props); got != 1 {
+		t.Errorf("focusCount on a decision = %d, want 1", got)
 	}
 }
