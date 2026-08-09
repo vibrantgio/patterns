@@ -232,9 +232,9 @@ type Props struct {
 	// Arbiter is the stack this modal joins while it is open: the modal in
 	// front of that stack takes keyboard and pointer input and the ones
 	// beneath it stay painted and inert. The value is the scope, so a window
-	// gets one of its own (see [Arbiter]). A nil Arbiter joins the
-	// package-level default stack, which is correct for a single-window
-	// process and only for that.
+	// gets one of its own (see [Arbiter]). A nil Arbiter gets this modal a
+	// stack of its own, so it is always the modal in front of it: sharing is
+	// the explicit act.
 	Arbiter *Arbiter
 
 	// HideClose, when true, omits the top-right close button on a PANEL. Use
@@ -489,7 +489,7 @@ type modalState struct {
 func newState(props Props) *modalState {
 	arb := props.Arbiter
 	if arb == nil {
-		arb = &defaultArbiter
+		arb = NewArbiter()
 	}
 	return &modalState{arb: arb}
 }

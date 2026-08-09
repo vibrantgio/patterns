@@ -404,3 +404,134 @@ func TestArbitrationDismissesPriorPopover(t *testing.T) {
 		})
 	}
 }
+
+// TestOpenNowIsReadEveryFrame pins ADR-008 destination 2's spelling of
+// open-ness: the caller owns a plain bool, the widget reads it during layout,
+// and no emission stands between the flip and the frame that shows it. It is
+// the SAME widget value on all four frames — the one the stream emitted for
+// the theme — which is the whole point: with Props.Open the flag can only
+// change by re-emitting, and the emission arrives on another goroutine, a
+// frame later, into an atomic cell the caller has to keep beside it.
+func TestOpenNowIsReadEveryFrame(t *testing.T) {
+	anchor := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
+
+	var open bool
+	var contentDraws int
+	content := func(gtx layout.Context) layout.Dimensions {
+		contentDraws++
+		return fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 80, 36)(gtx)
+	}
+
+	w := livePopover(t, popover.Props{
+		OpenNow:   func() bool { return open },
+		Anchor:    anchor,
+		Content:   content,
+		Placement: popover.Top,
+		Arbiter:   popover.NewArbiter(),
+	})
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+
+	driveFrame(w, ops, r, canvasSize)
+	if contentDraws != 0 {
+		t.Fatalf("closed popover laid out its content; contentDraws = %d, want 0", contentDraws)
+	}
+
+	open = true
+	driveFrame(w, ops, r, canvasSize)
+	if contentDraws != 1 {
+		t.Fatalf("OpenNow flipped true but the same widget did not open; contentDraws = %d, want 1", contentDraws)
+	}
+	driveFrame(w, ops, r, canvasSize)
+	if contentDraws != 2 {
+		t.Fatalf("popover did not stay open; contentDraws = %d, want 2", contentDraws)
+	}
+
+	open = false
+	driveFrame(w, ops, r, canvasSize)
+	if contentDraws != 2 {
+		t.Fatalf("OpenNow flipped false but the popover stayed open; contentDraws = %d, want 2", contentDraws)
+	}
+}
+
+// TestOpenNowArbitratesOnTheEdge is G0C.2's rule applied to the new spelling:
+// the claim must be an edge, not a level. OpenNow is read every frame and
+// stays true for as long as the caller's flag does, so a popover that has
+// been overtaken must not take top back on its next layout. st.holds is the
+// latch that makes it an edge, and it does not care where the flag came from.
+func TestOpenNowArbitratesOnTheEdge(t *testing.T) {
+	anchor := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
+	content := fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 80, 36)
+	arb := popover.NewArbiter()
+
+	var aOpen, bOpen bool
+	var aDismissed, bDismissed int
+	aWidget := livePopover(t, popover.Props{
+		OpenNow:   func() bool { return aOpen },
+		Anchor:    anchor,
+		Content:   content,
+		Arbiter:   arb,
+		OnDismiss: func(layout.Context) { aDismissed++; aOpen = false },
+	})
+	bWidget := livePopover(t, popover.Props{
+		OpenNow:   func() bool { return bOpen },
+		Anchor:    anchor,
+		Content:   content,
+		Placement: popover.Bottom,
+		Arbiter:   arb,
+		OnDismiss: func(layout.Context) { bDismissed++; bOpen = false },
+	})
+	frame := func(gtx layout.Context) layout.Dimensions {
+		aWidget(gtx)
+		bWidget(gtx)
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+
+	aOpen = true
+	driveFrame(frame, ops, r, canvasSize)
+	if aDismissed != 0 {
+		t.Fatalf("A dismissed with nobody to dismiss it; aDismissed = %d", aDismissed)
+	}
+
+	// B opens. A is dismissed inside B's layout pass, which closes A's own
+	// flag — the caller-owned bool is the only copy of the state.
+	bOpen = true
+	driveFrame(frame, ops, r, canvasSize)
+	if aDismissed != 1 || bDismissed != 0 {
+		t.Fatalf("B's claim: aDismissed = %d, bDismissed = %d; want 1, 0", aDismissed, bDismissed)
+	}
+
+	// Several quiet frames: B's flag is still true, so a level-guarded claim
+	// would re-take top every frame and the two would trade it forever.
+	for i := 0; i < 3; i++ {
+		driveFrame(frame, ops, r, canvasSize)
+	}
+	if aDismissed != 1 || bDismissed != 0 {
+		t.Fatalf("a level-guarded claim re-fired: aDismissed = %d, bDismissed = %d; want 1, 0", aDismissed, bDismissed)
+	}
+}
+
+// TestOpenNowWinsOverOpen documents the precedence, because a Props that sets
+// both is a caller who has not decided which destination the state belongs
+// to and should get the frame-owned answer, not a silent mixture.
+func TestOpenNowWinsOverOpen(t *testing.T) {
+	var contentDraws int
+	w := livePopover(t, popover.Props{
+		Open:    rx.Of(true),
+		OpenNow: func() bool { return false },
+		Anchor:  fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
+		Content: func(gtx layout.Context) layout.Dimensions {
+			contentDraws++
+			return layout.Dimensions{}
+		},
+		Arbiter: popover.NewArbiter(),
+	})
+	driveFrame(w, new(op.Ops), new(gioinput.Router), canvasSize)
+	if contentDraws != 0 {
+		t.Fatalf("Open won over OpenNow; contentDraws = %d, want 0", contentDraws)
+	}
+}

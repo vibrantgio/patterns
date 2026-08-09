@@ -92,8 +92,8 @@ type Props struct {
 
 	// Arbiter is the set of tooltips this one arbitrates within: showing it
 	// hides whichever tooltip of the same set was up. Give each window its
-	// own (see Arbiter). A nil Arbiter joins the package-level default set,
-	// which is correct for a single-window process.
+	// own (see Arbiter). A nil Arbiter gets this tooltip one of its own, so
+	// it arbitrates with nobody: sharing is the explicit act.
 	Arbiter *Arbiter
 }
 
@@ -210,7 +210,7 @@ type tooltipState struct {
 func newState(props Props) *tooltipState {
 	arb := props.Arbiter
 	if arb == nil {
-		arb = &defaultArbiter
+		arb = NewArbiter()
 	}
 	return &tooltipState{arb: arb}
 }

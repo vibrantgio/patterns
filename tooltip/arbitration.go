@@ -12,9 +12,18 @@ package tooltip
 // Tooltips that share an Arbiter arbitrate with one another and with nobody
 // else. A window is one widget tree laid out by one goroutine, so one
 // Arbiter per window is both the correct scope for "which tooltip is up"
-// and the only scope a lock-free value is safe at. A Props with no Arbiter
-// joins the package-level default set, which is right for a process with
-// one window and only for that.
+// and the only scope a lock-free value is safe at. Create one in the
+// window's composition root and hand it to every tooltip in that window's
+// tree.
+//
+// A Props with no Arbiter gets one of its own and therefore arbitrates with
+// nobody. Until G0C.4 it joined a package-level default instead, which was
+// indistinguishable from per-window in a single-window process and was a
+// data race in a two-window one; there is now no package state for a second
+// window to reach, so sharing is something a caller does on purpose or not
+// at all. Two tooltips that both forget an Arbiter can be up together — a
+// cosmetic fault anyone can see, which is the trade this makes against a
+// race nobody can.
 //
 // # The register is also the visibility
 //
@@ -51,12 +60,6 @@ type Arbiter struct {
 // NewArbiter returns an empty arbitration set. Create one per window and
 // hand it to every tooltip in that window's tree.
 func NewArbiter() *Arbiter { return new(Arbiter) }
-
-// defaultArbiter is the set a Props with no Arbiter joins. It restores the
-// process-global scope tooltip arbitration had before ADR-008, which is
-// indistinguishable from per-window in a single-window process — the shape
-// of every application in this organization today.
-var defaultArbiter Arbiter
 
 // claim makes st the visible tooltip. Whichever tooltip held top is hidden
 // by this very store, because a tooltip paints only while it holds top; see

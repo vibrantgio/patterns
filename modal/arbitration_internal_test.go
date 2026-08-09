@@ -92,14 +92,21 @@ func TestArbiterPopFromTheMiddle(t *testing.T) {
 	}
 }
 
-// TestNilArbiterJoinsTheDefaultSet documents the compatibility default: a
-// Props with no Arbiter of its own stacks process-globally, which is what the
-// modal stack did before ADR-008 and is correct for one window.
-func TestNilArbiterJoinsTheDefaultSet(t *testing.T) {
-	own := NewArbiter()
-	if st := newState(Props{}); st.arb != &defaultArbiter {
-		t.Errorf("nil Arbiter did not join the default set; got %p", st.arb)
+// TestNilArbiterArbitratesAlone pins what replaced the package-level default
+// at G0C.4: a Props with no Arbiter gets one of its own, so two of them
+// stack with nobody rather than sharing process-global state. The scope a
+// lock-free value is safe at is one window, and the only way to reach that
+// scope is to say so.
+func TestNilArbiterArbitratesAlone(t *testing.T) {
+	first, second := newState(Props{}), newState(Props{})
+	if first.arb == nil || second.arb == nil {
+		t.Fatal("a nil Props.Arbiter left the state with no arbiter at all")
 	}
+	if first.arb == second.arb {
+		t.Errorf("two nil-Arbiter states share an arbiter (%p); each must get its own", first.arb)
+	}
+
+	own := NewArbiter()
 	if st := newState(Props{Arbiter: own}); st.arb != own {
 		t.Errorf("explicit Arbiter was not used; got %p, want %p", st.arb, own)
 	}

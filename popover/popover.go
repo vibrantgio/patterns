@@ -69,7 +69,25 @@ const outsideMargin = unit.Dp(8192)
 type Props struct {
 	// Open emits true to show the popover and false to hide it. A nil
 	// Open is treated as a constant false (popover never opens).
+	//
+	// This is the spelling for a popover whose open-ness is model state
+	// carried on a stream — ADR-008 destination 1. Use OpenNow instead when
+	// it is frame-scoped UI state the caller owns.
 	Open rx.Observable[bool]
+
+	// OpenNow reports whether the popover is open, read during layout on the
+	// frame goroutine, once per frame. It is the spelling for ADR-008
+	// destination 2: a per-row confirm, a context menu — open-ness that
+	// nothing outside the frame ever asks about, held by the caller as a
+	// plain bool rather than pushed onto a bus and mirrored back.
+	//
+	// A non-nil OpenNow is the whole answer and Open is ignored. Popover then
+	// re-emits only when the theme changes, because the flag no longer needs
+	// an emission to be seen: the widget already runs every frame and reads
+	// it there. Everything downstream is unaffected — the arbitration claim
+	// and release are edges over whatever this returns, exactly as they are
+	// over Open.
+	OpenNow func() bool
 
 	Anchor    layout.Widget
 	Content   layout.Widget
@@ -78,8 +96,8 @@ type Props struct {
 
 	// Arbiter is the set of popovers this one arbitrates within: opening it
 	// dismisses whichever popover of the same set was open. Give each window
-	// its own (see Arbiter). A nil Arbiter joins the package-level default
-	// set, which is correct for a single-window process.
+	// its own (see Arbiter). A nil Arbiter gets this popover one of its own,
+	// so it arbitrates with nobody: sharing is the explicit act.
 	Arbiter *Arbiter
 }
 
@@ -96,9 +114,12 @@ type resolvedTokens struct {
 // Popover returns an rx.Observable[layout.Widget] that emits a new widget
 // whenever the theme or Open state changes. State (the arbitration hold,
 // event tags) persists across emissions in the rx.Defer scope.
+//
+// With Props.OpenNow set the widget reads the flag itself, every frame, and
+// the stream carries only the theme.
 func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	open := props.Open
-	if open == nil {
+	if open == nil || props.OpenNow != nil {
 		open = rx.Of(false)
 	}
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
@@ -113,8 +134,17 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		st := newState(props)
 		return rx.Map(inputs, func(next rx.Tuple2[resolvedTokens, bool]) layout.Widget {
-			tok, openNow := next.First, next.Second
+			tok, emitted := next.First, next.Second
 			return func(gtx layout.Context) layout.Dimensions {
+				// Open-ness is either the last value the stream carried or,
+				// for a caller that owns it as frame state, whatever OpenNow
+				// says on this frame. Read here and not in the Map, because
+				// the point of OpenNow is that no emission stands between
+				// the flag changing and the frame that shows it.
+				openNow := emitted
+				if props.OpenNow != nil {
+					openNow = props.OpenNow()
+				}
 				// Arbitration is frame state. The claim and the release
 				// happen here, on the frame goroutine that will draw the
 				// result, rather than where the Open observable emitted on
@@ -177,7 +207,7 @@ type popoverState struct {
 func newState(props Props) *popoverState {
 	arb := props.Arbiter
 	if arb == nil {
-		arb = &defaultArbiter
+		arb = NewArbiter()
 	}
 	return &popoverState{arb: arb, dismiss: props.OnDismiss}
 }
