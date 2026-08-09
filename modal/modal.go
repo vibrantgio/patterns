@@ -16,14 +16,42 @@
 // layout.Widget. The source is intentionally short and free of opaque
 // configuration — copy it into your own app and modify as needed.
 //
-// Interaction follows the modal's [Intent], which is the whole of this
-// package's dialog grammar: a dismissable panel (the zero value) or a
-// decision dialog ([Props.Decision] non-nil). A panel carries a ghost
-// close X top-right, and Escape and a backdrop click both invoke
-// Props.OnClose. A decision dialog carries no X, its backdrop is inert,
-// Escape invokes [Decision.Cancel], and Return activates
-// [Decision.DefaultAction]. The affordances are derived from the intent
-// rather than set severally — see Intent for why.
+// # The dialog grammar
+//
+// Desktop dialogs come in two archetypes, and this package has exactly two.
+// Which one you get is derived from [Props.Decision] — nil or not — and
+// reported by [Props.Intent]. Everything below follows from that one word;
+// none of it is separately configurable, because the wrong combinations are
+// what a boolean per affordance would let you write down.
+//
+// A PANEL ([IntentPanel], the zero value) is a place you opened and can
+// leave. It MANDATES a ghost close X top-right, a backdrop click that
+// invokes Props.OnClose, and Escape likewise: leaving costs nothing, so
+// every cheap exit is offered. It FORBIDS claiming Return, which belongs to
+// whatever holds focus inside it. It has no footer of its own — a panel's
+// changes apply live, which is the reason it can be left at any moment. If
+// you find yourself adding a Save button to a panel, you have a decision.
+//
+// A DECISION ([IntentDecision], [Props.Decision] non-nil) is a question you
+// must answer. It MANDATES right-aligned footer actions ending in a default
+// that answers Return ([Decision.DefaultAction]), and Escape bound to
+// [Decision.Cancel]. It FORBIDS an X anywhere and an active backdrop: the
+// backdrop still absorbs presses so nothing behind it is reached, but it
+// answers none of them, because dismissal is itself one of the answers and a
+// stray click must not give it. It also forbids Return reaching a
+// destructive primary — see [Decision] for why that is a matter of the
+// struct's shape rather than of documentation.
+//
+// # Arrival is not this package's business
+//
+// The modal owns dismissal. It does not own how you arrived, and it has no
+// notion of an accelerator: the ⌘,/Ctrl-, that opens a settings panel has to
+// be live when no modal exists, which is precisely the state a modal is not
+// in. Bind it in app chrome, with Gio's own key.ModShortcut (Cmd on darwin,
+// Ctrl elsewhere) rather than a GOOS test of your own, and land a message
+// that flips the flag [Props.Open] reads. The reference implementation is
+// workbench's feeds app — shortcut.go for the binding, preferences.go for
+// the panel it opens.
 //
 // Tab and Shift+Tab cycle keyboard focus within the modal's focusable items
 // and do not escape to background content. Only the topmost modal on the
