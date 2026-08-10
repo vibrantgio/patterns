@@ -251,3 +251,82 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 		t.Fatalf("the closed modal answered a press after leaving; innerClosed = %d, want 1", innerClosed)
 	}
 }
+
+// TestACoveredModalDrawnLastTakesNoPointerInput is the pointer half of
+// "painted but inert", measured where z-order cannot answer for the stack.
+// In TestOnlyTheFrontModalTakesPointerInput the modal in front is also the
+// one laid out last, so its absorber sits on top of whatever a covered modal
+// might wrongly register — a regression that made covered modals live for
+// pointer input would pass that test on z-order alone. Here the covered
+// modal is laid out LAST: it opened first from later in the tree, and the
+// front one opened a frame later from earlier in the tree, so push order and
+// paint order disagree. If the covered modal registered a scrim absorber at
+// all, Gio's hit test would hand it the press; only live gating event.Op
+// registration keeps it silent.
+func TestACoveredModalDrawnLastTakesNoPointerInput(t *testing.T) {
+	arb := NewArbiter()
+	shaper := tokens.DefaultTypography.DeterministicShaper()
+	tok := resolvedTokens{
+		color:   tokens.DefaultLight,
+		spacing: tokens.Spacing,
+		radius:  tokens.RadiusScale{},
+		title:   tokens.DefaultTypography.TitleMedium,
+	}
+
+	var frontClosed, coveredClosed int
+	frontProps := Props{Arbiter: arb, HideClose: true, OnClose: func(layout.Context) { frontClosed++ }}
+	coveredProps := Props{Arbiter: arb, HideClose: true, OnClose: func(layout.Context) { coveredClosed++ }}
+	frontSt, coveredSt := newState(frontProps), newState(coveredProps)
+
+	mk := func(props Props, st *modalState, open *bool) layout.Widget {
+		return func(gtx layout.Context) layout.Dimensions {
+			live := st.track(*open)
+			if !*open {
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
+			return drawModal(gtx, shaper, props, tok, st, live, nil)
+		}
+	}
+	frontOpen, coveredOpen := false, true
+	frontW := mk(frontProps, frontSt, &frontOpen)         // earlier in the tree
+	coveredW := mk(coveredProps, coveredSt, &coveredOpen) // later in the tree
+
+	canvas := image.Pt(320, 240)
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	frame := func() {
+		ops.Reset()
+		gtx := layout.Context{
+			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+			Constraints: layout.Exact(canvas),
+			Ops:         ops,
+			Source:      r.Source(),
+		}
+		frontW(gtx)
+		coveredW(gtx)
+		r.Frame(ops)
+	}
+	corner := f32.Pt(4, 4)
+	clickCorner := func() {
+		r.Queue(
+			pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+			pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+		)
+		frame()
+	}
+
+	frame() // only the later-in-tree modal is open; it is alone and in front
+	frontOpen = true
+	frame() // the front modal opens: pushed later, so in front, yet drawn first
+	if !arb.isTop(frontSt) {
+		t.Fatal("the modal pushed last is not the one in front")
+	}
+
+	clickCorner()
+	if coveredClosed != 0 {
+		t.Fatalf("the covered modal answered a press because it was drawn last; coveredClosed = %d, want 0", coveredClosed)
+	}
+	if frontClosed != 1 {
+		t.Fatalf("the backdrop press did not reach the modal in front; frontClosed = %d, want 1", frontClosed)
+	}
+}
