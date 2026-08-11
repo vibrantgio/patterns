@@ -43,8 +43,8 @@ import (
 	"github.com/vibrantgio/cadence/modal"
 	"github.com/vibrantgio/mvu/stream"
 	"github.com/vibrantgio/prism/button"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 func main() {

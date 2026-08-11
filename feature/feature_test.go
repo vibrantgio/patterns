@@ -13,7 +13,7 @@ import (
 
 	"github.com/vibrantgio/cadence/feature"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 const (
@@ -176,7 +176,7 @@ func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 // size, so through widget.Label alone a MaxLines:1 label renders identically at
 // any LineHeight. That made a wrapped run the only place the property was
 // observable at all, and this was the only golden that had one. F4.4c built
-// spectrum/typeset to correct it and F4.4d put every cadence label on it, so
+// theme/typeset to correct it and F4.4d put every cadence label on it, so
 // the property now moves single-line controls too and a dozen goldens in prism
 // pin it.
 //

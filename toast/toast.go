@@ -66,9 +66,9 @@ import (
 	"github.com/vibrantgio/mvu"
 	"github.com/vibrantgio/pulse/depth"
 	"github.com/vibrantgio/pulse/tween"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
-	"github.com/vibrantgio/spectrum/typeset"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // Level selects the toast's semantic palette.
@@ -260,7 +260,7 @@ type Props struct {
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See spectrum/tokens.Typography.Shaper.
+	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -633,7 +633,7 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 // with light/dark and follow whatever seed, palette or high-contrast
 // variant the theme is emitting. Until F4.6 Success and Warning were
 // Tailwind green and amber literals, duplicated byte-for-byte between this
-// file and alert/alert.go; spectrum's hue-fixed success and warning ramps
+// file and alert/alert.go; theme's hue-fixed success and warning ramps
 // replaced both copies.
 func accentColor(l Level, c tokens.ColorTokens) color.NRGBA {
 	switch l {

@@ -20,8 +20,8 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/table"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 // Body height fits ~9 rows of 36 px, so the visible-row bound used by

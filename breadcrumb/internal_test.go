@@ -3,7 +3,7 @@ package breadcrumb
 import (
 	"testing"
 
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 // TestLabelColorRule asserts the Specific contract: in a breadcrumb of n

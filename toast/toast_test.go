@@ -12,7 +12,7 @@ import (
 
 	"github.com/vibrantgio/cadence/toast"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 const (

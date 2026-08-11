@@ -12,7 +12,7 @@ wrong: the modal that knows a question from a place and so refuses to let a
 stray backdrop click answer the question, the popover that dismisses
 when you open another one, the tooltip that is the only tooltip on screen, the
 table that lays out only the rows you can see. Each pattern reads its visual
-values from [spectrum](https://github.com/vibrantgio/spectrum)'s theme
+values from [theme](https://github.com/vibrantgio/theme)'s theme
 observable, and the theme carries the whole look: colour, typography, density,
 elevation and motion. A window follows the OS between light and dark with no
 application code; switching an app to Compact density resizes the navbar,
@@ -65,9 +65,9 @@ couple of hundred lines, and the props struct is not trying to anticipate you.
 
 ## Where it sits
 
-Tier 4 of the stack — `mvu → spectrum → prism → pulse → cadence → markdown` —
+Tier 4 of the stack — `mvu → theme → prism → pulse → cadence → markdown` —
 alongside [markdown](https://github.com/vibrantgio/markdown). cadence imports
-`theme` and `tokens` from [spectrum](https://github.com/vibrantgio/spectrum),
+`theme` and `tokens` from [theme](https://github.com/vibrantgio/theme),
 `button`, `coordination`, `icon`, `layout` and `list` from
 [prism](https://github.com/vibrantgio/prism), plus `depth` and `tween` from
 [pulse](https://github.com/vibrantgio/pulse); [mvu](https://github.com/vibrantgio/mvu)

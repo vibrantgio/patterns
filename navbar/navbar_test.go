@@ -21,8 +21,8 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/navbar"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 const (

@@ -12,7 +12,7 @@ import (
 
 	"github.com/vibrantgio/cadence/breadcrumb"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 const (
@@ -60,7 +60,7 @@ func trail() []breadcrumb.Item {
 // worth keeping. capture constrains the canvas with layout.Exact, and a
 // horizontal layout.Flex passes its own cross minimum straight to every Rigid
 // child — so each segment label was handed Min.Y == Max.Y == 32. widget.Label
-// constrained its result to that 32 and spectrum/typeset then added the line
+// constrained its result to that 32 and theme/typeset then added the line
 // box deficit on top, so a label reported 35 px for a 32 px slot and the
 // chevrons centred against a row 3 px taller than the row actually was.
 // typeset now constrains the corrected height instead of correcting the

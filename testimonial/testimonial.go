@@ -40,9 +40,9 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/prism/layout"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
-	"github.com/vibrantgio/spectrum/typeset"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // Variant selects between the two testimonial layouts.
@@ -99,7 +99,7 @@ type Props struct {
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See spectrum/tokens.Typography.Shaper.
+	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -398,7 +398,7 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 }
 
 // textWidget renders a single-line label in the supplied colour and text
-// style, through spectrum/typeset so the role's line height is the height
+// style, through theme/typeset so the role's line height is the height
 // of the line box. Empty labels collapse to zero dimensions so adjacent
 // section gaps are the only vertical contribution. A zero style weight
 // (the legacy Render path synthesizes size-only styles) falls back to

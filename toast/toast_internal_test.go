@@ -13,8 +13,8 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/mvu"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
 )
 
 const intCanvasW, intCanvasH = 320, 240

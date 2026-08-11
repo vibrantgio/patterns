@@ -15,7 +15,7 @@
 // and Error — so a custom theme's colours reach all four. Until F4.6 the
 // last two were Tailwind green and amber literals defined in this file,
 // picked between light and dark by comparing the luminance of Surface
-// against Text; spectrum's token set now carries hue-fixed success and
+// against Text; theme's token set now carries hue-fixed success and
 // warning ramps, so the local palette and the light-mode sniff are both
 // gone.
 //
@@ -40,9 +40,9 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/prism/layout"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
-	"github.com/vibrantgio/spectrum/typeset"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // Variant selects the alert's semantic palette.
@@ -72,7 +72,7 @@ type Props struct {
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See spectrum/tokens.Typography.Shaper.
+	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 

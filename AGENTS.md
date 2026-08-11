@@ -6,10 +6,10 @@ shell, navbar, sidebar, table, tabs, pagination, modal, popover, tooltip,
 toast, alert, card, accordion, breadcrumb, hero, feature, pricing and
 testimonial.
 
-**Layer.** Tier 4 of ADR-001's stack, `mvu → spectrum → prism → pulse →
+**Layer.** Tier 4 of ADR-001's stack, `mvu → theme → prism → pulse →
 cadence → markdown`, alongside markdown: composed patterns, and the top of
 the design system proper. Its root module imports `mvu`, `prism`, `pulse`
-and `spectrum`, and reaches `font` and `svg` through them. No other
+and `theme`, and reaches `font` and `svg` through them. No other
 repository's root module imports it; outside the tier table it is imported
 by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`
 and `watchlist`. Both directions are measured rather than typed —

@@ -20,9 +20,9 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/popover"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
-	"github.com/vibrantgio/spectrum/typeset"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 const (
@@ -75,12 +75,12 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // the canvas cannot grow — the interaction tests below address the anchor by
 // hardcoded coordinates in this 320×240 frame.
 //
-// It draws through spectrum/typeset, like every other text site in this
+// It draws through theme/typeset, like every other text site in this
 // organization: a role's LineHeight is the CSS line box, and handing it to
 // gioui.org/widget.Label does not produce that box. This helper built the label
 // by hand until F5.6, which made the goldens record a layout no correct caller
 // produces — the one thing a golden must never do. See the repository
-// AGENTS.md and llms.txt "LINE HEIGHT NEEDS spectrum/typeset". A MaxLines:1
+// AGENTS.md and llms.txt "LINE HEIGHT NEEDS theme/typeset". A MaxLines:1
 // label is exactly the case widget.Label measures identically at every line
 // height, so this is where the difference is largest: the content is BodyMedium
 // and now stands in its declared 20 dp box rather than its 17 px of ink, and

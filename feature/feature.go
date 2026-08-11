@@ -33,9 +33,9 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/prism/layout"
-	"github.com/vibrantgio/spectrum/theme"
-	"github.com/vibrantgio/spectrum/tokens"
-	"github.com/vibrantgio/spectrum/typeset"
+	"github.com/vibrantgio/theme/theme"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // defaultColumns is the column count used when Props.Columns is zero.
@@ -73,7 +73,7 @@ type Props struct {
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See spectrum/tokens.Typography.Shaper.
+	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -269,7 +269,7 @@ func bodyWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Wi
 // textWidget renders a wrapped label in the supplied colour and text
 // style. The style's typeface, weight, size and line height are honoured;
 // a zero style weight falls back to fallbackWeight and a zero line height
-// stays at the shaper's default. Laid out through spectrum/typeset, so the
+// stays at the shaper's default. Laid out through theme/typeset, so the
 // role's line height is the height of each line box rather than a value
 // widget.Label would spend only on the gaps between wrapped lines.
 func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {

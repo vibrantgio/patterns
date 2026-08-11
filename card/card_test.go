@@ -15,8 +15,8 @@ import (
 
 	"github.com/vibrantgio/cadence/card"
 	"github.com/vibrantgio/prism/golden"
-	"github.com/vibrantgio/spectrum/tokens"
-	"github.com/vibrantgio/spectrum/typeset"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 const (
@@ -67,12 +67,12 @@ func defaultShaper(t *testing.T) *text.Shaper {
 //
 // ASCII only, per F4.2 — no symbol reaches a stored image.
 //
-// It draws through spectrum/typeset, like every other text site in this
+// It draws through theme/typeset, like every other text site in this
 // organization: a role's LineHeight is the CSS line box, and handing it to
 // gioui.org/widget.Label does not produce that box. This helper built the label
 // by hand until F5.6, which made the goldens record a layout no correct caller
 // produces — the one thing a golden must never do. See the repository
-// AGENTS.md and llms.txt "LINE HEIGHT NEEDS spectrum/typeset".
+// AGENTS.md and llms.txt "LINE HEIGHT NEEDS theme/typeset".
 func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLines int, s string) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		m := op.Record(gtx.Ops)
