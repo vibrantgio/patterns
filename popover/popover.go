@@ -1,4 +1,4 @@
-// Package popover provides the Cadence Popover pattern: an anchored
+// Package popover provides the Patterns Popover pattern: an anchored
 // elevated surface placed adjacent to a caller-supplied anchor widget,
 // with a small triangular tail glyph pointing at the anchor. Outside-
 // click dismissal and popover-vs-popover arbitration are frame state:

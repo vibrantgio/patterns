@@ -12,7 +12,7 @@ import (
 	"gioui.org/text"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/cadence/pagination"
+	"github.com/vibrantgio/patterns/pagination"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"

@@ -1,4 +1,4 @@
-// Package table provides the Cadence Table pattern: a sortable, filterable,
+// Package table provides the Patterns Table pattern: a sortable, filterable,
 // virtualised data table. Body rows are laid out only for the current
 // viewport (O(visible) per frame) via components/list, independent of how many
 // rows the Items observable carries.
@@ -13,7 +13,7 @@
 //
 // # Keyboard reach
 //
-// F4.7 checked this package for the gap it fixed in cadence/sidebar — a
+// F4.7 checked this package for the gap it fixed in patterns/sidebar — a
 // virtualised scroll region whose keyboard traversal was built on per-row
 // focus tags, so it could only ever reach the rows currently laid out — and
 // the answer is that the table has the same shape but not the same defect.

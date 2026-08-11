@@ -1,4 +1,4 @@
-// Command gallery shows the Cadence Modal in action, as a DECISION dialog —
+// Command gallery shows the Patterns Modal in action, as a DECISION dialog —
 // the archetype a "Confirm action" question belongs to. Props.Decision is what
 // says so, and everything else follows from it: no close X, an inert backdrop,
 // Escape bound to Cancel, Return to the default action. The footer Cancel/OK
@@ -16,7 +16,7 @@
 // of the same idea: OK is Filled, the one action the surface is about, and
 // Cancel is Tonal beside it.
 //
-// Run it from the root of the cadence repository:
+// Run it from the root of the patterns repository:
 //
 //	go run ./modal/gallery
 package main
@@ -40,7 +40,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/cadence/modal"
+	"github.com/vibrantgio/patterns/modal"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/mvu/stream"
 	"github.com/vibrantgio/theme/theme"
@@ -51,7 +51,7 @@ func main() {
 	go func() {
 		w := new(app.Window)
 		w.Option(
-			app.Title("Cadence — Modal (decision dialog)"),
+			app.Title("Patterns — Modal (decision dialog)"),
 			app.Size(unit.Dp(560), unit.Dp(440)),
 		)
 		if err := run(w); err != nil {

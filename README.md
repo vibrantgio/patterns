@@ -1,8 +1,8 @@
-# cadence
+# patterns
 
 The pattern layer of [Vibrant Gio](https://github.com/vibrantgio), a design
 system for native desktop applications on macOS, Windows and Linux, written in
-pure Go on [Gio](https://gioui.org). Where components gives you a button, cadence
+pure Go on [Gio](https://gioui.org). Where components gives you a button, patterns
 gives you the eighteen composed things an application is actually made of — an
 application shell, a navbar, a sidebar, a virtualised data table, a modal, a
 toast stack, a hero section.
@@ -65,19 +65,19 @@ couple of hundred lines, and the props struct is not trying to anticipate you.
 
 ## Where it sits
 
-Tier 4 of the stack — `mvu → theme → components → effects → cadence → markdown` —
-alongside [markdown](https://github.com/vibrantgio/markdown). cadence imports
+Tier 4 of the stack — `mvu → theme → components → effects → patterns → markdown` —
+alongside [markdown](https://github.com/vibrantgio/markdown). patterns imports
 `theme` and `tokens` from [theme](https://github.com/vibrantgio/theme),
 `button`, `coordination`, `icon`, `layout` and `list` from
 [components](https://github.com/vibrantgio/components), plus `depth` and `tween` from
 [effects](https://github.com/vibrantgio/effects); [mvu](https://github.com/vibrantgio/mvu)
 it uses only indirectly, through those. Nothing inside the design system
-imports cadence — the [workbench](https://github.com/vibrantgio/workbench)
+imports patterns — the [workbench](https://github.com/vibrantgio/workbench)
 applications are its consumers. The
 [organization page](https://github.com/vibrantgio) has the full tier table.
 
 ```sh
-go get github.com/vibrantgio/cadence
+go get github.com/vibrantgio/patterns
 ```
 
 Every module in the organization is on gioui.org v0.10.1,

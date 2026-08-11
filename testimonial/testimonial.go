@@ -1,4 +1,4 @@
-// Package testimonial provides the Cadence Testimonial pattern: a single
+// Package testimonial provides the Patterns Testimonial pattern: a single
 // centered card or a horizontal row of cards quoting a named author,
 // suitable for a marketing or onboarding "social proof" section.
 //

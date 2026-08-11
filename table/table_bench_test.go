@@ -11,7 +11,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
-	"github.com/vibrantgio/cadence/table"
+	"github.com/vibrantgio/patterns/table"
 	"github.com/vibrantgio/theme/tokens"
 )
 

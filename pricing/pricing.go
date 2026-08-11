@@ -1,4 +1,4 @@
-// Package pricing provides the Cadence Pricing pattern: a horizontal row
+// Package pricing provides the Patterns Pricing pattern: a horizontal row
 // of tier cards with an optional emphasised tier, suitable for a
 // marketing landing or onboarding screen.
 //

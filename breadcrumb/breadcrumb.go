@@ -1,4 +1,4 @@
-// Package breadcrumb provides the Cadence Breadcrumb pattern: a horizontal
+// Package breadcrumb provides the Patterns Breadcrumb pattern: a horizontal
 // row of labels separated by chevron glyphs that indicate hierarchical
 // location. The last segment renders in Text (the current location);
 // preceding segments render in the low-contrast neutral-700 step and may

@@ -1,4 +1,4 @@
-// Package shell provides the Cadence Shell pattern: a top-level
+// Package shell provides the Patterns Shell pattern: a top-level
 // application layout. Four variants are offered via Props.Layout —
 // SidebarHeaderMain composes a leading sidebar, a top navbar, and a
 // main content slot; SplitPane composes two slots separated by a
@@ -14,7 +14,7 @@
 // your own app and modify as needed.
 //
 // The Sidebar slot accepts any rx.Observable[layout.Widget], so callers
-// can supply a cadence/sidebar instance, a cadence/accordion-based
+// can supply a patterns/sidebar instance, a patterns/accordion-based
 // column, or any other pre-built widget stream. The static Render path
 // accepts a pre-built layout.Widget for the sidebar slot; Props.Sidebar
 // is not consulted by Render.
@@ -34,7 +34,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/cadence/navbar"
+	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -79,7 +79,7 @@ type Props struct {
 	//
 	// Sidebar is the pre-built sidebar widget stream. Any
 	// rx.Observable[layout.Widget] is accepted — pass sidebar.Sidebar(th,
-	// sidebarProps) for the default cadence/sidebar, or any other widget
+	// sidebarProps) for the default patterns/sidebar, or any other widget
 	// stream. A nil Sidebar renders an empty leading column.
 	Sidebar rx.Observable[layout.Widget]
 	Navbar  navbar.Props
@@ -179,7 +179,7 @@ const (
 // navbarHeight returns the navbar slot's pinned height for a density:
 // ControlHeight + 2·PaddingY — a bar wrapping ControlHeight controls with
 // the density's vertical control padding as breathing room (52 dp
-// Comfortable, 40 dp Compact; E1.4). cadence/navbar insets its content by
+// Comfortable, 40 dp Compact; E1.4). patterns/navbar insets its content by
 // the same PaddingY, so a components/button action fills the slot exactly. The
 // pre-density 64 dp pin was sized around the 44 dp hit-target-era navbar
 // content, not a bar rule.

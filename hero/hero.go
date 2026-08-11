@@ -1,4 +1,4 @@
-// Package hero provides the Cadence Hero pattern: a marketing landing
+// Package hero provides the Patterns Hero pattern: a marketing landing
 // block with an optional eyebrow tag, a display Title, a Subtitle, an
 // optional Visual slot, and an optional dual call-to-action pair.
 //

@@ -1,4 +1,4 @@
-// Package feature provides the Cadence Feature pattern: an icon-title-body
+// Package feature provides the Patterns Feature pattern: an icon-title-body
 // grid laid out as `Columns × N`, suitable for a marketing or onboarding
 // "features" section.
 //

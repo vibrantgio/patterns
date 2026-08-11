@@ -1,4 +1,4 @@
-// Package alert provides the Cadence Alert pattern: a tinted-Surface
+// Package alert provides the Patterns Alert pattern: a tinted-Surface
 // rounded banner with a leading variant icon, a Title, and an arbitrary
 // Body widget. Variants are Info, Success, Warning, and Error.
 //

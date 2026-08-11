@@ -1,4 +1,4 @@
-module github.com/vibrantgio/cadence
+module github.com/vibrantgio/patterns
 
 go 1.25.1
 

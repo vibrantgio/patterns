@@ -1,4 +1,4 @@
-// Package accordion provides the Cadence Accordion pattern: a vertical
+// Package accordion provides the Patterns Accordion pattern: a vertical
 // stack of collapsible Section groups. Each Section has a Title header
 // row with a chevron rotated per open state, and an optional Body widget
 // shown beneath the header when the Section is open. When SingleOpen is
@@ -15,8 +15,8 @@
 // components/button for header rows, but a Button renders with a Primary
 // background fill, 6 dp corner radius, and 44 dp minimum height — none
 // of which fit a full-width accordion header. The headers here use the
-// same widget.Clickable + custom rendering pattern as cadence/navbar,
-// cadence/sidebar, and cadence/tabs, which faced the same mismatch.
+// same widget.Clickable + custom rendering pattern as patterns/navbar,
+// patterns/sidebar, and patterns/tabs, which faced the same mismatch.
 package accordion
 
 import (

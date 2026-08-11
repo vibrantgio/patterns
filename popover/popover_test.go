@@ -18,7 +18,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/cadence/popover"
+	"github.com/vibrantgio/patterns/popover"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"

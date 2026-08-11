@@ -1,4 +1,4 @@
-// Package toast provides the Cadence Toast pattern: a position-anchored
+// Package toast provides the Patterns Toast pattern: a position-anchored
 // column of transient notifications. A toast request is an event, so it
 // becomes a message: widget code calls [Notify], which lands a [Requested]
 // on the frame's ops queue, the application's Update reduces it onto a
@@ -629,7 +629,7 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 }
 
 // accentColor maps Level to its pinned token role — mirroring
-// cadence/alert. All four read a role off the token set, so all four flip
+// patterns/alert. All four read a role off the token set, so all four flip
 // with light/dark and follow whatever seed, palette or high-contrast
 // variant the theme is emitting. Until F4.6 Success and Warning were
 // Tailwind green and amber literals, duplicated byte-for-byte between this

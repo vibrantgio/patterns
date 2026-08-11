@@ -1,4 +1,4 @@
-// Package modal provides the Cadence Modal pattern: a centered elevated
+// Package modal provides the Patterns Modal pattern: a centered elevated
 // surface dialog over a full-window scrim backdrop, with a header (title +
 // close affordance), padded body, and optional footer action row.
 //

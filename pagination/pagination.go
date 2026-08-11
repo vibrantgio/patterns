@@ -1,4 +1,4 @@
-// Package pagination provides the Cadence Pagination pattern: a horizontal
+// Package pagination provides the Patterns Pagination pattern: a horizontal
 // row of numbered page buttons flanked by prev/next chevrons. The current
 // page button is highlighted via Primary/OnPrimary; the other page buttons
 // use a neutral tinted-fill pair (neutral 300 fill, neutral 700 label) so

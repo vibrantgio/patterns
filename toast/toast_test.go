@@ -10,7 +10,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 
-	"github.com/vibrantgio/cadence/toast"
+	"github.com/vibrantgio/patterns/toast"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/tokens"
 )

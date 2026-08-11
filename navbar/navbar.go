@@ -1,4 +1,4 @@
-// Package navbar provides the Cadence Navbar pattern: a horizontal
+// Package navbar provides the Patterns Navbar pattern: a horizontal
 // Surface bar with three slots — a leading Brand, a centred row of
 // Links, and trailing Actions. The active link is marked with a
 // Primary-coloured underline.
@@ -23,7 +23,7 @@
 // bar too narrow for its own contents clips rather than wrapping or
 // collapsing to a menu affordance. The bar also fills the height it is
 // given — it reports gtx.Constraints.Max — so it needs a
-// height-constrained slot; cadence/shell pins it to the density's bar
+// height-constrained slot; patterns/shell pins it to the density's bar
 // height (ControlHeight + 2·PaddingY — 52 dp Comfortable, 40 dp Compact)
 // for you. The bar's own vertical inset is Density.PaddingY, so a
 // ControlHeight action (a components/button) fills a density-pinned slot

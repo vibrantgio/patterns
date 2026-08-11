@@ -1,4 +1,4 @@
-// Package card provides the Cadence Card pattern: a rounded surface
+// Package card provides the Patterns Card pattern: a rounded surface
 // container with optional Header / Body / Footer slots, in either an
 // outlined or elevated variant.
 //

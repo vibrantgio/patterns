@@ -1,4 +1,4 @@
-// Package sidebar provides the Cadence Sidebar pattern: a collapsible
+// Package sidebar provides the Patterns Sidebar pattern: a collapsible
 // vertical Surface column that swaps between an expanded width
 // (label+icon) and a collapsed width (icon-only) on demand. The active
 // Item is rendered on the Primary ramp's selected step (ADR-007's
@@ -31,7 +31,7 @@
 // components/list scroll region filling the column below the toggle (FX.6):
 // a list longer than the column is tall scrolls by wheel or touch
 // instead of painting past the bottom edge. No scrollbar is drawn — the
-// bare list.Layout, the same idiom cadence/table's body uses. Items are
+// bare list.Layout, the same idiom patterns/table's body uses. Items are
 // stacked full-width rows, so each row's hit area stays the row bounds
 // (extending it to the 44 dp pointer floor would steal the neighbouring
 // row's slop).

@@ -1,4 +1,4 @@
-# AGENTS.md — cadence
+# AGENTS.md — patterns
 
 The pattern layer of the Vibrant Gio design system: eighteen composed
 application patterns assembled from components widgets and effects — shell,
@@ -6,7 +6,7 @@ navbar, sidebar, table, tabs, pagination, modal, popover, tooltip, toast,
 alert, card, accordion, breadcrumb, hero, feature, pricing and testimonial.
 
 **Layer.** Tier 4 of ADR-001's stack, `mvu → theme → components → effects →
-cadence → markdown`, alongside markdown: composed patterns, and the top of
+patterns → markdown`, alongside markdown: composed patterns, and the top of
 the design system proper. Its root module imports `components`, `effects`,
 `mvu` and `theme`, and reaches `font` and `svg` through them. No other
 repository's root module imports it; outside the tier table it is imported
@@ -24,7 +24,7 @@ and this file links it rather than copying it:
 
     https://raw.githubusercontent.com/vibrantgio/.github/master/llms.txt
 
-**Module.** `github.com/vibrantgio/cadence`, one module at the repository
+**Module.** `github.com/vibrantgio/patterns`, one module at the repository
 root.
 
 **Build and test.** From the repository root:
@@ -57,7 +57,7 @@ runner has no GL driver for it to open — so the pixels and the build status
 are independent facts. The `build` job's *Were the golden images compared,
 or skipped?* step, added by F5.4, publishes which of the two happened as a
 workflow annotation, readable without a token at `GET
-/repos/vibrantgio/cadence/commits/<sha>/check-runs`; it has answered
+/repos/vibrantgio/patterns/commits/<sha>/check-runs`; it has answered
 SKIPPED on every run. F5.7 then measured the alternative rather than
 leaving it as an open question. Adding the drivers gio's own Linux CI
 installs — `libegl1`, `libegl-mesa0`, `libglx-mesa0`, `libgl1-mesa-dri`,

@@ -1,4 +1,4 @@
-// Package tooltip provides the Cadence Tooltip pattern: a small hover/
+// Package tooltip provides the Patterns Tooltip pattern: a small hover/
 // focus annotation rendered adjacent to a caller-supplied trigger after
 // a short delay. Hover or focus exit hides the tooltip; showing another
 // tooltip hides the previous one so only one tooltip is visible across the

@@ -1,4 +1,4 @@
-// Package tabs provides the Cadence Tabs pattern: a horizontal tab
+// Package tabs provides the Patterns Tabs pattern: a horizontal tab
 // strip with a Primary-coloured underline on the selected tab, plus
 // a content panel rendered below that shows the selected tab's content.
 //
@@ -11,7 +11,7 @@
 // components/button for tab labels, but a Button renders with a Primary
 // background fill, 6 dp corner radius, and a control-height minimum —
 // none of which fit a tab strip. The labels here use the same
-// widget.Clickable + custom label rendering pattern as cadence/navbar,
+// widget.Clickable + custom label rendering pattern as patterns/navbar,
 // which faced the same mismatch.
 package tabs
 
