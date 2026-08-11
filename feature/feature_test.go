@@ -12,7 +12,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/cadence/feature"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/tokens"
 )
 
@@ -177,7 +177,7 @@ func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 // any LineHeight. That made a wrapped run the only place the property was
 // observable at all, and this was the only golden that had one. F4.4c built
 // theme/typeset to correct it and F4.4d put every cadence label on it, so
-// the property now moves single-line controls too and a dozen goldens in prism
+// the property now moves single-line controls too and a dozen goldens in components
 // pin it.
 //
 // What is left is still worth a golden, and it says more than it did. typeset

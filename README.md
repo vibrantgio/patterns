@@ -2,7 +2,7 @@
 
 The pattern layer of [Vibrant Gio](https://github.com/vibrantgio), a design
 system for native desktop applications on macOS, Windows and Linux, written in
-pure Go on [Gio](https://gioui.org). Where prism gives you a button, cadence
+pure Go on [Gio](https://gioui.org). Where components gives you a button, cadence
 gives you the eighteen composed things an application is actually made of — an
 application shell, a navbar, a sidebar, a virtualised data table, a modal, a
 toast stack, a hero section.
@@ -65,11 +65,11 @@ couple of hundred lines, and the props struct is not trying to anticipate you.
 
 ## Where it sits
 
-Tier 4 of the stack — `mvu → theme → prism → pulse → cadence → markdown` —
+Tier 4 of the stack — `mvu → theme → components → pulse → cadence → markdown` —
 alongside [markdown](https://github.com/vibrantgio/markdown). cadence imports
 `theme` and `tokens` from [theme](https://github.com/vibrantgio/theme),
 `button`, `coordination`, `icon`, `layout` and `list` from
-[prism](https://github.com/vibrantgio/prism), plus `depth` and `tween` from
+[components](https://github.com/vibrantgio/components), plus `depth` and `tween` from
 [pulse](https://github.com/vibrantgio/pulse); [mvu](https://github.com/vibrantgio/mvu)
 it uses only indirectly, through those. Nothing inside the design system
 imports cadence — the [workbench](https://github.com/vibrantgio/workbench)
@@ -99,7 +99,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 
 | Package | |
 | --- | --- |
-| `table` | The sortable, virtualised data table, built on `prism/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces intent through `OnSort`. Row heights follow the theme's density. |
+| `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces intent through `OnSort`. Row heights follow the theme's density. |
 | `pagination` | A row of numbered page buttons flanked by prev/next chevrons, the current page highlighted Primary/OnPrimary. |
 | `card` | A rounded surface with optional Header / Body / Footer slots, in an outlined (1 dp stroke on the level-1 surface) or elevated variant — the latter a level-2 tonal fill. A card is raised in place, not floating, so neither variant casts a shadow (ADR-005; E2.2 retired the elevated card's `pulse/depth` call). |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
@@ -183,7 +183,7 @@ tableObs := table.Table(th, table.Props[symbolRow]{
 `Cell` is called fresh for every visible row on every frame, so the table holds
 no per-row state. Anything stateful in a cell — a checkbox, an editor, a
 per-row confirm popover — is kept alive by the consumer through
-`prism/keyed.Defer`, which returns the same pointer for the same row key across
+`components/keyed.Defer`, which returns the same pointer for the same row key across
 sort, filter and pagination:
 
 ```go

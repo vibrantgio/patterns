@@ -11,7 +11,7 @@
 // subscribed to.
 //
 // The package follows the Phase 4 Composition contract: Tooltip is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //

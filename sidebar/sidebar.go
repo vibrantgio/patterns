@@ -5,7 +5,7 @@
 // two-step walk past the Surface ground).
 //
 // The package follows the Phase 4 Composition contract: Sidebar is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short — copy it into
 // your own app and modify as needed.
 //
@@ -28,7 +28,7 @@
 //
 // Items are stacked at the density's row pitch — exactly
 // Density.ControlHeight (E1.4; 36 dp Comfortable, 28 dp Compact) — in a
-// prism/list scroll region filling the column below the toggle (FX.6):
+// components/list scroll region filling the column below the toggle (FX.6):
 // a list longer than the column is tall scrolls by wheel or touch
 // instead of painting past the bottom edge. No scrollbar is drawn — the
 // bare list.Layout, the same idiom cadence/table's body uses. Items are
@@ -37,7 +37,7 @@
 // row's slop).
 //
 // The whole rail is one keyboard stop, and the stop is the scroll region
-// itself (prism/list's [list.State.Focus]) rather than any row. Arrow-Up
+// itself (components/list's [list.State.Focus]) rather than any row. Arrow-Up
 // and Arrow-Down move a selection, Home and End reach the first and last
 // item, the list scrolls whatever is selected into view, and Enter or
 // Space activates it by calling that Item's OnClick. Items without an
@@ -55,7 +55,7 @@
 //
 // The collapse affordance registers no focus tag either — it answers
 // pointer clicks only — so the rail's single stop stays the item list.
-// Its glyph is a placeholder filled square until prism/icon lands.
+// Its glyph is a placeholder filled square until components/icon lands.
 //
 // Item.Active seeds the selection rather than competing with it: the
 // highlighted row is always the list's selection, which starts at the
@@ -80,7 +80,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/list"
+	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -302,7 +302,7 @@ func processInput(gtx layout.Context, props Props, st *liveState) {
 	}
 
 	// Enter/Space on the list activates the selected item. Traversal itself
-	// (Arrow-Up/Down, Home/End) is prism/list's, drained inside
+	// (Arrow-Up/Down, Home/End) is components/list's, drained inside
 	// LayoutSelectable; activation is ours, because the list has no notion
 	// of what a row does.
 	tag := st.list.Focus()
@@ -379,7 +379,7 @@ func drawSidebar(
 	}
 	drawToggle(gtx, tt, image.Pt(w, toggleH), colors)
 
-	// Items below the toggle, in a prism/list scroll region filling the
+	// Items below the toggle, in a components/list scroll region filling the
 	// rest of the column (FX.6) — no scrollbar, like table's body:
 	// wheel/touch scrolling plus, since F4.7, the list's own keyboard
 	// traversal. Each row is a full-width row at the density's pitch (E1.4

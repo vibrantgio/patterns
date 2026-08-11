@@ -12,7 +12,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/cadence/hero"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/tokens"
 )
 
@@ -64,7 +64,7 @@ const (
 // 88 px is ellipsized, not grown into. "Read the docs" came out as
 // "Read the do…". That contradicts ctaIntrinsicWidth's own doc comment,
 // which promises "wider labels still grow the button"; the growth branch in
-// prism/button can never fire, because the label was already clamped to the
+// components/button can never fire, because the label was already clamped to the
 // width being compared against. These two labels fit, so the goldens record
 // the hero rather than the clamp.
 
@@ -197,7 +197,7 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 // TestLongCTALabelGrowsTheButton pins ctaIntrinsicWidth as a floor rather than
 // a cap, which is the third of the three false sizing claims F4.4/F4.4b found:
 // its own doc promised that "wider labels still grow the button", and the
-// clamp made that impossible. The cell pinned Max.X to 120 dp, prism/button
+// clamp made that impossible. The cell pinned Max.X to 120 dp, components/button
 // clamped its MaxLines:1 label to 120 − 2×PaddingX, and the growth branch then
 // compared the cell against a label already trimmed to fit inside it. "Read
 // the docs" drew as "Read the do…" and nothing in the suite noticed.

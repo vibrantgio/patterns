@@ -22,7 +22,7 @@ import (
 	"github.com/vibrantgio/cadence/navbar"
 	"github.com/vibrantgio/cadence/shell"
 	"github.com/vibrantgio/cadence/sidebar"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -170,7 +170,7 @@ func TestShellGolden(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring prism's
+// for golden determinism — the E1.4 injection idiom, mirroring components'
 // density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()

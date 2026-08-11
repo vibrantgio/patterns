@@ -5,7 +5,7 @@
 // invoke an OnClick callback to navigate.
 //
 // The package follows the Phase 4 Composition contract: Breadcrumb is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
@@ -40,7 +40,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	pllayout "github.com/vibrantgio/prism/layout"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -77,7 +77,7 @@ type Props struct {
 
 // Breadcrumb returns an rx.Observable[layout.Widget] that emits a new
 // widget whenever any consumed theme token changes. Click handlers fire
-// for any item whose OnClick is non-nil; mirror the prism/button
+// for any item whose OnClick is non-nil; mirror the components/button
 // interaction model (widget.Clickable + semantic ops) per segment.
 func Breadcrumb(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The

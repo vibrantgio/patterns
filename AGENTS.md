@@ -1,15 +1,15 @@
 # AGENTS.md — cadence
 
 The pattern layer of the Vibrant Gio design system: eighteen composed
-application patterns assembled from prism components and pulse effects —
+application patterns assembled from components widgets and pulse effects —
 shell, navbar, sidebar, table, tabs, pagination, modal, popover, tooltip,
 toast, alert, card, accordion, breadcrumb, hero, feature, pricing and
 testimonial.
 
-**Layer.** Tier 4 of ADR-001's stack, `mvu → theme → prism → pulse →
+**Layer.** Tier 4 of ADR-001's stack, `mvu → theme → components → pulse →
 cadence → markdown`, alongside markdown: composed patterns, and the top of
-the design system proper. Its root module imports `mvu`, `prism`, `pulse`
-and `theme`, and reaches `font` and `svg` through them. No other
+the design system proper. Its root module imports `components`, `mvu`,
+`pulse` and `theme`, and reaches `font` and `svg` through them. No other
 repository's root module imports it; outside the tier table it is imported
 by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`
 and `watchlist`. Both directions are measured rather than typed —
@@ -34,13 +34,13 @@ root.
 
 **Golden images.** Tests in 18 packages compare rendered output against
 PNGs committed under `testdata/golden/`. They render through
-`github.com/vibrantgio/prism/golden`, which declares `-golden.update` and
-is shared with `markdown`, `pulse` and `workbench`. Do not inline a copy of
-it, and do not declare a second `-golden.update`: two registrations of one
-flag name in a single test binary panic in `flag.Bool` at init, before any
-test runs. When a change legitimately moves pixels, regenerate them within
-the same change, look at what came out, and say so in the commit. From the
-repository root:
+`github.com/vibrantgio/components/golden`, which declares `-golden.update`
+and is shared with `markdown`, `pulse` and `workbench`. Do not inline a
+copy of it, and do not declare a second `-golden.update`: two registrations
+of one flag name in a single test binary panic in `flag.Bool` at init,
+before any test runs. When a change legitimately moves pixels, regenerate
+them within the same change, look at what came out, and say so in the
+commit. From the repository root:
 
     go test ./accordion ./alert ./breadcrumb ./card ./feature ./hero ./modal ./navbar ./pagination ./popover ./pricing ./shell ./sidebar ./table ./tabs ./testimonial ./toast ./tooltip -golden.update
 

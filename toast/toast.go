@@ -36,7 +36,7 @@
 // could have delivered anything was another process-global. See Notify.
 //
 // The package follows the Phase 4 Composition contract: Stack is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
@@ -135,12 +135,12 @@ type Expired struct{ ID int64 }
 
 // Notify asks for a toast from inside a frame. It lands a Requested on the
 // frame's ops queue, stamped with the frame's own clock, and the
-// application's Update queues it — the same path prism/button's OnClick
+// application's Update queues it — the same path components/button's OnClick
 // messages take.
 //
 // The message is collected off gtx.Ops, and mvu's collector is keyed on the
 // exact buffer the frame is being recorded into: a call made from a widget
-// recording somewhere else — inside a prism/cache.FrameCache body, most of
+// recording somewhere else — inside a components/cache.FrameCache body, most of
 // all — is dropped silently. Emit from the widget that owns gtx.Ops.
 //
 // This replaces the pre-G0C.3 Notify(level, text), which published to a

@@ -23,8 +23,8 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/modal"
-	"github.com/vibrantgio/prism/button"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/button"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -174,7 +174,7 @@ func TestModalOpenAndClosedDiffer(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring prism's
+// for golden determinism — the E1.4 injection idiom, mirroring components'
 // density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
@@ -186,7 +186,7 @@ func densityTheme(d tokens.Density) theme.Theme {
 // TestModalCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline. The modal itself is a surface — its inset
 // and gaps stay on the spacing scale (E1.4 verdict) — but its close
-// affordance is a live prism/button, which densifies to a 28 dp square
+// affordance is a live components/button, which densifies to a 28 dp square
 // through its own theme subscription; that shrinking button is what this
 // golden pins down.
 func TestModalCompactGolden(t *testing.T) {
@@ -238,7 +238,7 @@ func liveModal(t *testing.T, props modal.Props) layout.Widget {
 	return w
 }
 
-// liveButtonAction subscribes to a labelled prism/button keyed to a caller-owned
+// liveButtonAction subscribes to a labelled components/button keyed to a caller-owned
 // clickable and returns its latest emitted widget. The caller passes &clk in
 // Props.ActionFocusTags so the button joins the modal's Tab cycle while owning
 // its own focus tag and ring.
@@ -306,7 +306,7 @@ func TestEscapeInvokesOnClose(t *testing.T) {
 }
 
 // TestCloseButtonActivatesOnClose verifies the close affordance — now a
-// prism/button keyed to &st.closeClick — invokes OnClose when activated by
+// components/button keyed to &st.closeClick — invokes OnClose when activated by
 // keyboard while focused. The button drains its own Clicked() and routes
 // through Props.OnClick; the modal no longer checks Clicked itself, so this
 // is the only guard against the close button silently doing nothing.
@@ -388,7 +388,7 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 // modal focus tags and does not advance focus to a background-registered
 // focusable, no matter how many times Tab is pressed.
 func TestTabTrapsFocusWithinModal(t *testing.T) {
-	// Two prism/button footer actions plus the implicit close button → three
+	// Two components/button footer actions plus the implicit close button → three
 	// modal tags. The actions own their clickables; those are the action focus
 	// tags (route (a)), so the modal cycles among all three without wrapping.
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
@@ -507,7 +507,7 @@ func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
 
 // ---- GX.5: footer actions own their own focus tags ----
 
-// TestActionOwnsFocusTag confirms route (a): a prism/button action joins the
+// TestActionOwnsFocusTag confirms route (a): a components/button action joins the
 // Tab cycle via its own caller-owned clickable. After tabbing off the close
 // button, the action's &clickable — not a modal-interposed tag — holds focus,
 // which is what makes the button draw its own (single) focus ring.
@@ -537,12 +537,12 @@ func TestActionOwnsFocusTag(t *testing.T) {
 		Source:      r.Source(),
 	}
 	if !gtx.Focused(&clk) {
-		t.Error("after Tab from the close button, the prism/button action's own clickable must hold focus (route (a)); the modal must not interpose its own action tag")
+		t.Error("after Tab from the close button, the components/button action's own clickable must hold focus (route (a)); the modal must not interpose its own action tag")
 	}
 }
 
 // TestActionFocusRingNotDoubled confirms the modal draws no focus ring around a
-// focused action — so a prism/button action shows only its own ring, never a
+// focused action — so a components/button action shows only its own ring, never a
 // doubled outer one. Two blank actions reserve space and register a focus tag
 // but paint nothing. If the modal drew a ring around the focused action it would
 // land at the first action's x when that one is focused and at the second's x

@@ -1,6 +1,6 @@
 // Package table provides the Cadence Table pattern: a sortable, filterable,
 // virtualised data table. Body rows are laid out only for the current
-// viewport (O(visible) per frame) via prism/list, independent of how many
+// viewport (O(visible) per frame) via components/list, independent of how many
 // rows the Items observable carries.
 //
 // Sort and filter are external transforms. The Items observable emits
@@ -17,7 +17,7 @@
 // virtualised scroll region whose keyboard traversal was built on per-row
 // focus tags, so it could only ever reach the rows currently laid out — and
 // the answer is that the table has the same shape but not the same defect.
-// The body is virtualised through prism/list, so the precondition holds; what
+// The body is virtualised through components/list, so the precondition holds; what
 // is missing is the traversal. Body rows are not interactive at all: they
 // register no focus tag, no click and no selection, and the only keyboard
 // reach in the table is Tab onto a sortable header cell. Nothing is
@@ -25,12 +25,12 @@
 //
 // So this is a latent version of the same problem rather than a live one, and
 // the instruction it leaves is for whoever adds row selection: take it from
-// prism/list's LayoutSelectable, which moves an index over every row, and not
+// components/list's LayoutSelectable, which moves an index over every row, and not
 // from a focus tag per row, which cannot exist for a row the frame skipped.
 // The list.State this package already holds is where that selection lives.
 //
 // Per-row widget state (editors, checkboxes, expanders) is preserved across
-// sort/filter by wiring prism/keyed.Defer into a Column's Cell closure: the
+// sort/filter by wiring components/keyed.Defer into a Column's Cell closure: the
 // consumer captures a *keyed.Deferred[K, *WidgetState] in the rx.Defer scope
 // holding the Items observable, and returns the same widget pointer for the
 // same row key on every emission. The table itself stores no per-row state
@@ -54,7 +54,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/list"
+	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -119,7 +119,7 @@ type Props[T any] struct {
 // Layout-affecting constants. Row and header heights come from the
 // density (E1.4): both are exactly Density.ControlHeight — the E1.3 row
 // rule (list.RowHeight) — so the body's vertical extent stays
-// deterministic and the prism/list viewport can serve constant-time
+// deterministic and the components/list viewport can serve constant-time
 // look-aheads. The header's old fixed 44 dp was the WCAG hit-target
 // floor, not a row height; sortable header cells tile the header band
 // edge to edge (like stacked rows, extending their pointer area would
@@ -143,7 +143,7 @@ type resolvedTokens struct {
 
 // Table returns an rx.Observable[layout.Widget] that emits a new widget
 // whenever a consumed theme token, Items, or Sort changes. Header clicks
-// invoke OnSort; the body is laid out via prism/list.Layout so per-frame
+// invoke OnSort; the body is laid out via components/list.Layout so per-frame
 // cost is O(visible-rows), not O(len(items)).
 func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[layout.Widget] {
 	items := props.Items
@@ -243,7 +243,7 @@ func processHeaderClicks[T any](
 
 // drawTable renders the full table: header row + virtualised body. Width
 // is partitioned across columns once per frame (O(cols), independent of
-// row count); the body is laid out via prism/list so only viewport-
+// row count); the body is laid out via components/list so only viewport-
 // visible rows incur per-row cost.
 func drawTable[T any](
 	gtx layout.Context,

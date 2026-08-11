@@ -19,7 +19,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/tabs"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -251,7 +251,7 @@ func equalInts(a, b []int) bool {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring prism's
+// for golden determinism — the E1.4 injection idiom, mirroring components'
 // density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()

@@ -12,7 +12,7 @@
 // shadows for surfaces that float and can leave without a scrim.
 //
 // The package follows the Phase 4 Composition contract: Modal is a callable
-// Go function consuming a Prism theme observable, returning a stream of
+// Go function consuming a components theme observable, returning a stream of
 // layout.Widget. The source is intentionally short and free of opaque
 // configuration — copy it into your own app and modify as needed.
 //
@@ -63,8 +63,8 @@
 // ADR-008 and arbitration.go.
 //
 // Focus ownership: the close affordance and each footer action own their own
-// focus tag and focus ring (the close button is a prism/button; actions
-// likewise register their own tags, e.g. a prism/button's caller-owned
+// focus tag and focus ring (the close button is a components/button; actions
+// likewise register their own tags, e.g. a components/button's caller-owned
 // *widget.Clickable). The modal does not wrap an action or draw a ring around
 // it — it only adds the caller-declared Props.ActionFocusTags to its Tab cycle
 // (route (a)), so a focused action shows exactly one ring: its own.
@@ -92,8 +92,8 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/button"
-	pllayout "github.com/vibrantgio/prism/layout"
+	"github.com/vibrantgio/components/button"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -157,7 +157,7 @@ func (i Intent) String() string {
 //
 // The callbacks here are the KEYBOARD bindings, not the footer. The footer is
 // still Props.Actions (with Props.ActionFocusTags), because an action's widget
-// is the caller's — a prism/button, a link, whatever the dialog needs. List
+// is the caller's — a components/button, a link, whatever the dialog needs. List
 // the same two actions in both places: Cancel and the primary, in that order,
 // right-aligned, the way both platforms order them.
 //
@@ -186,7 +186,7 @@ type Decision struct {
 	// Destructive marks Confirm as destroying something the user cannot get
 	// back: discarding edits, deleting a record, ending a session. It moves
 	// the Return binding to Cancel and nothing else — the footer's own
-	// colours are the caller's to choose (prism/button's emphasis axis, or a
+	// colours are the caller's to choose (components/button's emphasis axis, or a
 	// role colour).
 	Destructive bool
 
@@ -263,7 +263,7 @@ type Props struct {
 	// DynamicFocusTags, if non-nil, is called every frame and its tags join
 	// the Tab cycle after the close button and BEFORE ActionFocusTags. Use
 	// it for focusables whose tags change across the modal's lifetime —
-	// e.g. a prism TextField rebuilt per open (its editor tag, exposed via
+	// e.g. a components TextField rebuilt per open (its editor tag, exposed via
 	// TextFieldProps.FocusTag, is new each rebuild). The first tag in the
 	// cycle receives initial focus when the modal opens.
 	DynamicFocusTags func() []event.Tag
@@ -272,7 +272,7 @@ type Props struct {
 	// order they should join the modal's Tab cycle (after the close button).
 	//
 	// Footer actions own their own focus tags and focus ring — the modal does
-	// not wrap an action or draw a ring around it. A prism/button action, for
+	// not wrap an action or draw a ring around it. A components/button action, for
 	// example, is built with a caller-owned *widget.Clickable; passing that
 	// &clickable here adds it to the Tab cycle (and the Escape trap) with no
 	// doubled outer ring. A non-focusable action (plain widget) simply omits
@@ -374,7 +374,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		st := newState(props)
 
-		// The close affordance is a GHOST prism/button icon-only variant — a
+		// The close affordance is a GHOST components/button icon-only variant — a
 		// panel's X is present without being the subject, which is what the
 		// filled square it used to be got wrong: it out-weighed the title
 		// beside it. The modal owns its clickable (&st.closeClick) so the
@@ -431,7 +431,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // and line height all reach the shaper — and d is the density the close
 // button draws at. It is the one thing density sizes here: the surface
 // itself is content-sized, and the close affordance is an icon-only
-// prism/button, which takes a density and no text style at all. Pass
+// components/button, which takes a density and no text style at all. Pass
 // tokens.DefaultTypography.TitleMedium and tokens.Comfortable for the
 // default desktop look. On a decision dialog there is no close affordance to
 // size: the intent removes it, here as on the live path, so the two render
@@ -478,7 +478,7 @@ type modalState struct {
 	wantInitialFocus bool
 
 	// Stable tags so the router can route events across frames. The close
-	// button's clickable doubles as its focus tag (driven by prism/button).
+	// button's clickable doubles as its focus tag (driven by components/button).
 	// Footer actions own their own focus tags (Props.ActionFocusTags); the
 	// modal holds none on their behalf.
 	scrimTag   int
@@ -668,7 +668,7 @@ func drawSurfaceContents(
 }
 
 // headerWidget renders the title (drawn only when non-empty) on the left and
-// the close affordance — a prism/button icon variant, built upstream and
+// the close affordance — a components/button icon variant, built upstream and
 // threaded in as closeWidget — on the right. The button owns its own focus
 // ring and click handling; the header only positions it.
 func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWidget layout.Widget) layout.Widget {
@@ -746,7 +746,7 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 // OnClose, tab/shift-tab → cycle focus among the registered modal tags.
 func processInput(gtx layout.Context, props Props, st *modalState) {
 	// Drain FocusFilter events for each focus tag so the router retains focus
-	// when set, mirroring prism/layout.FocusGroup.Update.
+	// when set, mirroring components/layout.FocusGroup.Update.
 	tags := focusTags(props, st)
 	for _, tag := range tags {
 		for {
@@ -790,7 +790,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 		}
 	}
 
-	// The close button is a prism/button instance: it drains its own
+	// The close button is a components/button instance: it drains its own
 	// Clicked() and invokes props.OnClose via Props.OnClick. The modal must
 	// NOT also check st.closeClick.Clicked here — the button has already
 	// consumed the event, so this check would always be false.

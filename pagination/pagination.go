@@ -5,18 +5,18 @@
 // they remain visually distinct from the active page.
 //
 // Page cells are drawn natively (E1.4). They previously bridged through
-// prism/button.Render, but that static bridge's frozen signature renders
+// components/button.Render, but that static bridge's frozen signature renders
 // at tokens.Comfortable — inside a density-sized ControlHeight square its
 // Comfortable PaddingX (16 dp) truncated the page digit to a sliver, and
 // nothing was gained: the bridge only ever drew the normal state (no
 // hover/press/focus visuals reached it). Drawing the cell here — the same
 // Primary/neutral fill, radius.Md corners, centred digit — keeps the
-// visuals aligned with prism/button while letting every metric follow the
-// density. The trade-off, accepted deliberately: future prism/button
+// visuals aligned with components/button while letting every metric follow the
+// density. The trade-off, accepted deliberately: future components/button
 // styling changes must be mirrored here by hand.
 //
 // The package follows the Phase 4 Composition contract: Pagination is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
@@ -43,8 +43,8 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/icon"
-	pllayout "github.com/vibrantgio/prism/layout"
+	"github.com/vibrantgio/components/icon"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -175,7 +175,7 @@ type resolvedTokens struct {
 // around the 44 dp pointer floor, which is a hit metric, not a control
 // height; the digit centres in the square like an icon-button glyph). The
 // chevron glyph takes the icon rule, icon.Size(d) = ControlHeight −
-// 2·PaddingY (20/16 dp), matching prism icon buttons. Cells are adjacent
+// 2·PaddingY (20/16 dp), matching components icon buttons. Cells are adjacent
 // controls separated by S2 gaps, so their hit area stays the cell bounds
 // (extending to the 44 dp pointer floor would overlap the neighbouring
 // cell's slop — the E1.3 stacked/tiled-controls precedent).
@@ -215,9 +215,9 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 }
 
 // pageCellWidget returns a clickable ControlHeight-square cell rendering
-// page n natively (see the package doc for why the prism/button.Render
+// page n natively (see the package doc for why the components/button.Render
 // bridge was dropped in E1.4). The current page uses the real
-// Primary/OnPrimary pair — prism/button's normal-state colours — and
+// Primary/OnPrimary pair — components/button's normal-state colours — and
 // other pages a neutral tinted fill (step 300) with low-contrast text
 // (step 700), so they remain visually distinct from both the active page
 // and the surrounding surface.
@@ -248,7 +248,7 @@ func pageCellWidget(shaper *text.Shaper, n int, current bool, click *widget.Clic
 }
 
 // drawPageCell paints one page-number cell: a side×side rounded square
-// (radius.Md, prism/button's corner) filled with bg, the digit shaped in
+// (radius.Md, components/button's corner) filled with bg, the digit shaped in
 // the LabelLarge role and centred. The digit is never truncated — the
 // square is the control, the digit its glyph, mirroring the icon-button
 // rule rather than the text-button padding rule.
@@ -294,7 +294,7 @@ func drawPageCell(gtx layout.Context, shaper *text.Shaper, label string, bg, fg 
 // glyph takes the icon rule, icon.Size(d). pointsRight selects
 // the "next" direction; otherwise the chevron points "prev". enabled=false
 // dims the glyph to tokens.DisabledOpacity and skips click registration —
-// matching the disabled-control convention used by prism/button.
+// matching the disabled-control convention used by components/button.
 func chevronCellWidget(pointsRight bool, click *widget.Clickable, enabled bool, tok resolvedTokens) layout.Widget {
 	fg := tok.color.Text
 	if !enabled {

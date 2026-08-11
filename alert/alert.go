@@ -3,13 +3,13 @@
 // Body widget. Variants are Info, Success, Warning, and Error.
 //
 // The package follows the Phase 4 Composition contract: Alert is a callable
-// Go function consuming a Prism theme observable, returning a stream of
+// Go function consuming a components theme observable, returning a stream of
 // layout.Widget. Source is intentionally short and free of opaque
 // configuration — copy it into your own app and modify as needed.
 //
 // One thing about the variants is worth knowing before you theme them: all
 // four draw the same right-pointing chevron glyph, differing only in
-// colour; the per-variant icon set arrives with prism/icon.
+// colour; the per-variant icon set arrives with components/icon.
 //
 // Each variant's accent is a pinned token role — Primary, Success, Warning
 // and Error — so a custom theme's colours reach all four. Until F4.6 the
@@ -39,7 +39,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	pllayout "github.com/vibrantgio/prism/layout"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -168,7 +168,7 @@ func drawAlert(gtx layout.Context, shaper *text.Shaper, props Props, colors toke
 
 // iconWidget renders the variant icon — a right-pointing filled chevron —
 // into a fixed sizeDp square. The richer per-variant icon set will arrive
-// once prism/icon lands; until then all variants share the chevron shape
+// once components/icon lands; until then all variants share the chevron shape
 // and differentiate by colour.
 func iconWidget(sizeDp float32, col color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {

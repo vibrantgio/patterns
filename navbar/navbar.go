@@ -4,7 +4,7 @@
 // Primary-coloured underline.
 //
 // The package follows the Phase 4 Composition contract: Navbar is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
@@ -26,7 +26,7 @@
 // height-constrained slot; cadence/shell pins it to the density's bar
 // height (ControlHeight + 2·PaddingY — 52 dp Comfortable, 40 dp Compact)
 // for you. The bar's own vertical inset is Density.PaddingY, so a
-// ControlHeight action (a prism/button) fills a density-pinned slot
+// ControlHeight action (a components/button) fills a density-pinned slot
 // exactly; the horizontal inset stays spacing S4.
 package navbar
 
@@ -45,7 +45,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	pllayout "github.com/vibrantgio/prism/layout"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -88,7 +88,7 @@ type Props struct {
 // Navbar returns an rx.Observable[layout.Widget] that emits a new
 // widget whenever any consumed theme token changes. Click handlers
 // fire for any Link whose OnClick is non-nil; interaction mirrors the
-// prism/button model (widget.Clickable + semantic ops) per link.
+// components/button model (widget.Clickable + semantic ops) per link.
 func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style and the

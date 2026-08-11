@@ -13,11 +13,11 @@
 // modal (level 2), which has a scrim, and the toast (level-2 base),
 // which keeps its cast shadow and accent outline, the popover's fill
 // plus its 1 dp Neutral step-500 stroke are its only separation cues,
-// so it takes the deepest tonal step. prism/input's dropdown menu, the
+// so it takes the deepest tonal step. components/input's dropdown menu, the
 // same overlay class, sits at the same level.
 //
 // The package follows the Phase 4 Composition contract: Popover is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //

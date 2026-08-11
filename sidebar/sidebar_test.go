@@ -19,7 +19,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/sidebar"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -202,7 +202,7 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 //   - Arrow-Up from item 1 moves it back to item 0,
 //   - Enter activates the selected item via its OnClick.
 //
-// Since F4.7 the selection lives in the prism/list scroll region and the
+// Since F4.7 the selection lives in the components/list scroll region and the
 // rail has one focus tag rather than one per row, so what the click at
 // the start seeds is the list's focus, not the row's.
 //
@@ -430,7 +430,7 @@ func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring prism's
+// for golden determinism — the E1.4 injection idiom, mirroring components'
 // density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()

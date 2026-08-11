@@ -3,12 +3,12 @@
 // a content panel rendered below that shows the selected tab's content.
 //
 // The package follows the Phase 4 Composition contract: Tabs is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
-// Note on prism/button: the implementation plan suggested reusing
-// prism/button for tab labels, but a Button renders with a Primary
+// Note on components/button: the implementation plan suggested reusing
+// components/button for tab labels, but a Button renders with a Primary
 // background fill, 6 dp corner radius, and a control-height minimum —
 // none of which fit a tab strip. The labels here use the same
 // widget.Clickable + custom label rendering pattern as cadence/navbar,

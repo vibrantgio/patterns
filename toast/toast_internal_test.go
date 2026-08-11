@@ -11,8 +11,8 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/mvu"
-	"github.com/vibrantgio/prism/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -312,7 +312,7 @@ func TestLifetimeOfPrefersTheToast(t *testing.T) {
 // TestNotifyOutsideAFrameIsHarmless documents the one thing no test in this
 // organization can assert: mvu's MessageOp collector is registered by
 // mvu.Window on the frame's own *op.Ops and is unreachable from outside mvu
-// (prism/input's textfield test says the same and uses OnChange as its
+// (components/input's textfield test says the same and uses OnChange as its
 // proxy). So this pins the failure mode instead — an Add against a buffer no
 // frame is collecting drops the message silently rather than panicking, which
 // is exactly the trap Notify's doc names.

@@ -2,7 +2,7 @@
 // the archetype a "Confirm action" question belongs to. Props.Decision is what
 // says so, and everything else follows from it: no close X, an inert backdrop,
 // Escape bound to Cancel, Return to the default action. The footer Cancel/OK
-// actions are prism/button instances that own their own focus ring; the modal
+// actions are components/button instances that own their own focus ring; the modal
 // sequences them into one Tab cycle (Cancel → OK → Cancel) via
 // Props.ActionFocusTags.
 //
@@ -41,8 +41,8 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/modal"
+	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/mvu/stream"
-	"github.com/vibrantgio/prism/button"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -92,12 +92,12 @@ func run(w *app.Window) error {
 	// may watch, carried by mvu/stream.Value rather than a bus. The seed is
 	// the part that matters here — a subscriber sees `false` the moment it
 	// subscribes, so the modal's CombineLatest fires on the first frame
-	// instead of waiting for an emission. prism/coordination is deprecated
+	// instead of waiting for an emission. components/coordination is deprecated
 	// and this demo was one of its last two users in the organization.
 	var openObs rx.Observable[bool]
 	d.openObserver, openObs = stream.Value(false)
 
-	// The trigger is itself a prism/button — dogfooding the same component the
+	// The trigger is itself a components/button — dogfooding the same component the
 	// modal's footer actions use.
 	var err error
 	d.openBtn, err = button.Button(th, button.Props{
@@ -121,7 +121,7 @@ func run(w *app.Window) error {
 		w.Invalidate()
 	}
 
-	// Footer actions are prism/buttons keyed to caller-owned clickables. Each
+	// Footer actions are components/buttons keyed to caller-owned clickables. Each
 	// draws its own focus ring; passing &clickable in ActionFocusTags adds it
 	// to the modal's Tab cycle with no doubled outer ring (GX.5).
 	cancelBtn, err := button.Button(th, button.Props{

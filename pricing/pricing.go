@@ -3,7 +3,7 @@
 // marketing landing or onboarding screen.
 //
 // The package follows the Phase 4 Composition contract: Pricing is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
@@ -13,7 +13,7 @@
 // (Highlighted tier only), the tier name in title typography, a price /
 // cadence pair in display typography with the cadence muted, a vertical
 // feature list with a leading checkmark glyph rendered from a clip.Path,
-// and a footer CTA button reusing prism/button's filled visual. The
+// and a footer CTA button reusing components/button's filled visual. The
 // Highlighted tier swaps the 1 dp strong border for a 2 dp Primary
 // border.
 //
@@ -39,8 +39,8 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/button"
-	pllayout "github.com/vibrantgio/prism/layout"
+	"github.com/vibrantgio/components/button"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -406,9 +406,9 @@ func checkmarkWidget(tok resolvedTokens) layout.Widget {
 	}
 }
 
-// ctaWidget renders the per-tier CTA as a prism/button filled visual,
+// ctaWidget renders the per-tier CTA as a components/button filled visual,
 // wrapped in widget.Clickable when a click target is provided. The
-// button fills the card's inner width (prism/button's intrinsic
+// button fills the card's inner width (components/button's intrinsic
 // "fill Max.X" sizing), giving the typical full-width pricing CTA.
 func ctaWidget(shaper *text.Shaper, cta *CTA, tok resolvedTokens, click *widget.Clickable) layout.Widget {
 	rendered := button.Render(shaper, cta.Label, tok.color, tok.spacing, tok.radius, tok.label, tok.density, button.RenderState{})

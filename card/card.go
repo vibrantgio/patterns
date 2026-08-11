@@ -13,7 +13,7 @@
 // (toasts, menus), which a card is not.
 //
 // The package follows the Phase 4 Composition contract: Card is a callable
-// Go function consuming a Prism theme observable, returning a stream of
+// Go function consuming a components theme observable, returning a stream of
 // layout.Widget. The source is intentionally short and free of opaque
 // configuration — copy it into your own app and modify as needed.
 //
@@ -39,7 +39,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	pllayout "github.com/vibrantgio/prism/layout"
+	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )

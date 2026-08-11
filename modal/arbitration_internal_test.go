@@ -166,7 +166,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 	}
 
 	var outerClosed, innerClosed int
-	// HideClose keeps the header free of a live prism/button: this test is
+	// HideClose keeps the header free of a live components/button: this test is
 	// about the scrim absorber, and a panel's backdrop is the dismissing one.
 	outerProps := Props{Arbiter: arb, HideClose: true, OnClose: func(layout.Context) { outerClosed++ }}
 	innerProps := Props{Arbiter: arb, HideClose: true, OnClose: func(layout.Context) { innerClosed++ }}

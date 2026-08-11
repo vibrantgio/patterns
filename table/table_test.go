@@ -19,7 +19,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/cadence/table"
-	"github.com/vibrantgio/prism/golden"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -70,7 +70,7 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 }
 
 // TestRowFnCalledOnlyForVisibleItems is the direct counter-based proof
-// that the table delegates body iteration to prism/list and therefore
+// that the table delegates body iteration to components/list and therefore
 // only invokes each Column.Cell for viewport-visible rows. With a 360 px
 // body height and 36 dp row height we expect ~9 visible rows; the safe
 // upper bound for a 10 000-row dataset is well under 50 — anything
@@ -183,7 +183,7 @@ func TestNilItemsObservableRenders(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring prism's
+// for golden determinism — the E1.4 injection idiom, mirroring components'
 // density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()

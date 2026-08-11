@@ -16,7 +16,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/prism/button"
+	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -29,7 +29,7 @@ import (
 func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 
-	// Two prism/button actions, each keyed to its own caller-owned clickable.
+	// Two components/button actions, each keyed to its own caller-owned clickable.
 	// Those clickables are the action focus tags (route (a)); the modal owns
 	// none on their behalf, so they must register themselves — which the live
 	// button does — to be focusable.

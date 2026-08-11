@@ -9,7 +9,7 @@
 // sections — the marketing-page shell.
 //
 // Shell follows the Phase 4 Composition contract: it is a callable
-// Go function consuming a Prism theme observable, returning a stream
+// Go function consuming a components theme observable, returning a stream
 // of layout.Widget. Source is intentionally short — copy it into
 // your own app and modify as needed.
 //
@@ -180,7 +180,7 @@ const (
 // ControlHeight + 2·PaddingY — a bar wrapping ControlHeight controls with
 // the density's vertical control padding as breathing room (52 dp
 // Comfortable, 40 dp Compact; E1.4). cadence/navbar insets its content by
-// the same PaddingY, so a prism/button action fills the slot exactly. The
+// the same PaddingY, so a components/button action fills the slot exactly. The
 // pre-density 64 dp pin was sized around the 44 dp hit-target-era navbar
 // content, not a bar rule.
 func navbarHeight(d tokens.Density) unit.Dp {

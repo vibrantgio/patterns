@@ -7,12 +7,12 @@
 // on a single-open state without additional bookkeeping.
 //
 // The package follows the Phase 4 Composition contract: Accordion is a
-// callable Go function consuming a Prism theme observable, returning a
+// callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
-// Note on prism/button: the implementation plan suggested reusing
-// prism/button for header rows, but a Button renders with a Primary
+// Note on components/button: the implementation plan suggested reusing
+// components/button for header rows, but a Button renders with a Primary
 // background fill, 6 dp corner radius, and 44 dp minimum height — none
 // of which fit a full-width accordion header. The headers here use the
 // same widget.Clickable + custom rendering pattern as cadence/navbar,
