@@ -65,12 +65,12 @@ couple of hundred lines, and the props struct is not trying to anticipate you.
 
 ## Where it sits
 
-Tier 4 of the stack — `mvu → theme → components → pulse → cadence → markdown` —
+Tier 4 of the stack — `mvu → theme → components → effects → cadence → markdown` —
 alongside [markdown](https://github.com/vibrantgio/markdown). cadence imports
 `theme` and `tokens` from [theme](https://github.com/vibrantgio/theme),
 `button`, `coordination`, `icon`, `layout` and `list` from
 [components](https://github.com/vibrantgio/components), plus `depth` and `tween` from
-[pulse](https://github.com/vibrantgio/pulse); [mvu](https://github.com/vibrantgio/mvu)
+[effects](https://github.com/vibrantgio/effects); [mvu](https://github.com/vibrantgio/mvu)
 it uses only indirectly, through those. Nothing inside the design system
 imports cadence — the [workbench](https://github.com/vibrantgio/workbench)
 applications are its consumers. The
@@ -101,7 +101,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces intent through `OnSort`. Row heights follow the theme's density. |
 | `pagination` | A row of numbered page buttons flanked by prev/next chevrons, the current page highlighted Primary/OnPrimary. |
-| `card` | A rounded surface with optional Header / Body / Footer slots, in an outlined (1 dp stroke on the level-1 surface) or elevated variant — the latter a level-2 tonal fill. A card is raised in place, not floating, so neither variant casts a shadow (ADR-005; E2.2 retired the elevated card's `pulse/depth` call). |
+| `card` | A rounded surface with optional Header / Body / Footer slots, in an outlined (1 dp stroke on the level-1 surface) or elevated variant — the latter a level-2 tonal fill. A card is raised in place, not floating, so neither variant casts a shadow (ADR-005; E2.2 retired the elevated card's `effects/depth` call). |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
 
 **Overlays and feedback** — the things that draw over everything else.
@@ -111,7 +111,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `modal` | A centred dialog over a full-window scrim, its surface a level-2 fill from the elevation ladder: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's and tooltip's single register it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the modal a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
 | `popover` | An anchored elevated surface with a triangular tail pointing at a caller-supplied anchor. Outside-click dismissal and popover-vs-popover arbitration are frame state, not a bus: `Props.Arbiter` names the set a popover arbitrates within — one per window — and opening a second popover in that set dismisses the first, in the same frame, from inside the claimant's own layout pass. A nil `Arbiter` gets the popover one of its own, so sharing one is the explicit act. `Props.Open` carries open-ness on a stream; `Props.OpenNow` reads it during layout, for a caller that owns it as frame state. |
 | `tooltip` | A hover/focus annotation next to a trigger after a delay. `DefaultDelay` resolves from the token motion scale's `DurXSlow` stop (500 ms), and the live form re-times from the theme's `Motion` observable. Arbitration keeps exactly one tooltip visible, and is frame state rather than a bus: `Props.Arbiter` names the set — one per window — and a tooltip is visible exactly while it holds that set's top, so the claim a finished dwell makes *is* the previous tooltip's dismissal. A nil `Arbiter` gets the tooltip one of its own, so sharing one is the explicit act. |
-| `toast` | A position-anchored column of transient notifications, each on a level-2 surface with a `pulse/depth` cast shadow — a toast floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `toast.Queue` in the model, `Props.Toasts` carries that queue back to the `Stack`, and `Expire` brings the removal back as `Expired` at the end of the toast's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `pulse/tween` across the theme's `DurSlow` stop. |
+| `toast` | A position-anchored column of transient notifications, each on a level-2 surface with a `effects/depth` cast shadow — a toast floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `toast.Queue` in the model, `Props.Toasts` carries that queue back to the `Stack`, and `Expire` brings the removal back as `Expired` at the end of the toast's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
 | `alert` | A tinted-surface banner with a leading variant icon, a title and an arbitrary body widget. Info, Success, Warning, Error. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
@@ -292,7 +292,7 @@ Honest about what does not work yet:
 - **Overlays open and close instantly.** `modal`, `popover` and `tooltip` have
   no entrance or exit transition; only `toast` animates, and only its fade-out
   (whose duration does at least resolve from the theme's motion scale now).
-  Integrating pulse's motion primitives across the overlays is still deferred.
+  Integrating effects' motion primitives across the overlays is still deferred.
 - **No responsive behaviour.** `feature`, `pricing` and `testimonial` do not
   collapse to fewer columns or a vertical stack on a narrow window, and
   `popover` does not flip or reflow when the chosen `Placement` would clip the

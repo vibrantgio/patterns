@@ -22,7 +22,7 @@
 // opaque configuration — copy it into your own app and modify as needed.
 //
 // Open/close is instantaneous in this package; entrance/exit transitions
-// are deferred to a later Pulse-integration goal. No collision-aware
+// are deferred to a later Effects-integration goal. No collision-aware
 // reflow — if the chosen Placement would clip the viewport, the surface
 // clips. Automatic flip is deferred.
 package popover

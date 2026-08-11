@@ -26,7 +26,7 @@
 //
 // The trigger renders at the canvas centre; the tooltip surface is placed
 // adjacent per Placement. Show/hide is instantaneous in this package;
-// entrance/exit transitions are deferred to a later Pulse-integration
+// entrance/exit transitions are deferred to a later Effects-integration
 // goal. Touch long-press is out of scope.
 package tooltip
 

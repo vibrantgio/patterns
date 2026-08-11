@@ -8,7 +8,7 @@
 // content plane at SurfaceAt(Level1) (Neutral step 200) with a 1 dp
 // Neutral step-500 stroke, ADR-007's strong border; the Elevated
 // variant fills one storey deeper at SurfaceAt(Level2) (Neutral step
-// 300). E2.2's verdict retired the Elevated variant's pulse/depth
+// 300). E2.2's verdict retired the Elevated variant's effects/depth
 // shadow: shadows are reserved for surfaces that float and can leave
 // (toasts, menus), which a card is not.
 //

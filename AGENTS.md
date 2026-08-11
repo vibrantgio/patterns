@@ -1,15 +1,14 @@
 # AGENTS.md — cadence
 
 The pattern layer of the Vibrant Gio design system: eighteen composed
-application patterns assembled from components widgets and pulse effects —
-shell, navbar, sidebar, table, tabs, pagination, modal, popover, tooltip,
-toast, alert, card, accordion, breadcrumb, hero, feature, pricing and
-testimonial.
+application patterns assembled from components widgets and effects — shell,
+navbar, sidebar, table, tabs, pagination, modal, popover, tooltip, toast,
+alert, card, accordion, breadcrumb, hero, feature, pricing and testimonial.
 
-**Layer.** Tier 4 of ADR-001's stack, `mvu → theme → components → pulse →
+**Layer.** Tier 4 of ADR-001's stack, `mvu → theme → components → effects →
 cadence → markdown`, alongside markdown: composed patterns, and the top of
-the design system proper. Its root module imports `components`, `mvu`,
-`pulse` and `theme`, and reaches `font` and `svg` through them. No other
+the design system proper. Its root module imports `components`, `effects`,
+`mvu` and `theme`, and reaches `font` and `svg` through them. No other
 repository's root module imports it; outside the tier table it is imported
 by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`
 and `watchlist`. Both directions are measured rather than typed —
@@ -35,7 +34,7 @@ root.
 **Golden images.** Tests in 18 packages compare rendered output against
 PNGs committed under `testdata/golden/`. They render through
 `github.com/vibrantgio/components/golden`, which declares `-golden.update`
-and is shared with `markdown`, `pulse` and `workbench`. Do not inline a
+and is shared with `effects`, `markdown` and `workbench`. Do not inline a
 copy of it, and do not declare a second `-golden.update`: two registrations
 of one flag name in a single test binary panic in `flag.Bool` at init,
 before any test runs. When a change legitimately moves pixels, regenerate

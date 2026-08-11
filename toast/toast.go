@@ -5,7 +5,7 @@
 // [Queue] it holds in its model, and [Stack] renders that queue through
 // Props.Toasts. Each toast auto-dismisses after its Lifetime, which is a
 // second message ([Expired], carried by the [Expire] command), fading out
-// via pulse/tween over a trailing fade window resolved from the theme's
+// via effects/tween over a trailing fade window resolved from the theme's
 // motion scale (Theme.Motion's DurSlow stop).
 //
 //	// in the application's Update
@@ -64,8 +64,8 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/mvu"
-	"github.com/vibrantgio/pulse/depth"
-	"github.com/vibrantgio/pulse/tween"
+	"github.com/vibrantgio/effects/depth"
+	"github.com/vibrantgio/effects/tween"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -604,7 +604,7 @@ func paintToast(
 // fadeAlpha returns a toast's alpha in [0,1] for a frame at now. A zero at
 // (the Render path, or a hand-built Toast) means "fully opaque". Otherwise
 // the alpha tweens from 1.0 to 0.0 across the final fade window (the
-// theme's DurSlow stop) of the lifetime via pulse/tween.LerpFloat64, and
+// theme's DurSlow stop) of the lifetime via effects/tween.LerpFloat64, and
 // stays at 0 past expiry while the Expired message travels the loop; a zero
 // fade window paints fully opaque until then.
 func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float64 {

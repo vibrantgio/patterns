@@ -70,7 +70,7 @@
 // (route (a)), so a focused action shows exactly one ring: its own.
 //
 // Open/close is instantaneous in this package; entrance/exit transitions
-// are deferred to a later Pulse-integration goal.
+// are deferred to a later Effects-integration goal.
 package modal
 
 import (
