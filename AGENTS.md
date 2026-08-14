@@ -34,12 +34,12 @@ root.
 **Golden images.** Tests in 18 packages compare rendered output against
 PNGs committed under `testdata/golden/`. They render through
 `github.com/vibrantgio/components/golden`, which declares `-golden.update`
-and is shared with `effects`, `markdown` and `workbench`. Do not inline a
-copy of it, and do not declare a second `-golden.update`: two registrations
-of one flag name in a single test binary panic in `flag.Bool` at init,
-before any test runs. When a change legitimately moves pixels, regenerate
-them within the same change, look at what came out, and say so in the
-commit. From the repository root:
+and is shared with `design`, `effects`, `markdown` and `workbench`. Do not
+inline a copy of it, and do not declare a second `-golden.update`: two
+registrations of one flag name in a single test binary panic in `flag.Bool`
+at init, before any test runs. When a change legitimately moves pixels,
+regenerate them within the same change, look at what came out, and say so
+in the commit. From the repository root:
 
     go test ./accordion ./alert ./breadcrumb ./card ./feature ./hero ./modal ./navbar ./pagination ./popover ./pricing ./shell ./sidebar ./table ./tabs ./testimonial ./toast ./tooltip -golden.update
 
