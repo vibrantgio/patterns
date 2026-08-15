@@ -1,9 +1,10 @@
 # AGENTS.md — patterns
 
-The pattern layer of the Vibrant Gio design system: eighteen composed
+The pattern layer of the Vibrant Gio design system: nineteen composed
 application patterns assembled from components widgets and effects — shell,
 navbar, sidebar, table, tabs, pagination, modal, popover, tooltip, toast,
-alert, card, accordion, breadcrumb, hero, feature, pricing and testimonial.
+alert, tag, card, accordion, breadcrumb, hero, feature, pricing and
+testimonial.
 
 **Layer.** Tier 4 of ADR-001's stack, `mvu → theme → components → effects →
 patterns → markdown`, alongside markdown: composed patterns, and the top of
@@ -31,7 +32,7 @@ root.
 
     go build ./... && go test ./...
 
-**Golden images.** Tests in 18 packages compare rendered output against
+**Golden images.** Tests in 19 packages compare rendered output against
 PNGs committed under `testdata/golden/`. They render through
 `github.com/vibrantgio/components/golden`, which declares `-golden.update`
 and is shared with `design`, `effects`, `markdown` and `workbench`. Do not
@@ -41,7 +42,7 @@ at init, before any test runs. When a change legitimately moves pixels,
 regenerate them within the same change, look at what came out, and say so
 in the commit. From the repository root:
 
-    go test ./accordion ./alert ./breadcrumb ./card ./feature ./hero ./modal ./navbar ./pagination ./popover ./pricing ./shell ./sidebar ./table ./tabs ./testimonial ./toast ./tooltip -golden.update
+    go test ./accordion ./alert ./breadcrumb ./card ./feature ./hero ./modal ./navbar ./pagination ./popover ./pricing ./shell ./sidebar ./table ./tabs ./tag ./testimonial ./toast ./tooltip -golden.update
 
 Both halves of that line matter. `go test` cannot tell that an unfamiliar
 flag is boolean, so a flag placed before the packages swallows them: `go

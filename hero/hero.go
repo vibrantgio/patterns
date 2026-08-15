@@ -37,6 +37,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/patterns/tag"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -255,46 +256,13 @@ func textColumn(
 }
 
 // eyebrowWidget renders a Primary-tinted pill containing the eyebrow label
-// in Primary color. The pill background keeps the eyebrow visible even when
-// the label rasterises to zero width (e.g., in deterministic empty-label
-// golden tests).
+// in Primary color — patterns/tag's Tonal variant (ADR-007: ramp steps
+// 100–300 are tinted fills), drawn through the shared chip so every pill in
+// the vocabulary is one drawing. The pill background keeps the eyebrow
+// visible even when the label rasterises to zero width (e.g., in
+// deterministic empty-label golden tests).
 func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		padH := gtx.Dp(unit.Dp(tok.spacing.S2))
-		padV := gtx.Dp(unit.Dp(tok.spacing.S1))
-		rad := gtx.Dp(unit.Dp(tok.radius.Full))
-
-		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: tok.color.Primary}.Add(gtx.Ops)
-		material := mColor.Stop()
-
-		labelGtx := gtx
-		labelGtx.Constraints.Min = image.Point{}
-		mLabel := op.Record(gtx.Ops)
-		wl := typeset.Label(tok.eyebrow, 1)
-		labelDims := typeset.Layout(labelGtx, shaper, wl, typeset.Font(tok.eyebrow, font.SemiBold), unit.Sp(tok.eyebrow.Size), label, material)
-		labelCall := mLabel.Stop()
-
-		w := labelDims.Size.X + 2*padH
-		h := labelDims.Size.Y + 2*padV
-		if minW := 2 * padH; w < minW {
-			w = minW
-		}
-		if minH := 2 * padV; h < minH {
-			h = minH
-		}
-		// A Primary tinted fill at the card-tint depth (ADR-007: ramp
-		// steps 100–300 are tinted fills): same lightness zone as the
-		// Surface ground, carrying the primary hue at full ramp chroma
-		// instead of the old 12% alpha blend.
-		bg := tok.color.Ramps.Primary.Step(200)
-		paint.FillShape(gtx.Ops, bg, pllayout.Pill(gtx.Ops, image.Rectangle{Max: image.Pt(w, h)}, rad))
-
-		st := op.Offset(image.Pt(padH, padV)).Push(gtx.Ops)
-		labelCall.Add(gtx.Ops)
-		st.Pop()
-		return layout.Dimensions{Size: image.Pt(w, h)}
-	}
+	return tag.Render(shaper, label, tag.Tonal, tok.color, tok.spacing, tok.radius, tok.eyebrow)
 }
 
 // titleWidget renders the DisplaySmall-role title in Text. A zero
