@@ -11,9 +11,9 @@ patterns → markdown`, alongside markdown: composed patterns, and the top of
 the design system proper. Its root module imports `components`, `effects`,
 `mvu` and `theme`, and reaches `font` and `svg` through them. No other
 repository's root module imports it; outside the tier table it is imported
-by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`
-and `watchlist`. Both directions are measured rather than typed —
-`scripts/check-layers.sh --edges` reports the graph and
+by the workbench applications `feeds`, `launcher`, `mindchat`, `sitedocs`,
+`vaultview` and `watchlist`. Both directions are measured rather than typed
+— `scripts/check-layers.sh --edges` reports the graph and
 `scripts/sync-agents.sh` renders these sentences from it — so correcting
 them here changes nothing.
 
