@@ -13,12 +13,12 @@
 //   - Tonal: the primary-200 tinted fill under Primary text — hero's
 //     eyebrow (ADR-007: ramp steps 100–300 are tinted fills).
 //   - Success, Warning, Error: the status treatments. Each resolves its
-//     level exactly as patterns/toast resolves the same level — the pinned
-//     fixed-hue role (ColorTokens.Success/Warning/Error), blended 20% over
-//     the Surface pin for the fill and drawn pure as a 1 dp outline, under
-//     the Text pin — so status colour means one thing everywhere. The base
-//     is Surface rather than the toast's level-2 fill because a chip rests
-//     on the pane it labels; it does not float (ADR-005).
+//     level from the pinned fixed-hue role
+//     (ColorTokens.Success/Warning/Error), blended 20% over the Surface
+//     pin for the fill and drawn pure as a 1 dp outline, under the Text
+//     pin. The base is Surface because a chip rests on the pane it
+//     labels; it does not float (ADR-005), which is what separates its
+//     resolution from a transient surface's.
 //
 // Geometry is one chip for all five: S2/S1 padding, Full corner radius,
 // sized to its label-small label, the SemiBold request resolving to the
@@ -228,12 +228,10 @@ func draw(
 }
 
 // colors resolves a variant to its text colour, fill, and — for the status
-// variants — outline. The status levels read the same pinned fixed-hue
-// roles patterns/toast's accentColor reads, and blend them over the ground
-// with the same 20% tint its tintSurface applies, so a chip's success and a
-// toast's success are one colour decision. All of it reads roles off the
-// token set, so every variant flips with light/dark and follows whatever
-// seed, palette or high-contrast variant the theme is emitting.
+// variants — outline. The status levels read the pinned fixed-hue roles and
+// blend them 20% over the ground the chip rests on. All of it reads roles
+// off the token set, so every variant flips with light/dark and follows
+// whatever seed, palette or high-contrast variant the theme is emitting.
 func colors(v Variant, c tokens.ColorTokens) (fg, bg, outline color.NRGBA, outlined bool) {
 	switch v {
 	case Tonal:
@@ -249,8 +247,7 @@ func colors(v Variant, c tokens.ColorTokens) (fg, bg, outline color.NRGBA, outli
 	}
 }
 
-// tintSurface blends 20% of the accent over the given base — the exact
-// blend patterns/toast applies to its level-2 fill, applied here to the
+// tintSurface blends 20% of the accent over the given base — here the
 // Surface pin a resting chip sits on.
 func tintSurface(base, accent color.NRGBA) color.NRGBA {
 	return blend(base, accent, 0x33)

@@ -295,30 +295,46 @@ func TestAnExpiredToastPaintsNothing(t *testing.T) {
 	}
 }
 
-// surfaceFill is the flat, opaque colour paintToast fills a toast of the
-// given level with — what the anchor tests look for in the framebuffer.
-func surfaceFill(l Level, tok resolvedTokens) color.NRGBA {
-	return tintSurface(tok.color.SurfaceAt(tokens.Level2), accentColor(l, tok.color))
+// surfaceFill is the flat, opaque colour paintToast fills every toast
+// with, whatever its level: the inverse chip's ground. It no longer tells
+// two toasts apart — that is what levelEdge is for.
+func surfaceFill(tok resolvedTokens) color.NRGBA {
+	return tok.color.InverseSurface
 }
 
-// toastBounds returns the rectangle of the toast img paints in fill. A
-// toast's surface is one flat, opaque, axis-aligned rectangle at the zero
-// radius these tests render with, so its extent can be read back off the
-// image and held against the anchor that placed it.
+// levelEdge is the colour of the leading edge a toast of the given level
+// paints — one toast's own mark in a column of otherwise identical chips.
+func levelEdge(l Level, tok resolvedTokens) color.NRGBA {
+	return edgeColor(l, tok.color)
+}
+
+// toastBounds returns the rectangle enclosing every pixel img paints in
+// any of cs. A toast's surface is one flat, opaque, axis-aligned rectangle
+// at the zero radius these tests render with, so its extent can be read
+// back off the image and held against the anchor that placed it: pass the
+// fill together with the level's edge for a toast's whole rectangle, or
+// the edge alone to find one toast inside a column of them.
 //
-// Two allowances make the reading exact. The 1 dp outline is stroked on the
-// rectangle's own path, so it takes half its width from either side and
-// overwrites the surface's outermost row and column: the fill that survives
-// is the toast inset by one, and this grows it back. And the match carries a
-// tolerance of one step per channel, because the fill reaches the
-// framebuffer through a rasteriser and demanding the exact byte would be
-// asserting its arithmetic rather than the geometry.
-func toastBounds(img *image.RGBA, fill color.NRGBA) image.Rectangle {
+// The match carries a tolerance of one step per channel, because the fill
+// reaches the framebuffer through a rasteriser and demanding the exact byte
+// would be asserting its arithmetic rather than the geometry. Nothing is
+// grown back: the chip carries no outline since the inverse fill separates
+// it, so the fill and the edge reach the surface's outermost row and column
+// themselves.
+func toastBounds(img *image.RGBA, cs ...color.NRGBA) image.Rectangle {
 	var box image.Rectangle
 	r := img.Bounds()
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		for x := r.Min.X; x < r.Max.X; x++ {
-			if !nearColor(img.RGBAAt(x, y), fill) {
+			got := img.RGBAAt(x, y)
+			hit := false
+			for _, c := range cs {
+				if nearColor(got, c) {
+					hit = true
+					break
+				}
+			}
+			if !hit {
 				continue
 			}
 			px := image.Rect(x, y, x+1, y+1)
@@ -329,10 +345,7 @@ func toastBounds(img *image.RGBA, fill color.NRGBA) image.Rectangle {
 			box = box.Union(px)
 		}
 	}
-	if box.Empty() {
-		return box
-	}
-	return box.Inset(-1)
+	return box
 }
 
 func nearColor(got color.RGBA, want color.NRGBA) bool {
@@ -356,7 +369,7 @@ func nearColor(got color.RGBA, want color.NRGBA) bool {
 func TestAnchorsPlaceTheColumn(t *testing.T) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	tok := intTok()
-	fill := surfaceFill(Info, tok)
+	fill, lead := surfaceFill(tok), levelEdge(Info, tok)
 	edge := int(tok.spacing.S4)
 	queued := []Toast{{ID: 1, Level: Info, Text: "Rescanned: 2 notes"}}
 
@@ -376,7 +389,7 @@ func TestAnchorsPlaceTheColumn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			box := toastBounds(golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
 				return drawStackStatic(gtx, shaper, Props{Position: tc.pos}, tok, queued)
-			}), fill)
+			}), fill, lead)
 			if box.Empty() {
 				t.Fatal("the stack painted no toast surface; there is no geometry to measure")
 			}
@@ -408,8 +421,12 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 	tok := intTok()
 	edge, gap := int(tok.spacing.S4), int(tok.spacing.S2)
 
-	// Two levels, so the two surfaces are told apart by their own fill
-	// rather than by where the test expects to find them.
+	// Two levels, so the two chips are told apart by their own leading
+	// edge rather than by where the test expects to find them. Their fill
+	// is the one inverse surface and says nothing about which is which,
+	// so each toast is found by its edge — which spans that toast's full
+	// height at its leading side, and so reports where it stands and how
+	// tall it is. The column's width is read from everything together.
 	queued := []Toast{
 		{ID: 1, Level: Info, Text: "Rescanned: 2 notes"},
 		{ID: 2, Level: Error, Text: "Vault is unreadable"},
@@ -417,7 +434,8 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 	img := golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
 		return drawStackStatic(gtx, shaper, Props{Position: BottomCenter}, tok, queued)
 	})
-	older, newest := toastBounds(img, surfaceFill(Info, tok)), toastBounds(img, surfaceFill(Error, tok))
+	older, newest := toastBounds(img, levelEdge(Info, tok)), toastBounds(img, levelEdge(Error, tok))
+	column := toastBounds(img, surfaceFill(tok), levelEdge(Info, tok), levelEdge(Error, tok))
 	if older.Empty() || newest.Empty() {
 		t.Fatalf("one of the two toasts painted nothing: older=%v newest=%v", older, newest)
 	}
@@ -429,7 +447,7 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 	if older.Min.X != newest.Min.X {
 		t.Errorf("the two toasts lead at x=%d and x=%d; a column stands on one line", older.Min.X, newest.Min.X)
 	}
-	if lead, trail := newest.Min.X, intCanvasW-newest.Max.X; lead != trail {
+	if lead, trail := column.Min.X, intCanvasW-column.Max.X; lead != trail {
 		t.Errorf("the column has %d dp of air leading and %d trailing; a centred anchor has the same on both sides", lead, trail)
 	}
 	// Both labels are one line of the same style, so the older surface is

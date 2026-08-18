@@ -10,10 +10,10 @@
 // Elevation (goal G-E2): the popover surface (and its tail) fills at
 // SurfaceAt(Level3) (Neutral step 400), the deepest rung of the ladder.
 // A popover is an unscrimmed, shadowless transient overlay — unlike the
-// modal (level 2), which has a scrim, and the toast (level-2 base),
-// which keeps its cast shadow and accent outline, the popover's fill
-// plus its 1 dp Neutral step-500 stroke are its only separation cues,
-// so it takes the deepest tonal step. components/input's dropdown menu, the
+// modal (level 2), which has a scrim, and the toast, which takes no rung
+// at all and keeps its cast shadow, the popover's fill plus its 1 dp
+// Neutral step-500 stroke are its only separation cues, so it takes the
+// deepest tonal step. components/input's dropdown menu, the
 // same overlay class, sits at the same level.
 //
 // The package follows the Phase 4 Composition contract: Popover is a

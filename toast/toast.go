@@ -40,13 +40,23 @@
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
-// Elevation (goal G-E2): each toast's base fills at SurfaceAt(Level2)
-// (Neutral step 300), tinted 20% with the level accent and ringed by a
-// 1 dp accent outline. Level 2, not the level 3 the shadowless overlays
-// (popover, dropdown menu) take, because the toast does not separate by
-// fill alone: it floats and can leave, so per E2.2's verdict it keeps
-// its Level3 cast shadow — on dark themes the shadow, not the fill, is
-// what separates it — and the accent tint and outline carry the rest.
+// Colour: each toast is an inverse chip. Its base fills at the token set's
+// InverseSurface and its message reads in OnInverseSurface — the pair built
+// from the counterpart scheme, so the chip is dark on a light scheme and
+// light on a dark one and separates from every surface it can appear over
+// by construction rather than by out-elevating them. Its level shows as a
+// leading edge in that level's ramp, and the Level3 cast shadow stays: the
+// chip floats and can leave, and the shadow is what says so.
+//
+// That supersedes the elevation reading this pattern was built on, where
+// the base filled at SurfaceAt(Level2) tinted 20% with the level accent and
+// ringed by a 1 dp accent outline. Storeys are a way for a surface to
+// separate from the one ground beneath it; a toast has no such ground — it
+// can appear over a pane at any storey — so no storey is far enough from
+// all of them, and the ring was doing the separating the fill could not.
+// An inverse fill is one step away from every surface in the scheme, so
+// the ring is gone and the accent moved to the edge, where it says which
+// level this is instead of drawing the chip's shape.
 package toast
 
 import (
@@ -549,15 +559,22 @@ func paintStack(
 	return layout.Dimensions{Size: canvas}
 }
 
-// paintToast paints one elevated, tinted row sized to its content: a
-// Level3 cast shadow under a level-2 fill (SurfaceAt(Level2), Neutral
-// step 300) tinted 20% with the level accent, ringed by a 1dp accent
-// outline. The level-2 base sits one storey past the level-1 Surface
-// ground so the fill itself separates from Surface-painted panes; the
-// Surface-based 12% tint it replaced sat at ~1.2:1 against them — the
-// toast only read as a shape because of its outline. The fade alpha is
-// applied to the shadow (via its opacity argument), the fill, and the
-// text colour.
+// paintToast paints one inverse chip sized to its content: a Level3 cast
+// shadow under a flat InverseSurface fill, its message in
+// OnInverseSurface, and a leading edge one spacing stop wide in the
+// level's own ramp. The fade alpha is applied to the shadow (via its
+// opacity argument), the fill, the edge and the text colour.
+//
+// Two judgements were re-made over the new fill rather than carried over
+// from the tinted level-2 one. The shadow stays: the inverse fill already
+// separates the chip from everything under it, but separation is not the
+// only thing a shadow says — this surface is temporary and floating, and
+// nothing else in the frame says that. The outline goes: a ring in the
+// accent was what made the old fill read as a shape at all, and the fill
+// now measures 13.0:1 against the Surface panes in both schemes and no
+// worse than 7.6:1 against the deepest surface storey, so the ring is
+// decoration — and decoration that cost the level its one strong signal,
+// which the leading edge now carries.
 func paintToast(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -566,22 +583,24 @@ func paintToast(
 ) layout.Dimensions {
 	padH := gtx.Dp(unit.Dp(tok.spacing.S3))
 	padV := gtx.Dp(unit.Dp(tok.spacing.S2))
+	edgeW := gtx.Dp(unit.Dp(tok.spacing.S1))
 	r := gtx.Dp(unit.Dp(tok.radius.Md))
 	alpha := it.alpha
 
-	accent := accentColor(it.toast.Level, tok.color)
-	fill := withAlpha(tintSurface(tok.color.SurfaceAt(tokens.Level2), accent), alpha)
-	outline := withAlpha(accent, alpha)
-	fg := withAlpha(tok.color.Text, alpha)
+	fill := withAlpha(tok.color.InverseSurface, alpha)
+	edge := withAlpha(edgeColor(it.toast.Level, tok.color), alpha)
+	fg := withAlpha(tok.color.OnInverseSurface, alpha)
 
-	// Pre-record the label so we can size the surface around its dims.
+	// Pre-record the label so we can size the surface around its dims. The
+	// leading edge takes its width off the label's, so the trailing margin
+	// stays one padH and the text stands one padH clear of the edge.
 	mColor := op.Record(gtx.Ops)
 	paint.ColorOp{Color: fg}.Add(gtx.Ops)
 	material := mColor.Stop()
 	mLabel := op.Record(gtx.Ops)
 	labelGtx := gtx
 	labelGtx.Constraints = layout.Constraints{
-		Max: image.Pt(gtx.Constraints.Max.X-2*padH, gtx.Constraints.Max.Y),
+		Max: image.Pt(gtx.Constraints.Max.X-edgeW-2*padH, gtx.Constraints.Max.Y),
 	}
 	// Shape with the LabelMedium role's typeface, weight, size and line
 	// height. Zero fields (the legacy Render path synthesizes a size-only
@@ -598,24 +617,26 @@ func paintToast(
 		h = gtx.Constraints.Min.Y
 	}
 
-	// The shadow, not the fill, separates the toast on dark themes. It
-	// rounds to the fill's radius so its interior cannot show through
-	// the corners, and it takes the toast's fade alpha directly so it
-	// never outlives the surface.
+	// The shadow says the chip is a temporary layer, not that it is
+	// separate — the inverse fill has that covered. It rounds to the
+	// fill's radius so its interior cannot show through the corners, and
+	// it takes the toast's fade alpha directly so it never outlives the
+	// surface.
 	depth.Shadow(gtx, image.Rectangle{Max: image.Pt(w, h)}, tokens.Level3, r, float32(alpha))
 
 	rect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: r, SW: r, NE: r, NW: r}
 	paint.FillShape(gtx.Ops, fill, rect.Op(gtx.Ops))
-	paint.FillShape(gtx.Ops, outline, clip.Stroke{
-		Path:  rect.Path(gtx.Ops),
-		Width: float32(gtx.Dp(unit.Dp(1))),
-	}.Op())
+	// The level's edge, clipped to the chip so it wears the same rounded
+	// corners the fill does rather than squaring off the leading side.
+	clipped := rect.Op(gtx.Ops).Push(gtx.Ops)
+	paint.FillShape(gtx.Ops, edge, clip.Rect{Max: image.Pt(edgeW, h)}.Op())
+	clipped.Pop()
 
 	labelY := padV
 	if labelDims.Size.Y < h-2*padV {
 		labelY = (h - labelDims.Size.Y) / 2
 	}
-	labelOff := op.Offset(image.Pt(padH, labelY)).Push(gtx.Ops)
+	labelOff := op.Offset(image.Pt(edgeW+padH, labelY)).Push(gtx.Ops)
 	labelCall.Add(gtx.Ops)
 	labelOff.Pop()
 
@@ -649,42 +670,41 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 	return tw.At(frame)
 }
 
-// accentColor maps Level to its pinned token role — mirroring
-// patterns/alert. All four read a role off the token set, so all four flip
-// with light/dark and follow whatever seed, palette or high-contrast
-// variant the theme is emitting. Until F4.6 Success and Warning were
-// Tailwind green and amber literals, duplicated byte-for-byte between this
-// file and alert/alert.go; theme's hue-fixed success and warning ramps
-// replaced both copies.
-func accentColor(l Level, c tokens.ColorTokens) color.NRGBA {
+// edgeStep is the rung of the level's ramp the leading edge takes. It is
+// the deepest rung that still reads over the inverse ground in both
+// schemes, which is what fixes it: the ramps are paired scales, so in a
+// light scheme step 400 is a light tint against a dark chip (7.86–7.89:1
+// across the four levels) and in a dark scheme the same step is a deep
+// shade against a light one (7.61–7.63:1), while step 500 — the ramps'
+// mid-value rung — collapses to 2.19:1 on the dark scheme's light chip.
+// Every level clears the 3:1 a non-text graphic owes its ground with room
+// to spare, in both schemes and in the high-contrast variant, whose 100–600
+// stops are the default scale's.
+const edgeStep = 400
+
+// edgeColor maps Level to the colour of its leading edge: that level's own
+// ramp at edgeStep, so it flips with light/dark and follows whatever seed,
+// palette or high-contrast variant the theme is emitting.
+//
+// It reads a ramp rather than the pinned base the fill used to be tinted
+// with. The pins are tuned to be filled and written on — their depth is
+// chosen against the scheme's own grounds — and against the inverse ground
+// they are on the wrong side: a dark scheme's pins sit at L* 82, which is
+// most of the way to that scheme's own light chip.
+//
+// Until F4.6 Success and Warning were Tailwind green and amber literals,
+// duplicated byte-for-byte between this file and alert/alert.go; theme's
+// hue-fixed success and warning ramps replaced both copies.
+func edgeColor(l Level, c tokens.ColorTokens) color.NRGBA {
 	switch l {
-	case Info:
-		return c.Primary
 	case Error:
-		return c.Error
+		return c.Ramps.Error.Step(edgeStep)
 	case Success:
-		return c.Success
+		return c.Ramps.Success.Step(edgeStep)
 	case Warning:
-		return c.Warning
+		return c.Ramps.Warning.Step(edgeStep)
 	default:
-		return c.Primary
-	}
-}
-
-// tintSurface blends 20% of the accent over the given base. Strong
-// enough that the fill itself separates from Surface-painted panes;
-// paired with the level-2 (SurfaceAt(Level2)) base in paintToast.
-func tintSurface(base, accent color.NRGBA) color.NRGBA {
-	return blend(base, accent, 0x33)
-}
-
-func blend(base, over color.NRGBA, alpha uint8) color.NRGBA {
-	a := float32(alpha) / 255
-	return color.NRGBA{
-		R: uint8(float32(over.R)*a + float32(base.R)*(1-a)),
-		G: uint8(float32(over.G)*a + float32(base.G)*(1-a)),
-		B: uint8(float32(over.B)*a + float32(base.B)*(1-a)),
-		A: 0xff,
+		return c.Ramps.Primary.Step(edgeStep)
 	}
 }
 
