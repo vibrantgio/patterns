@@ -2,6 +2,7 @@ package toast
 
 import (
 	"image"
+	"image/color"
 	"testing"
 	"time"
 
@@ -291,6 +292,152 @@ func TestAnExpiredToastPaintsNothing(t *testing.T) {
 	up := golden.Capture(t, intCanvas, frame(live))
 	if n := golden.PixelDiff(empty, up); n == 0 {
 		t.Error("a live toast painted nothing; the expiry assertion above proves nothing")
+	}
+}
+
+// surfaceFill is the flat, opaque colour paintToast fills a toast of the
+// given level with — what the anchor tests look for in the framebuffer.
+func surfaceFill(l Level, tok resolvedTokens) color.NRGBA {
+	return tintSurface(tok.color.SurfaceAt(tokens.Level2), accentColor(l, tok.color))
+}
+
+// toastBounds returns the rectangle of the toast img paints in fill. A
+// toast's surface is one flat, opaque, axis-aligned rectangle at the zero
+// radius these tests render with, so its extent can be read back off the
+// image and held against the anchor that placed it.
+//
+// Two allowances make the reading exact. The 1 dp outline is stroked on the
+// rectangle's own path, so it takes half its width from either side and
+// overwrites the surface's outermost row and column: the fill that survives
+// is the toast inset by one, and this grows it back. And the match carries a
+// tolerance of one step per channel, because the fill reaches the
+// framebuffer through a rasteriser and demanding the exact byte would be
+// asserting its arithmetic rather than the geometry.
+func toastBounds(img *image.RGBA, fill color.NRGBA) image.Rectangle {
+	var box image.Rectangle
+	r := img.Bounds()
+	for y := r.Min.Y; y < r.Max.Y; y++ {
+		for x := r.Min.X; x < r.Max.X; x++ {
+			if !nearColor(img.RGBAAt(x, y), fill) {
+				continue
+			}
+			px := image.Rect(x, y, x+1, y+1)
+			if box.Empty() {
+				box = px
+				continue
+			}
+			box = box.Union(px)
+		}
+	}
+	if box.Empty() {
+		return box
+	}
+	return box.Inset(-1)
+}
+
+func nearColor(got color.RGBA, want color.NRGBA) bool {
+	off := func(a, b uint8) int {
+		if a > b {
+			return int(a) - int(b)
+		}
+		return int(b) - int(a)
+	}
+	return got.A == want.A &&
+		off(got.R, want.R) <= 1 && off(got.G, want.G) <= 1 && off(got.B, want.B) <= 1
+}
+
+// TestAnchorsPlaceTheColumn pins in pixels where each Position puts the
+// column on one canvas: the four corners hug their two edges by the spacing
+// scale's edge margin, and the bottom-centre anchor hugs the bottom edge
+// with the same air on both sides of the column. The corners are measured
+// alongside the centre on purpose — the centre was added to a decision the
+// corners share, so a test that only measured the new anchor would not
+// notice it moving the old ones.
+func TestAnchorsPlaceTheColumn(t *testing.T) {
+	shaper := tokens.DefaultTypography.DeterministicShaper()
+	tok := intTok()
+	fill := surfaceFill(Info, tok)
+	edge := int(tok.spacing.S4)
+	queued := []Toast{{ID: 1, Level: Info, Text: "Rescanned: 2 notes"}}
+
+	cases := []struct {
+		name string
+		pos  Position
+		x    int  // where the surface's leading edge lands
+		top  bool // hugs the top edge; otherwise the bottom
+	}{
+		{"top right", TopRight, intCanvasW - edge - toastWidthDp, true},
+		{"bottom right", BottomRight, intCanvasW - edge - toastWidthDp, false},
+		{"top left", TopLeft, edge, true},
+		{"bottom left", BottomLeft, edge, false},
+		{"bottom center", BottomCenter, (intCanvasW - toastWidthDp) / 2, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			box := toastBounds(golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
+				return drawStackStatic(gtx, shaper, Props{Position: tc.pos}, tok, queued)
+			}), fill)
+			if box.Empty() {
+				t.Fatal("the stack painted no toast surface; there is no geometry to measure")
+			}
+			if box.Min.X != tc.x || box.Dx() != toastWidthDp {
+				t.Errorf("the surface spans x %d..%d; want the %d dp column at x=%d",
+					box.Min.X, box.Max.X, toastWidthDp, tc.x)
+			}
+			if tc.top {
+				if box.Min.Y != edge {
+					t.Errorf("the surface starts at y=%d; want one %d dp margin below the top edge", box.Min.Y, edge)
+				}
+				return
+			}
+			if box.Max.Y != intCanvasH-edge {
+				t.Errorf("the surface ends at y=%d; want one %d dp margin above the bottom edge at y=%d",
+					box.Max.Y, edge, intCanvasH-edge)
+			}
+		})
+	}
+}
+
+// TestBottomCenterStacksUpwardFromTheEdge is the half of the centred anchor
+// the single-toast measurement cannot see: with two queued, the newest is
+// the one against the bottom edge, the older stands one gap above it, and
+// both share the column — the stack grows away from the edge it is anchored
+// to, exactly as the bottom corners' does.
+func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
+	shaper := tokens.DefaultTypography.DeterministicShaper()
+	tok := intTok()
+	edge, gap := int(tok.spacing.S4), int(tok.spacing.S2)
+
+	// Two levels, so the two surfaces are told apart by their own fill
+	// rather than by where the test expects to find them.
+	queued := []Toast{
+		{ID: 1, Level: Info, Text: "Rescanned: 2 notes"},
+		{ID: 2, Level: Error, Text: "Vault is unreadable"},
+	}
+	img := golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
+		return drawStackStatic(gtx, shaper, Props{Position: BottomCenter}, tok, queued)
+	})
+	older, newest := toastBounds(img, surfaceFill(Info, tok)), toastBounds(img, surfaceFill(Error, tok))
+	if older.Empty() || newest.Empty() {
+		t.Fatalf("one of the two toasts painted nothing: older=%v newest=%v", older, newest)
+	}
+
+	if newest.Max.Y != intCanvasH-edge {
+		t.Errorf("the newest toast ends at y=%d; want it against the anchored edge, one %d dp margin up at y=%d",
+			newest.Max.Y, edge, intCanvasH-edge)
+	}
+	if older.Min.X != newest.Min.X {
+		t.Errorf("the two toasts lead at x=%d and x=%d; a column stands on one line", older.Min.X, newest.Min.X)
+	}
+	if lead, trail := newest.Min.X, intCanvasW-newest.Max.X; lead != trail {
+		t.Errorf("the column has %d dp of air leading and %d trailing; a centred anchor has the same on both sides", lead, trail)
+	}
+	// Both labels are one line of the same style, so the older surface is
+	// as tall as the newest — read the height off the newest, whose own
+	// pixels nothing paints over.
+	if want := newest.Min.Y - gap - newest.Dy(); older.Min.Y != want {
+		t.Errorf("the older toast starts at y=%d; want y=%d, one %d dp gap above the newest — the stack grows upward",
+			older.Min.Y, want, gap)
 	}
 }
 

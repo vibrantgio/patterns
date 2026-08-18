@@ -10,8 +10,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 
-	"github.com/vibrantgio/patterns/toast"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/patterns/toast"
 	"github.com/vibrantgio/theme/tokens"
 )
 
@@ -67,14 +67,14 @@ func item(id int64, l toast.Level) toast.Toast {
 	return toast.Toast{ID: id, Level: l, Text: toastText(l)}
 }
 
-// TestStackGolden records or diffs the three Measurable goldens. Variant tint
-// and stack ordering are the load-bearing visual signal and the text carries
-// the LabelMedium role. The scenes
-// composite over the theme's own Surface — the colour app panes are
-// painted with — so a toast fill that stops separating from real app
-// backgrounds fails the diff instead of hiding behind an arbitrary
-// grey (the regression that shipped the ~1.2:1 Surface-on-Surface
-// toast).
+// TestStackGolden records or diffs the stored scenes. Variant tint and
+// stack ordering are the load-bearing visual signal and the text carries
+// the LabelMedium role; one scene stands the column on the bottom edge's
+// midpoint, where the design language puts a transient confirmation. The
+// scenes composite over the theme's own Surface — the colour app panes
+// are painted with — so a toast fill that stops separating from real app
+// backgrounds fails the diff instead of hiding behind an arbitrary grey
+// (the regression that shipped the ~1.2:1 Surface-on-Surface toast).
 func TestStackGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := tokens.DefaultLight.Surface
@@ -111,6 +111,16 @@ func TestStackGolden(t *testing.T) {
 			items:  []toast.Toast{item(1, toast.Warning)},
 			colors: tokens.DefaultDark,
 			bg:     darkBG,
+		},
+		{
+			name:  "light-bottom-center",
+			props: toast.Props{Position: toast.BottomCenter, Shaper: shaper},
+			items: []toast.Toast{
+				item(1, toast.Info),
+				item(2, toast.Success),
+			},
+			colors: tokens.DefaultLight,
+			bg:     lightBG,
 		},
 	}
 	for _, tc := range cases {

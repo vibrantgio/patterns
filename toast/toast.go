@@ -63,9 +63,9 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/mvu"
 	"github.com/vibrantgio/effects/depth"
 	"github.com/vibrantgio/effects/tween"
+	"github.com/vibrantgio/mvu"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -81,8 +81,9 @@ const (
 	Error
 )
 
-// Position is the screen corner where the stack anchors. Newest toast
-// renders nearest the anchored edge; older toasts sit further from it.
+// Position is where on the canvas the stack anchors: one of the four
+// corners, or the midpoint of the bottom edge. Newest toast renders
+// nearest the anchored edge; older toasts sit further from it.
 type Position int
 
 const (
@@ -90,6 +91,17 @@ const (
 	BottomRight
 	TopLeft
 	BottomLeft
+	// BottomCenter anchors the stack to the middle of the bottom edge:
+	// the column is centred between the canvas's side edges, the newest
+	// toast sits one edge margin above the bottom, and older ones stack
+	// upward from it. It is where a transient confirmation belongs — the
+	// reader is looking at what they just acted on, not at a corner — and
+	// it takes the same edge margin, gap and fade as the corners do.
+	//
+	// It is last in the enum because the four corners' values are what
+	// callers have compiled against; a centred anchor is an addition, not
+	// a renumbering.
+	BottomCenter
 )
 
 // DefaultLifetime is the auto-dismiss duration Queue.Add applies to a
@@ -444,8 +456,8 @@ const (
 	toastMinHDp  = 36
 )
 
-// paintStack lays out the column of toasts at the anchored corner of the
-// canvas, each at the alpha its placed entry carries.
+// paintStack lays out the column of toasts at the canvas anchor
+// Props.Position names, each at the alpha its placed entry carries.
 func paintStack(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -464,13 +476,22 @@ func paintStack(
 		}
 	}
 
-	leftAnchored := props.Position == TopLeft || props.Position == BottomLeft
+	// The two anchors are read separately because they do not pair up: a
+	// centred column hugs neither side edge, so the horizontal question
+	// has three answers where the vertical still has two.
 	topAnchored := props.Position == TopLeft || props.Position == TopRight
 
 	var x int
-	if leftAnchored {
+	switch props.Position {
+	case TopLeft, BottomLeft:
 		x = edgePad
-	} else {
+	case BottomCenter:
+		// The column's own middle on the canvas's. Width is already
+		// clamped to the space between the two edge margins, so a
+		// canvas too narrow for the full width centres what is left
+		// rather than overhanging either edge.
+		x = (canvas.X - width) / 2
+	default:
 		x = canvas.X - edgePad - width
 	}
 
