@@ -94,7 +94,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `navbar` | A horizontal surface bar with three slots — leading brand, centred links, trailing actions. The active link carries a Primary underline. |
 | `sidebar` | A collapsible vertical column that swaps between an expanded width (icon + label) and a collapsed width (icon only). The active item is tinted Primary. |
 | `tabs` | A tab strip with a Primary underline on the selection, plus the content panel below it. Click, Arrow-Left/Right (wrapping), Home and End all change the selection. |
-| `breadcrumb` | A chevron-separated row of location segments. The last renders as the current location in a deep neutral text step; the ones before it are clickable. |
+| `breadcrumb` | A chevron-separated row of location segments. The last renders as the current location in a deep neutral text step; the ones before it are clickable. `Breadcrumb` takes the trail when the stream is built; `Trail` takes it per frame, for a path that changes as the user navigates, and routes each click by the segment's own key rather than by the position it stood in. |
 
 **Data and content** — the things that hold a screenful of stuff.
 

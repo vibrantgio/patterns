@@ -21,6 +21,13 @@
 // row, each label clamped to a single line; a trail deeper than its
 // constraint is clipped rather than collapsed to a leading ellipsis. An
 // empty Items renders to zero Dimensions.
+//
+// A trail comes in two shapes. Breadcrumb and Render take their Items when
+// they are built, which is what a trail known up front wants and what fixes
+// each segment's clickable to a position. Trail and NewTrail take their
+// Segments per frame instead, for a trail that is decided again on every
+// frame as the user navigates; those route a click by the segment's own Key
+// rather than by where it stood. Both shapes draw the same row.
 package breadcrumb
 
 import (
@@ -79,27 +86,18 @@ type Props struct {
 // widget whenever any consumed theme token changes. Click handlers fire
 // for any item whose OnClick is non-nil; mirror the components/button
 // interaction model (widget.Clickable + semantic ops) per segment.
+//
+// Props.Items is read when the stream is built, so this is the trail that is
+// known up front. A trail that changes as the user navigates wants Trail
+// instead, which takes its segments per frame.
 func Breadcrumb(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
-	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the TitleSmall text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
-	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
-		return rx.Map(
-			rx.CombineLatest3(t.Color, t.Spacing, t.Typography),
-			func(n rx.Tuple3[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography]) resolvedTokens {
-				typ := n.Third
-				return resolvedTokens{
-					color:   n.First,
-					spacing: n.Second,
-					label:   typ.TitleSmall,
-					shaper:  typ.Shaper(),
-				}
-			},
-		)
-	})
+	resolved := resolveTokens(th)
 
 	return rx.Defer(func() rx.Observable[layout.Widget] {
-		clicks := make([]widget.Clickable, len(props.Items))
+		clicks := make([]*widget.Clickable, len(props.Items))
+		for i := range clicks {
+			clicks[i] = new(widget.Clickable)
+		}
 
 		return rx.Map(resolved, func(tok resolvedTokens) layout.Widget {
 			// Props.Shaper is an explicit override; the theme's shaper is
@@ -149,13 +147,34 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
+// resolveTokens flattens the nested theme observables into a stream of
+// concrete snapshots, one per token change. The typography emission supplies
+// both the TitleSmall text style and the theme's cached shaper (ADR-003: the
+// theme owns the typeface). Both live paths read the same snapshot.
+func resolveTokens(th rx.Observable[theme.Theme]) rx.Observable[resolvedTokens] {
+	return rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
+		return rx.Map(
+			rx.CombineLatest3(t.Color, t.Spacing, t.Typography),
+			func(n rx.Tuple3[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography]) resolvedTokens {
+				typ := n.Third
+				return resolvedTokens{
+					color:   n.First,
+					spacing: n.Second,
+					label:   typ.TitleSmall,
+					shaper:  typ.Shaper(),
+				}
+			},
+		)
+	})
+}
+
 const chevronDp = 12
 
 func drawBreadcrumb(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	items []Item,
-	clicks []widget.Clickable,
+	clicks []*widget.Clickable,
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
@@ -189,11 +208,14 @@ func labelColor(i, n int, colors tokens.ColorTokens) color.NRGBA {
 	return colors.Ramps.Neutral.Step(700)
 }
 
-func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
+// clickFor returns the clickable drawing segment i, or nil when the caller
+// laid out no clickable for it — the static Render path passes none at all,
+// and a frame-time trail passes none for an inert segment.
+func clickFor(clicks []*widget.Clickable, i int) *widget.Clickable {
 	if i >= len(clicks) {
 		return nil
 	}
-	return &clicks[i]
+	return clicks[i]
 }
 
 func segmentWidget(shaper *text.Shaper, item Item, click *widget.Clickable, fg color.NRGBA, style tokens.TextStyle) layout.Widget {
