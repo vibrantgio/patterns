@@ -36,7 +36,7 @@ const (
 // shaper and the default light tokens.
 func newTrail(t *testing.T) breadcrumb.TrailLayout {
 	t.Helper()
-	return breadcrumb.NewTrail(defaultShaper(t), tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
+	return breadcrumb.NewTrail(defaultShaper(t), breadcrumb.TrailProps{}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
 }
 
 // segments builds a trail from key/label pairs, giving every segment but the
@@ -137,7 +137,7 @@ func TestTrailClickRoutesToItsSegment(t *testing.T) {
 				[2]string{designKey, labels[1]},
 				[2]string{tokensKey, labels[2]},
 			)
-			w := breadcrumb.NewTrail(shaper, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
+			w := breadcrumb.NewTrail(shaper, breadcrumb.TrailProps{}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
 
 			r := new(gioinput.Router)
 			ops := new(op.Ops)

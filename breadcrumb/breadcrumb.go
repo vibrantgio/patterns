@@ -67,6 +67,18 @@ type Item struct {
 type Props struct {
 	Items []Item
 
+	// Chevron is the square each separator is drawn in. Zero takes
+	// DefaultChevron, which is the size this row has always drawn at.
+	//
+	// It is stated rather than derived because the separator is drawn and
+	// not typeset: nothing in the label's text style says how tall a
+	// triangle beside it should be, and a trail set in a smaller style than
+	// the desktop TitleSmall — or one whose separator should read as a
+	// hairline between labels rather than a mark of its own — wants a
+	// smaller square than the default. Ink fills the square's full height,
+	// so this is the separator's ink height and not a box around it.
+	Chevron unit.Dp
+
 	// Shaper is an explicit per-instance override of the text shaper. Leave
 	// it nil in normal use: the breadcrumb then shapes its labels with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
@@ -112,7 +124,7 @@ func Breadcrumb(th rx.Observable[theme.Theme], props Props) rx.Observable[layout
 						props.Items[i].OnClick(gtx)
 					}
 				}
-				return drawBreadcrumb(gtx, shaper, props.Items, clicks, tok.color, tok.spacing, tok.label)
+				return drawBreadcrumb(gtx, shaper, props.Items, clicks, tok.color, tok.spacing, tok.label, props.Chevron)
 			}
 		})
 	})
@@ -136,7 +148,7 @@ func Render(
 	label tokens.TextStyle,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawBreadcrumb(gtx, shaper, props.Items, nil, colors, sp, label)
+		return drawBreadcrumb(gtx, shaper, props.Items, nil, colors, sp, label, props.Chevron)
 	}
 }
 
@@ -168,7 +180,19 @@ func resolveTokens(th rx.Observable[theme.Theme]) rx.Observable[resolvedTokens] 
 	})
 }
 
-const chevronDp = 12
+// DefaultChevron is the square a separator is drawn in when the caller
+// states no size of its own.
+const DefaultChevron unit.Dp = 12
+
+// chevronSize answers which square this row's separators take: the caller's
+// where it stated one, and the default otherwise. A zero or negative size is
+// no size at all, not an invisible separator.
+func chevronSize(d unit.Dp) unit.Dp {
+	if d <= 0 {
+		return DefaultChevron
+	}
+	return d
+}
 
 func drawBreadcrumb(
 	gtx layout.Context,
@@ -178,6 +202,7 @@ func drawBreadcrumb(
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
+	chevron unit.Dp,
 ) layout.Dimensions {
 	if len(items) == 0 {
 		return layout.Dimensions{}
@@ -189,7 +214,7 @@ func drawBreadcrumb(
 		if i > 0 {
 			children = append(children,
 				layout.Rigid(pllayout.HSpacer(sp.S2)),
-				layout.Rigid(chevronWidget(chevronDp, colors.Ramps.Neutral.Step(700))),
+				layout.Rigid(chevronWidget(chevronSize(chevron), colors.Ramps.Neutral.Step(700))),
 				layout.Rigid(pllayout.HSpacer(sp.S2)),
 			)
 		}
@@ -247,9 +272,9 @@ func labelWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens
 	}
 }
 
-func chevronWidget(sizeDp float32, col color.NRGBA) layout.Widget {
+func chevronWidget(sizeDp unit.Dp, col color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		sz := gtx.Dp(unit.Dp(sizeDp))
+		sz := gtx.Dp(sizeDp)
 		drawChevron(gtx, sz/2, sz/2, sz, col)
 		return layout.Dimensions{Size: image.Pt(sz, sz)}
 	}

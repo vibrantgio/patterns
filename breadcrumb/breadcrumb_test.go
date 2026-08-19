@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
+	"gioui.org/unit"
 
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/breadcrumb"
@@ -129,5 +131,65 @@ func TestBreadcrumbLightDarkDiffer(t *testing.T) {
 	imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Errorf("light and dark render identically; expected chevron colour differences")
+	}
+}
+
+// TestChevronSizeIsTheCallersOrTheDefault pins the separator's square: a
+// caller that states one gets it, and a caller that states nothing gets the
+// size the row has always drawn at. The row's width is the measure, because
+// the separator occupies its square: a stated size that never reached the
+// drawing would leave two rows the same width.
+//
+// Both shapes are checked. They draw the same row, and a knob that reached
+// only one of them would be a knob that works depending on which
+// constructor you took.
+func TestChevronSizeIsTheCallersOrTheDefault(t *testing.T) {
+	shaper := defaultShaper(t)
+	items := trail()
+	segs := make([]breadcrumb.Segment, len(items))
+	for i, it := range items {
+		segs[i] = breadcrumb.Segment{Key: it.Label, Label: it.Label}
+	}
+	loose := layout.Constraints{Max: image.Pt(1<<14, 1<<14)}
+
+	static := func(size unit.Dp) int {
+		w := breadcrumb.Render(shaper, breadcrumb.Props{Items: items, Chevron: size},
+			tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
+		gtx := layout.Context{Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: loose, Ops: new(op.Ops)}
+		return w(gtx).Size.X
+	}
+	perFrame := func(size unit.Dp) int {
+		w := breadcrumb.NewTrail(shaper, breadcrumb.TrailProps{Chevron: size},
+			tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
+		gtx := layout.Context{Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: loose, Ops: new(op.Ops)}
+		return w(gtx, segs).Size.X
+	}
+
+	const smaller = breadcrumb.DefaultChevron - 4
+	for _, tc := range []struct {
+		name  string
+		width func(unit.Dp) int
+	}{
+		{"Render", static},
+		{"NewTrail", perFrame},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			deflt := tc.width(breadcrumb.DefaultChevron)
+			if unstated := tc.width(0); unstated != deflt {
+				t.Errorf("an unstated size drew %dpx wide, the default %dpx: zero must take the default",
+					unstated, deflt)
+			}
+			if negative := tc.width(-3); negative != deflt {
+				t.Errorf("a negative size drew %dpx wide, the default %dpx: it is no size at all, "+
+					"not an invisible separator", negative, deflt)
+			}
+			// Two separators in a three-segment trail, each four dp narrower.
+			want := deflt - 2*int(breadcrumb.DefaultChevron-smaller)
+			if got := tc.width(smaller); got != want {
+				t.Errorf("at %ddp the row drew %dpx wide, want %dpx (the default's %dpx less the "+
+					"two separators' %ddp)", int(smaller), got, want, deflt,
+					int(breadcrumb.DefaultChevron-smaller))
+			}
+		})
 	}
 }

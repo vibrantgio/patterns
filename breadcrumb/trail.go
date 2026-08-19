@@ -3,6 +3,7 @@ package breadcrumb
 import (
 	"gioui.org/layout"
 	"gioui.org/text"
+	"gioui.org/unit"
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
@@ -56,6 +57,10 @@ type TrailProps struct {
 	// it nil in normal use: the trail then shapes its labels with the theme's
 	// shaper (Typography.Shaper()), exactly as Props.Shaper describes.
 	Shaper *text.Shaper
+
+	// Chevron is the square each separator is drawn in, exactly as
+	// Props.Chevron describes it. Zero takes DefaultChevron.
+	Chevron unit.Dp
 }
 
 // Trail returns an rx.Observable[TrailLayout] that emits a new layout function
@@ -81,7 +86,7 @@ func Trail(th rx.Observable[theme.Theme], props TrailProps) rx.Observable[TrailL
 				shaper = tok.shaper
 			}
 			return func(gtx layout.Context, segments []Segment) layout.Dimensions {
-				return st.layout(gtx, shaper, segments, tok.color, tok.spacing, tok.label)
+				return st.layout(gtx, shaper, segments, tok.color, tok.spacing, tok.label, props.Chevron)
 			}
 		})
 	})
@@ -94,17 +99,21 @@ func Trail(th rx.Observable[theme.Theme], props TrailProps) rx.Observable[TrailL
 // the value NewTrail returns owns the trail's clickables and must outlive the
 // frame — see TrailLayout.
 //
+// props carries the configuration that is not a token, as it does for
+// Render; its Shaper is unread here, the shaper being the first argument.
+//
 // label is the TitleSmall role's whole text style, as it is for Render; pass
 // tokens.DefaultTypography.TitleSmall for the default desktop look.
 func NewTrail(
 	shaper *text.Shaper,
+	props TrailProps,
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 ) TrailLayout {
 	st := new(trailState)
 	return func(gtx layout.Context, segments []Segment) layout.Dimensions {
-		return st.layout(gtx, shaper, segments, colors, sp, label)
+		return st.layout(gtx, shaper, segments, colors, sp, label, props.Chevron)
 	}
 }
 
@@ -166,10 +175,11 @@ func (s *trailState) layout(
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
+	chevron unit.Dp,
 ) layout.Dimensions {
 	s.fire(gtx)
 	items, clicks := s.adopt(segments)
-	return drawBreadcrumb(gtx, shaper, items, clicks, colors, sp, style)
+	return drawBreadcrumb(gtx, shaper, items, clicks, colors, sp, style, chevron)
 }
 
 // fire reports the clicks queued against the identities the previous frame
