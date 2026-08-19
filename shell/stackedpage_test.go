@@ -19,9 +19,9 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/shell"
-	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )

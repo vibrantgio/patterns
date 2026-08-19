@@ -10,8 +10,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 
-	"github.com/vibrantgio/patterns/breadcrumb"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/patterns/breadcrumb"
 	"github.com/vibrantgio/theme/tokens"
 )
 

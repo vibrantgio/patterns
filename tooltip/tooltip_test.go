@@ -11,8 +11,8 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
-	"github.com/vibrantgio/patterns/tooltip"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/patterns/tooltip"
 	"github.com/vibrantgio/theme/tokens"
 )
 

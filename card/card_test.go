@@ -13,8 +13,8 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
-	"github.com/vibrantgio/patterns/card"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/patterns/card"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
 )

@@ -22,9 +22,9 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/patterns/modal"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/patterns/modal"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )

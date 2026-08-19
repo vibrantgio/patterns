@@ -40,9 +40,9 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/patterns/modal"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/mvu/stream"
+	"github.com/vibrantgio/patterns/modal"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )

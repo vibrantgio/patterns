@@ -18,8 +18,8 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/patterns/table"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/patterns/table"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
