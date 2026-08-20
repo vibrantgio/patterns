@@ -1,10 +1,10 @@
 // Package tag provides the Patterns Tag pattern: the Full-radius pill chip
-// the patterns draw — a label, not a control. It is the shared home of the
-// chip that patterns/pricing ("Popular") and patterns/hero (the eyebrow)
-// each used to draw locally, and it is where the chip's status vocabulary
-// lives: real screens need status chips, and a vocabulary without one gets
-// status invented for it (goal G-I2 — if the web surface wants it, the Gio
-// vocabulary grows it first).
+// the patterns draw — a label, optionally with one affordance on it. It is
+// the shared home of the chip that patterns/pricing ("Popular") and
+// patterns/hero (the eyebrow) each used to draw locally, and it is where the
+// chip's status vocabulary lives: real screens need status chips, and a
+// vocabulary without one gets status invented for it (goal G-I2 — if the web
+// surface wants it, the Gio vocabulary grows it first).
 //
 // Five variants:
 //
@@ -12,19 +12,77 @@
 //     pricing's "Popular" chip.
 //   - Tonal: the primary-200 tinted fill under Primary text — hero's
 //     eyebrow (ADR-007: ramp steps 100–300 are tinted fills).
-//   - Success, Warning, Error: the status treatments. Each resolves its
-//     level from the pinned hue-anchored role
-//     (ColorTokens.Success/Warning/Error), blended 20% over the Surface
-//     pin for the fill and drawn pure as a 1 dp outline, under the Text
-//     pin. The base is Surface because a chip rests on the pane it
-//     labels; it does not float (ADR-005), which is what separates its
-//     resolution from a transient surface's.
+//   - Success, Warning, Error: the status treatments. Each is its role's
+//     tonal container — the role's own hue realized at one measured chroma
+//     and depth by the theme, never mixed here — under the Text pin. The
+//     container is resolved against the Surface pin because a chip rests on
+//     the pane it labels; it does not float (ADR-005), which is what
+//     separates its resolution from a transient surface's.
 //
-// Geometry is one chip for all five: S2/S1 padding, Full corner radius,
-// sized to its label-small label, the SemiBold request resolving to the
-// nearest registered face exactly as the pricing and hero call sites always
-// requested it. A tag is a label, not a control: it has no interaction
-// states, no density, and no hit target.
+// # A tinted pill states its own edge
+//
+// Filled needs no outline: a pinned fill separates from the ground on its
+// own, at 5.24:1 over the light Surface and 9.87:1 over the dark one. A
+// tinted fill never can. A tint and the surface it rests on are the same
+// lightness by construction, so every tinted fill in this system measures
+// within 1.37:1 of its ground — the tonal chip's primary-200 came out at
+// exactly 1.00:1 in the light scheme and 1.01:1 in the dark, which is a pill
+// with no pill in it: the label floated on the pane with nothing around it.
+//
+// So a tinted chip draws a 1 dp ring, and the ring is what carries WCAG
+// 1.4.11's 3:1 for the shape. It is drawn inside the pill, as nested fills
+// rather than as a stroke on the pill's path — see draw for the two defects
+// a centred stroke caused. The ring is the variant's role pinned base — the
+// same colour the tonal chip's own label wears, and for a status chip the
+// level pin it already rang itself with. Measured on the default seed, ring
+// against the pill's own fill and against the Surface it rests on:
+//
+//	scheme  variant  ring/fill   ring/Surface
+//	------  -------  ---------   ------------
+//	light   tonal      5.24:1       5.24:1
+//	light   success    4.54:1       5.48:1
+//	light   warning    4.54:1       5.48:1
+//	light   error      4.54:1       5.48:1
+//	dark    tonal      9.92:1       9.87:1
+//	dark    success    8.48:1       9.94:1
+//	dark    warning    8.43:1       9.88:1
+//	dark    error      8.40:1       9.86:1
+//
+// # Geometry
+//
+// One chip for all five: S2 horizontal padding, the S1 stop as the whole
+// vertical padding split between the two edges, Full corner radius, sized to
+// its label-small label, the SemiBold request resolving to the nearest
+// registered face exactly as the pricing and hero call sites always requested
+// it.
+//
+// The vertical padding is stated as a total rather than a per-edge inset
+// because the pill is a box on the 4-pt grid and its two edges are not: the
+// label-small line box is 16 dp, so the pill measures 16 + S1 = 20 dp. It
+// used to spend S1 on each edge and measure 24, which is a third of the
+// pill's height given to air above and below a 14 dp ink box that already
+// carries 1 dp of leading on each side. Nothing about the type changed: the
+// label is the same 11 sp in the same 16 dp line box it always was.
+//
+// # Dismissal
+//
+// A tag with a non-nil [Props.OnDismiss] draws a small close mark after its
+// label and reports the click; one with a nil OnDismiss draws none and takes
+// no input at all, which is the same nil-means-inert rule the navbar's links
+// and the sidebar's items follow. The tag never removes itself: it has no
+// idea what it labels, and the caller owns the collection it came from.
+//
+// Dismissal is not a sixth variant. It is orthogonal to the five, so every
+// treatment above can carry the mark and the mark takes its colour from
+// whichever one does.
+//
+// The mark is deliberately small and its target is not. The visible x is
+// 9 dp, and the pointer area registered under it is [CloseHitDp] square,
+// centred on the mark. On a default chip that is a 24 dp target on a 9 dp
+// drawing: it clears the pill by 2 dp above and below, and sideways it grows
+// inward over the chip's own trailing padding and the tail of its own label
+// rather than out past the pill's edge — so a row of chips has one target
+// per chip however tightly it is set.
 //
 // The package follows the Phase 4 Composition contract: Tag is a callable
 // Go function consuming a components theme observable, returning a stream of
@@ -36,13 +94,16 @@ import (
 	"image"
 	"image/color"
 
+	"gioui.org/f32"
 	"gioui.org/font"
+	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/theme/theme"
@@ -57,16 +118,49 @@ const (
 	// Filled is the default: the Primary pin under OnPrimary — the
 	// pricing card's "Popular" chip.
 	Filled Variant = iota
-	// Tonal is the primary-200 tinted fill under Primary text — the
-	// hero's eyebrow.
+	// Tonal is the primary-200 tinted fill under Primary text, ringed in
+	// the Primary pin — the hero's eyebrow.
 	Tonal
 	// Success, Warning and Error are the status treatments: the level's
-	// pinned role tinted 20% over Surface, ringed by the 1 dp level
-	// outline, under the Text pin — the toast's level resolution at chip
-	// scale.
+	// tonal container under the Text pin, ringed by the 1 dp level pin —
+	// the alert's level resolution at chip scale.
 	Success
 	Warning
 	Error
+)
+
+// The close affordance's three numbers, in dp.
+const (
+	// closeMarkDp is the square the x is drawn in. It is smaller than the
+	// label's line box on purpose: the mark is an affordance on a chip,
+	// not a second word in it.
+	//
+	// It is even, and that is the whole of why it is 10 and not 9. The
+	// pill's height is its line box plus S1, and both are even, so an
+	// odd-sided mark cannot be centred in it: at 9 the mark sat five rows
+	// below the pill's top edge and six above its bottom, next to a label
+	// centred six and six. On a word the half-pixel would be invisible; an
+	// x is symmetric about both axes, so it showed as a mark floating high
+	// beside type that did not.
+	closeMarkDp = 10
+	// closeStrokeDp is the width of each of the x's two strokes, in dp. It
+	// is a quarter wider than the pill's own 1 dp ring because a diagonal
+	// spends part of its width on anti-aliasing while the ring's
+	// axis-aligned edges do not; see drawClose for why it is not rounded to
+	// whole pixels.
+	closeStrokeDp = 1.25
+	// CloseHitDp is the side of the pointer target the close mark
+	// registers, in dp, centred on the mark and free to overhang the pill.
+	//
+	// It is WCAG 2.5.8 Target Size (Minimum), the AA criterion, and not
+	// the 44 dp of tokens.MinHitTarget. 44 is this system's floor for a
+	// *standalone* control — one with space around it — and extending a
+	// chip's trailing mark to it would reach across the whole of a short
+	// chip and into the next chip in the row, which is the neighbour's
+	// slop tokens.MinHitTarget's own documentation refuses to steal for
+	// stacked rows. 24 is what a target that cannot take the 44 owes, and
+	// it is the number every row in this system already meets.
+	CloseHitDp = 24
 )
 
 // Props configures a Tag.
@@ -77,6 +171,16 @@ type Props struct {
 
 	// Variant selects the treatment; the zero value is Filled.
 	Variant Variant
+
+	// OnDismiss makes the chip dismissible. When it is non-nil the chip
+	// draws its close mark and calls this on a click; when it is nil the
+	// chip draws no mark and registers no pointer area.
+	//
+	// It reports that the user asked for this chip to go away, and nothing
+	// more: the chip does not hide itself on the next frame, because what
+	// it labels is the caller's and only the caller knows whether the
+	// answer is to drop a row, clear a filter, or ask first.
+	OnDismiss func(gtx layout.Context)
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
 	// it nil in normal use: the tag then shapes its label with the theme's
@@ -101,13 +205,20 @@ type resolvedTokens struct {
 }
 
 // Tag returns an rx.Observable[layout.Widget] that emits a new widget
-// whenever any consumed theme token changes. A tag holds no interaction
-// state, so there is nothing to preserve across emissions.
+// whenever any consumed theme token changes.
+//
+// A tag with no OnDismiss holds no interaction state, so there is nothing to
+// preserve across emissions. A dismissible one holds exactly one clickable,
+// which the deferred scope below keeps across every emission: a click lands
+// on the frame after the one that drew the mark, so a clickable rebuilt per
+// emission would drop whichever click a token change happened to straddle.
 func Tag(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies the LabelSmall text style and the
 	// theme's cached shaper (ADR-003: the theme owns the typeface). There
-	// is no density: a tag is a label, not a control (E1.4).
+	// is no density: a tag is not a control (E1.4), and its one affordance
+	// takes its target from the pointer floor rather than from a control
+	// height.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Typography),
@@ -124,16 +235,33 @@ func Tag(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget
 		)
 	})
 
-	return rx.Map(resolved, func(tok resolvedTokens) layout.Widget {
-		// Props.Shaper is an explicit override; the theme's shaper is
-		// the default.
-		shaper := props.Shaper
-		if shaper == nil {
-			shaper = tok.shaper
-		}
-		return func(gtx layout.Context) layout.Dimensions {
-			return draw(gtx, shaper, props.Label, props.Variant, tok)
-		}
+	return rx.Defer(func() rx.Observable[layout.Widget] {
+		var dismiss widget.Clickable
+		return rx.Map(resolved, func(tok resolvedTokens) layout.Widget {
+			// Props.Shaper is an explicit override; the theme's shaper is
+			// the default.
+			shaper := props.Shaper
+			if shaper == nil {
+				shaper = tok.shaper
+			}
+			return func(gtx layout.Context) layout.Dimensions {
+				if props.OnDismiss == nil {
+					return draw(gtx, shaper, props.Label, props.Variant, tok, false, nil)
+				}
+				// Drained to empty and reported once: a double click on a
+				// close mark is one dismissal, not two, and the second
+				// click left queued would fire on the next frame against
+				// a chip the caller has already taken away.
+				dismissed := false
+				for dismiss.Clicked(gtx) {
+					dismissed = true
+				}
+				if dismissed {
+					props.OnDismiss(gtx)
+				}
+				return draw(gtx, shaper, props.Label, props.Variant, tok, true, &dismiss)
+			}
+		})
 	})
 }
 
@@ -158,29 +286,63 @@ func Render(
 ) layout.Widget {
 	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, style: style}
 	return func(gtx layout.Context) layout.Dimensions {
-		return draw(gtx, shaper, label, v, tok)
+		return draw(gtx, shaper, label, v, tok, false, nil)
 	}
 }
 
-// draw paints one pill chip sized to its label: S2 horizontal and S1
-// vertical padding around the label, Full corner radius, the variant's fill
-// under the variant's text colour, and — for the status variants — the 1 dp
-// level outline stroked on the pill's edge, exactly as the toast rings its
-// surface. The padding minimums keep the pill visible when the label
-// rasterises to zero width (e.g., in deterministic empty-label golden
-// tests), matching the historical eyebrow behaviour.
+// RenderDismissible is [Render] for a chip that carries its close mark: the
+// same pill, widened by the mark, with the mark's pointer area registered
+// against close.
+//
+// It is the static half of [Props.OnDismiss], for golden-image testing and
+// demonstrations, and it takes the clickable rather than a callback because
+// on this path there is no frame loop to drain one: the caller owns the
+// clickable, lays the widget out, and reads Clicked itself. A nil dismiss
+// draws the mark and registers nothing, which is what a still image wants.
+func RenderDismissible(
+	shaper *text.Shaper,
+	label string,
+	v Variant,
+	dismiss *widget.Clickable,
+	colors tokens.ColorTokens,
+	sp tokens.SpacingScale,
+	rad tokens.RadiusScale,
+	style tokens.TextStyle,
+) layout.Widget {
+	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, style: style}
+	return func(gtx layout.Context) layout.Dimensions {
+		return draw(gtx, shaper, label, v, tok, true, dismiss)
+	}
+}
+
+// draw paints one pill chip sized to its label: S2 horizontal padding, the
+// S1 stop split between the two vertical edges, Full corner radius, the
+// variant's fill under the variant's text colour, and — for the tinted
+// variants — the 1 dp role ring stroked on the pill's edge. The padding
+// minimums keep the pill visible when the label rasterises to zero width
+// (e.g., in deterministic empty-label golden tests), matching the historical
+// eyebrow behaviour.
+//
+// dismissible widens the pill by the close mark and draws it; dismiss is the
+// clickable the mark's pointer area is registered against, and a nil one
+// draws the mark inert, which is what a still image wants.
 func draw(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	label string,
 	v Variant,
 	tok resolvedTokens,
+	dismissible bool,
+	dismiss *widget.Clickable,
 ) layout.Dimensions {
 	padH := gtx.Dp(unit.Dp(tok.spacing.S2))
-	padV := gtx.Dp(unit.Dp(tok.spacing.S1))
+	// The S1 stop is the pill's whole vertical padding, split between the
+	// two edges — see the package comment. Integer division floors it, so
+	// the two edges are equal at every scale factor.
+	padV := gtx.Dp(unit.Dp(tok.spacing.S1)) / 2
 	rad := gtx.Dp(unit.Dp(tok.radius.Full))
 
-	fg, bg, outline, outlined := colors(v, tok.color)
+	fg, bg, ring, ringed := colors(v, tok.color)
 
 	// Both historical call sites request SemiBold, which the pinned shaper
 	// resolves to the Medium face (the nearest registered weight); a zero
@@ -196,69 +358,177 @@ func draw(
 	labelDims := typeset.Layout(labelGtx, shaper, wl, typeset.Font(tok.style, font.SemiBold), unit.Sp(tok.style.Size), label, material)
 	labelCall := mLabel.Stop()
 
-	w := labelDims.Size.X + 2*padH
+	mark, gap := 0, 0
+	if dismissible {
+		mark = gtx.Dp(unit.Dp(closeMarkDp))
+		// S2 rather than S1, so the mark sits in the same 8 dp of air on
+		// both sides — the chip's trailing padding on one, this gap on the
+		// other — instead of being glued to the last letter. At S1 the mark
+		// read as the end of the word rather than as something of its own,
+		// which for the chip's only affordance is the wrong reading.
+		gap = gtx.Dp(unit.Dp(tok.spacing.S2))
+	}
+
+	w := labelDims.Size.X + 2*padH + gap + mark
 	h := labelDims.Size.Y + 2*padV
-	if minW := 2 * padH; w < minW {
+	if minW := 2*padH + gap + mark; w < minW {
 		w = minW
 	}
 	if minH := 2 * padV; h < minH {
 		h = minH
 	}
 
-	// components/layout.Pill's clamp, kept here because the status outline
-	// needs the same rounded rect as a Path: clip.RRect does not clamp a
-	// corner radius to the rect, so the Full sentinel (9999 dp) passed
-	// straight in would spray paint across the canvas.
+	// components/layout.Pill's clamp, kept here because the ring needs the
+	// same rounded rect as a Path: clip.RRect does not clamp a corner
+	// radius to the rect, so the Full sentinel (9999 dp) passed straight in
+	// would spray paint across the canvas.
 	if maxRad := min(w, h) / 2; rad > maxRad {
 		rad = maxRad
 	}
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
-	paint.FillShape(gtx.Ops, bg, rrect.Op(gtx.Ops))
-	if outlined {
-		paint.FillShape(gtx.Ops, outline, clip.Stroke{
-			Path:  rrect.Path(gtx.Ops),
-			Width: float32(gtx.Dp(unit.Dp(1))),
-		}.Op())
+	if !ringed {
+		paint.FillShape(gtx.Ops, bg, rrect.Op(gtx.Ops))
+	} else {
+		// The ring as nested fills — the pill in the ring's colour, then the
+		// fill inset by the ring's width — which is how components/input
+		// draws a field's border, and not as a stroke on the pill's path.
+		//
+		// A stroke is centred on the path it follows, so a 1 dp stroke on
+		// the pill's own edge spends half its width outside the box the chip
+		// reports. Two things came of that, and both were visible in a row
+		// of chips: a ringed chip painted two pixels taller than a filled one
+		// beside it and ate a pixel of the gap on each side, so the row had a
+		// notch in it wherever the treatment changed; and the half-pixel
+		// either side of the boundary meant the ring never rendered at its
+		// own colour — a two-row, half-strength smear, which measured 1.64:1
+		// against the light success fill where the colour it was drawn in
+		// measures 4.54:1. Inset, the ring lands on whole pixels, reads at
+		// the ratio it was chosen for, and every variant measures the same
+		// box.
+		band := gtx.Dp(unit.Dp(1))
+		if band < 1 {
+			band = 1
+		}
+		inner := image.Rect(band, band, w-band, h-band)
+		if inner.Dx() <= 0 || inner.Dy() <= 0 {
+			// A chip too small to hold a fill inside its ring is all ring.
+			paint.FillShape(gtx.Ops, ring, rrect.Op(gtx.Ops))
+		} else {
+			innerRad := rad - band
+			if maxRad := min(inner.Dx(), inner.Dy()) / 2; innerRad > maxRad {
+				innerRad = maxRad
+			}
+			if innerRad < 0 {
+				innerRad = 0
+			}
+			paint.FillShape(gtx.Ops, ring, rrect.Op(gtx.Ops))
+			paint.FillShape(gtx.Ops, bg, clip.RRect{
+				Rect: inner, SE: innerRad, SW: innerRad, NE: innerRad, NW: innerRad,
+			}.Op(gtx.Ops))
+		}
 	}
 
 	st := op.Offset(image.Pt(padH, padV)).Push(gtx.Ops)
 	labelCall.Add(gtx.Ops)
 	st.Pop()
+
+	if dismissible {
+		origin := image.Pt(w-padH-mark, (h-mark)/2)
+		drawClose(gtx, origin, mark, fg)
+		registerCloseTarget(gtx, label, origin, mark, dismiss)
+	}
 	return layout.Dimensions{Size: image.Pt(w, h)}
 }
 
-// colors resolves a variant to its text colour, fill, and — for the status
-// variants — outline. The status levels read the pinned hue-anchored roles and
-// blend them 20% over the ground the chip rests on. All of it reads roles
-// off the token set, so every variant flips with light/dark and follows
-// whatever seed, palette or high-contrast variant the theme is emitting.
-func colors(v Variant, c tokens.ColorTokens) (fg, bg, outline color.NRGBA, outlined bool) {
+// drawClose strokes the x in the mark-sized square at origin, in the same
+// colour the chip's label is drawn in — so the affordance is measured
+// against the fill by the pairing the label already cleared, and a chip can
+// never grow a mark its own ground hides.
+func drawClose(gtx layout.Context, origin image.Point, mark int, c color.NRGBA) {
+	// The width is scaled rather than rounded to whole pixels, which is the
+	// opposite of what the pill's ring wants and right for the same reason.
+	// A ring is axis-aligned, so a whole-pixel width lands on whole pixels
+	// and reads at exactly its weight; an x is two diagonals, which are
+	// anti-aliased at any width at all. Rounding 1.25 dp up to 2 px made the
+	// mark a weight heavier than the label beside it, and down to 1 px a
+	// weight lighter — measured on the label-small specimen at 1x, where the
+	// Medium face's stems land between the two.
+	stroke := closeStrokeDp * gtx.Metric.PxPerDp
+	if stroke < 1 {
+		// A zero or unset metric would erase the mark; a sub-pixel width
+		// would leave it a smear. Neither is better than the thinnest
+		// stroke that draws.
+		stroke = 1
+	}
+	// Inset by the stroke's half-width so the arms end inside the square
+	// rather than bleeding a half-stroke past it on the diagonal.
+	in := stroke / 2
+	x0, y0 := float32(origin.X)+in, float32(origin.Y)+in
+	x1, y1 := float32(origin.X+mark)-in, float32(origin.Y+mark)-in
+
+	var p clip.Path
+	p.Begin(gtx.Ops)
+	p.MoveTo(f32.Pt(x0, y0))
+	p.LineTo(f32.Pt(x1, y1))
+	p.MoveTo(f32.Pt(x1, y0))
+	p.LineTo(f32.Pt(x0, y1))
+	paint.FillShape(gtx.Ops, c, clip.Stroke{Path: p.End(), Width: stroke}.Op())
+}
+
+// registerCloseTarget puts the clickable's pointer area over the mark,
+// grown to CloseHitDp on each axis and centred on it. That is the point of
+// the affordance: the drawn mark is 9 dp and the target it answers to is 24.
+//
+// The chip's own reported size is unaffected — a caller laying tags out in a
+// row spaces the pills it can see, not the slop behind them — so where the
+// slop of two widgets overlaps, the one laid out later wins it, exactly as
+// Gio delivers to the topmost area. It rarely comes up between two chips:
+// the mark sits a whole S2 in from the pill's trailing edge, so the target's
+// growth sideways is spent inside the chip.
+func registerCloseTarget(gtx layout.Context, label string, origin image.Point, mark int, dismiss *widget.Clickable) {
+	if dismiss == nil {
+		return
+	}
+	hit := gtx.Dp(unit.Dp(CloseHitDp))
+	if hit < mark {
+		hit = mark
+	}
+	off := op.Offset(image.Pt(origin.X-(hit-mark)/2, origin.Y-(hit-mark)/2)).Push(gtx.Ops)
+	dismiss.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		semantic.ClassOp(semantic.Button).Add(gtx.Ops)
+		// The chip's own label names the target: what the mark removes is
+		// the chip, and a screen reader reading the mark should say which
+		// chip rather than a word this package invented for it.
+		semantic.LabelOp(label).Add(gtx.Ops)
+		semantic.EnabledOp(true).Add(gtx.Ops)
+		return layout.Dimensions{Size: image.Pt(hit, hit)}
+	})
+	off.Pop()
+}
+
+// colors resolves a variant to its text colour, fill, and — for the tinted
+// variants — the ring that states the pill's edge. The status levels take
+// their role's tonal container, realized at a tone by the theme rather than
+// mixed here: compositing a pinned base over the neutral Surface in
+// non-linear sRGB is neither hue- nor chroma-preserving, and the four
+// grounds it used to give this chip came out at chroma 0.0196–0.0433, near
+// enough to the grey they were mixed into that no two of them could be told
+// apart. The realized containers hold one chroma and four hues.
+//
+// All of it reads roles off the token set, so every variant flips with
+// light/dark and follows whatever seed, palette or high-contrast variant the
+// theme is emitting.
+func colors(v Variant, c tokens.ColorTokens) (fg, bg, ring color.NRGBA, ringed bool) {
 	switch v {
 	case Tonal:
-		return c.Primary, c.Ramps.Primary.Step(200), color.NRGBA{}, false
+		return c.Primary, c.Ramps.Primary.Step(200), c.Primary, true
 	case Success:
-		return c.Text, tintSurface(c.Surface, c.Success), c.Success, true
+		return c.Text, c.StatusContainer(tokens.RoleSuccess), c.Success, true
 	case Warning:
-		return c.Text, tintSurface(c.Surface, c.Warning), c.Warning, true
+		return c.Text, c.StatusContainer(tokens.RoleWarning), c.Warning, true
 	case Error:
-		return c.Text, tintSurface(c.Surface, c.Error), c.Error, true
+		return c.Text, c.StatusContainer(tokens.RoleError), c.Error, true
 	default:
 		return c.OnPrimary, c.Primary, color.NRGBA{}, false
-	}
-}
-
-// tintSurface blends 20% of the accent over the given base — here the
-// Surface pin a resting chip sits on.
-func tintSurface(base, accent color.NRGBA) color.NRGBA {
-	return blend(base, accent, 0x33)
-}
-
-func blend(base, over color.NRGBA, alpha uint8) color.NRGBA {
-	a := float32(alpha) / 255
-	return color.NRGBA{
-		R: uint8(float32(over.R)*a + float32(base.R)*(1-a)),
-		G: uint8(float32(over.G)*a + float32(base.G)*(1-a)),
-		B: uint8(float32(over.B)*a + float32(base.B)*(1-a)),
-		A: 0xff,
 	}
 }
