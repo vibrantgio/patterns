@@ -25,7 +25,7 @@ type exception struct {
 // alert/alert.go and toast/toast.go were listed here until F4.6, each
 // carrying a byte-identical copy of the same four Tailwind values for the
 // success and warning accents. theme/tokens now derives both roles —
-// hue-fixed ramps and pins, like error — so both entries are gone and the
+// hue-anchored ramps and pins, like error — so both entries are gone and the
 // only exception left is a deliberate alpha composite.
 var exceptions = []exception{
 	{

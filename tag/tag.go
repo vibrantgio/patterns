@@ -13,7 +13,7 @@
 //   - Tonal: the primary-200 tinted fill under Primary text — hero's
 //     eyebrow (ADR-007: ramp steps 100–300 are tinted fills).
 //   - Success, Warning, Error: the status treatments. Each resolves its
-//     level from the pinned fixed-hue role
+//     level from the pinned hue-anchored role
 //     (ColorTokens.Success/Warning/Error), blended 20% over the Surface
 //     pin for the fill and drawn pure as a 1 dp outline, under the Text
 //     pin. The base is Surface because a chip rests on the pane it
@@ -228,7 +228,7 @@ func draw(
 }
 
 // colors resolves a variant to its text colour, fill, and — for the status
-// variants — outline. The status levels read the pinned fixed-hue roles and
+// variants — outline. The status levels read the pinned hue-anchored roles and
 // blend them 20% over the ground the chip rests on. All of it reads roles
 // off the token set, so every variant flips with light/dark and follows
 // whatever seed, palette or high-contrast variant the theme is emitting.

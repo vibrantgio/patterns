@@ -670,21 +670,19 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 	return tw.At(frame)
 }
 
-// edgeStep is the rung of the level's ramp the leading edge takes. It is
-// the deepest rung that still reads over the inverse ground in both
-// schemes, which is what fixes it: the ramps are paired scales, so in a
-// light scheme step 400 is a light tint against a dark chip (7.86–7.89:1
-// across the four levels) and in a dark scheme the same step is a deep
-// shade against a light one (7.61–7.63:1), while step 500 — the ramps'
-// mid-value rung — collapses to 2.19:1 on the dark scheme's light chip.
-// Every level clears the 3:1 a non-text graphic owes its ground with room
-// to spare, in both schemes and in the high-contrast variant, whose 100–600
-// stops are the default scale's.
-const edgeStep = 400
+// edgeFloor is the contrast the leading edge owes the inverse chip it sits
+// on. The edge is a graphic and not text, so 3:1 would satisfy WCAG, but it
+// is also the only thing on a toast that says which level this is, and it
+// says it in a sliver one spacing stop wide — so it is held to the body-text
+// floor instead, which is what a signal that narrow has to reach to be a
+// signal at all.
+const edgeFloor = 4.5
 
-// edgeColor maps Level to the colour of its leading edge: that level's own
-// ramp at edgeStep, so it flips with light/dark and follows whatever seed,
-// palette or high-contrast variant the theme is emitting.
+// edgeColor maps Level to the colour of its leading edge: the most
+// chromatic rung of that level's own ramp that clears edgeFloor over the
+// inverse chip (tokens.MarkOn), so the edge flips with light/dark and
+// follows whatever seed, palette or high-contrast variant the theme is
+// emitting.
 //
 // It reads a ramp rather than the pinned base the fill used to be tinted
 // with. The pins are tuned to be filled and written on — their depth is
@@ -692,20 +690,41 @@ const edgeStep = 400
 // they are on the wrong side: a dark scheme's pins sit at L* 82, which is
 // most of the way to that scheme's own light chip.
 //
+// It also asks for a rung rather than naming one. The edge used to be
+// step 400 in both schemes, that being the deepest rung to read over the
+// inverse ground in either, and one rung for two schemes and four hues cost
+// the light scheme its reds: over a light scheme's dark chip step 400 sits
+// at L* 74, where sRGB holds a third less chroma at the error hue than it
+// does two rungs deeper, and the error edge came out the pale salmon a red
+// turns into when it is asked to be that light. Asked for the most
+// chromatic rung that still reads, the light scheme takes step 500 for
+// error, success and info — the rung all three hold their anchor's full
+// chroma at — and step 400 for the amber, whose chroma peaks a rung
+// shallower; the dark scheme keeps step 400 throughout.
+//
 // Until F4.6 Success and Warning were Tailwind green and amber literals,
 // duplicated byte-for-byte between this file and alert/alert.go; theme's
-// hue-fixed success and warning ramps replaced both copies.
+// hue-anchored success and warning ramps replaced both copies.
+//
+// Info reads the info ramp rather than the accent one. A level is a
+// statement about what happened, and an informational chip that wore the
+// brand made that statement in whatever colour the brand happened to be —
+// under a red-heavy brand it said "error" more loudly than the error level
+// did. The info role is anchored on a blue of its own, so the four levels
+// stay four whatever the seed.
 func edgeColor(l Level, c tokens.ColorTokens) color.NRGBA {
+	var role tokens.Role
 	switch l {
 	case Error:
-		return c.Ramps.Error.Step(edgeStep)
+		role = tokens.RoleError
 	case Success:
-		return c.Ramps.Success.Step(edgeStep)
+		role = tokens.RoleSuccess
 	case Warning:
-		return c.Ramps.Warning.Step(edgeStep)
+		role = tokens.RoleWarning
 	default:
-		return c.Ramps.Primary.Step(edgeStep)
+		role = tokens.RoleInfo
 	}
+	return c.MarkOn(role, c.InverseSurface, edgeFloor)
 }
 
 func withAlpha(c color.NRGBA, a float64) color.NRGBA {

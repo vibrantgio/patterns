@@ -110,7 +110,7 @@ func TestStatusVariantsDiffer(t *testing.T) {
 }
 
 // TestTagLightDarkDiffer confirms a status chip flips with the scheme: the
-// fixed-hue level roles are paired light/dark ramps, not literals.
+// hue-anchored level roles are paired light/dark ramps, not literals.
 func TestTagLightDarkDiffer(t *testing.T) {
 	shaper := defaultShaper(t)
 	light := tag.Render(shaper, labelSuccess, tag.Success, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelSmall)

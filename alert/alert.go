@@ -11,13 +11,25 @@
 // four draw the same right-pointing chevron glyph, differing only in
 // colour; the per-variant icon set arrives with components/icon.
 //
-// Each variant's accent is a pinned token role — Primary, Success, Warning
-// and Error — so a custom theme's colours reach all four. Until F4.6 the
-// last two were Tailwind green and amber literals defined in this file,
-// picked between light and dark by comparing the luminance of Surface
-// against Text; theme's token set now carries hue-fixed success and
-// warning ramps, so the local palette and the light-mode sniff are both
-// gone.
+// Colour: each variant is a status role, and the banner is that role's
+// tonal container with the role's own mark on it — StatusContainer and
+// OnStatusContainer, both realized at a tone by the theme rather than mixed
+// here. Info is the info role, not the accent: an informational banner that
+// wore the brand said whatever the brand happened to say, and under a
+// red-heavy brand it said "error" louder than the error variant did.
+//
+// That supersedes two earlier arrangements. Until F4.6 success and warning
+// were Tailwind green and amber literals defined in this file, picked
+// between light and dark by comparing the luminance of Surface against
+// Text; the theme's hue-anchored status ramps replaced both copies and the
+// light-mode sniff with them. And until this pattern took the container
+// token, the banner mixed its own ground: the pinned base composited over
+// the neutral Surface at 12% alpha, in non-linear sRGB. That is neither
+// hue-preserving nor chroma-preserving, and all four grounds came out
+// within a rounding error of grey — the red one at chroma 0.019 with its
+// hue dragged seven degrees toward magenta, which is a red banner that
+// reads as dirty pink. The blend and its local helpers are gone; the
+// theme derives the ground.
 //
 // The banner fills the constraints it is given rather than shrinking to
 // its content — it reports gtx.Constraints.Max as its size — so an Alert
@@ -149,8 +161,9 @@ func drawAlert(gtx layout.Context, shaper *text.Shaper, props Props, colors toke
 	size := gtx.Constraints.Max
 	r := gtx.Dp(unit.Dp(rad.Lg))
 
-	accent := accentColor(props.Variant, colors)
-	bg := tintSurface(colors.Surface, accent)
+	role := roleOf(props.Variant)
+	accent := colors.OnStatusContainer(role)
+	bg := colors.StatusContainer(role)
 
 	rrect := clip.RRect{Rect: image.Rectangle{Max: size}, SE: r, SW: r, NE: r, NW: r}
 	paint.FillShape(gtx.Ops, bg, rrect.Op(gtx.Ops))
@@ -227,36 +240,19 @@ func drawChevron(gtx layout.Context, cx, cy, sz int, col color.NRGBA) {
 	paint.FillShape(gtx.Ops, col, clip.Outline{Path: p.End()}.Op())
 }
 
-// accentColor maps Variant to its pinned token role. All four read a role
-// off the token set, so all four flip with light/dark and follow whatever
-// seed, palette or high-contrast variant the theme is emitting.
-func accentColor(v Variant, c tokens.ColorTokens) color.NRGBA {
+// roleOf maps Variant to its status role in the token set. All four are
+// status roles — info included — so all four flip with light/dark and
+// follow whatever seed, palette or high-contrast variant the theme is
+// emitting, and none of them wears the accent.
+func roleOf(v Variant) tokens.Role {
 	switch v {
-	case Info:
-		return c.Primary
 	case Error:
-		return c.Error
+		return tokens.RoleError
 	case Success:
-		return c.Success
+		return tokens.RoleSuccess
 	case Warning:
-		return c.Warning
+		return tokens.RoleWarning
 	default:
-		return c.Primary
-	}
-}
-
-// tintSurface overlays accent onto surface at ~12% alpha. The result has
-// a soft variant tint while preserving Text legibility.
-func tintSurface(surface, accent color.NRGBA) color.NRGBA {
-	return blend(surface, accent, 0x1F)
-}
-
-func blend(base, over color.NRGBA, alpha uint8) color.NRGBA {
-	a := float32(alpha) / 255
-	return color.NRGBA{
-		R: uint8(float32(over.R)*a + float32(base.R)*(1-a)),
-		G: uint8(float32(over.G)*a + float32(base.G)*(1-a)),
-		B: uint8(float32(over.B)*a + float32(base.B)*(1-a)),
-		A: 0xff,
+		return tokens.RoleInfo
 	}
 }
