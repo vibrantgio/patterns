@@ -14,6 +14,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/mvu"
+	vcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -456,6 +457,95 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 	if want := newest.Min.Y - gap - newest.Dy(); older.Min.Y != want {
 		t.Errorf("the older toast starts at y=%d; want y=%d, one %d dp gap above the newest — the stack grows upward",
 			older.Min.Y, want, gap)
+	}
+}
+
+// TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir measures the
+// level edge on a rendered chip and holds it between the two bounds the
+// width was judged against.
+//
+// The floor is that a mark identified by its colour cannot be drawn at the
+// width the desktop keeps for hairlines, separators and insets — one to
+// three pixels — which is where this edge used to sit at one spacing stop.
+// The ceiling is the chip's own air: the message stands one horizontal pad
+// clear of the edge, and an edge as wide as that gap reads as a panel the
+// message sits beside rather than as the chip's leading edge. So the
+// assertion is not "8 px" for its own sake — it is that the mark is at
+// least twice the platform's furniture band and still narrower than the air
+// it holds the text off by, with the pixel value logged so a later change
+// of scale can be read off a test run.
+func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
+	shaper := tokens.DefaultTypography.DeterministicShaper()
+	tok := intTok()
+	// The widest band the platform draws when it does not want the mark
+	// looked at: a pane stroke, a separator hairline, a scroll thumb's
+	// inset. A level edge has to clear it by a margin, not by a pixel.
+	const furnitureBand = 3
+
+	for _, l := range []Level{Info, Success, Warning, Error} {
+		queued := []Toast{{ID: 1, Level: l, Text: "Rescanned: 2 notes"}}
+		img := golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
+			return drawStackStatic(gtx, shaper, Props{Position: TopLeft}, tok, queued)
+		})
+		edge := toastBounds(img, levelEdge(l, tok))
+		if edge.Empty() {
+			t.Fatalf("level %d painted no leading edge", l)
+		}
+		if edge.Dx() <= 2*furnitureBand {
+			t.Errorf("level %d edge is %d px wide; a mark read by its colour cannot be drawn at the %d px the platform keeps for furniture",
+				l, edge.Dx(), furnitureBand)
+		}
+		air := int(tok.spacing.S3) // the message's inset from the edge
+		if edge.Dx() >= air {
+			t.Errorf("level %d edge is %d px wide against %d px of air before the message; an edge as wide as its own air reads as a panel",
+				l, edge.Dx(), air)
+		}
+		// The air is real, not just arithmetic: find the first column right
+		// of the edge carrying anything that is neither the fill nor the
+		// edge, which is the message's first ink.
+		fill := surfaceFill(tok)
+		firstInk := -1
+		for x := edge.Max.X; x < edge.Max.X+4*air && firstInk < 0; x++ {
+			for y := edge.Min.Y; y < edge.Max.Y; y++ {
+				got := img.RGBAAt(x, y)
+				if !nearColor(got, fill) && !nearColor(got, levelEdge(l, tok)) {
+					firstInk = x
+					break
+				}
+			}
+		}
+		if firstInk < 0 {
+			t.Fatalf("level %d: no message ink found beside the edge", l)
+		}
+		if gap := firstInk - edge.Max.X; gap <= edge.Dx() {
+			t.Errorf("level %d: %d px of air between the edge and the message against a %d px edge; the mark must not out-measure the space it keeps",
+				l, gap, edge.Dx())
+		}
+		t.Logf("level %d: edge %d px wide, message ink %d px past it", l, edge.Dx(), firstInk-edge.Max.X)
+	}
+}
+
+// TestLeadingEdgeReadsOnTheChipInBothSchemes is the colour half of the same
+// claim: the edge is the only thing on a toast that says which level this
+// is, so it owes its chip the floor edgeFloor names, in both schemes and at
+// every level. The rung each scheme lands on is logged rather than asserted
+// — which rung answers is the ramp's business, not this package's — but the
+// contrast it reaches is this package's, because it is what the component
+// asked for.
+func TestLeadingEdgeReadsOnTheChipInBothSchemes(t *testing.T) {
+	for _, sc := range []struct {
+		name string
+		c    tokens.ColorTokens
+	}{{"light", tokens.DefaultLight}, {"dark", tokens.DefaultDark}} {
+		for _, l := range []Level{Info, Success, Warning, Error} {
+			edge := edgeColor(l, sc.c)
+			got := vcolor.ContrastRatio(edge, sc.c.InverseSurface)
+			if got < edgeFloor {
+				t.Errorf("%s scheme, level %d: edge %v on the chip measures %.2f:1; want at least %.1f:1",
+					sc.name, l, edge, got, edgeFloor)
+			}
+			t.Logf("%s scheme, level %d: edge %v at %.2f:1", sc.name, l, edge, got)
+		}
 	}
 }
 

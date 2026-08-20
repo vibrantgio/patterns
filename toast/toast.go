@@ -561,7 +561,7 @@ func paintStack(
 
 // paintToast paints one inverse chip sized to its content: a Level3 cast
 // shadow under a flat InverseSurface fill, its message in
-// OnInverseSurface, and a leading edge one spacing stop wide in the
+// OnInverseSurface, and a leading edge two spacing stops wide in the
 // level's own ramp. The fade alpha is applied to the shadow (via its
 // opacity argument), the fill, the edge and the text colour.
 //
@@ -575,6 +575,34 @@ func paintStack(
 // worse than 7.6:1 against the deepest surface storey, so the ring is
 // decoration — and decoration that cost the level its one strong signal,
 // which the leading edge now carries.
+//
+// The edge's width is a third judgement, re-made once the edge was
+// carrying that signal alone. It was one spacing stop, 4 dp, and at one
+// pixel per dp that is the width the desktop reserves for the furniture it
+// does not want looked at: a title bar's separator, a floating pane's
+// stroke, the divider between two panes and the inset around a scroll
+// thumb all measure one to three pixels there, while the marks that same
+// platform asks you to identify by colour alone measure eleven to fourteen
+// across — the scroll thumb eleven, a window button fourteen. A
+// level edge is the second kind of thing wearing the first kind's width,
+// which is the whole of why it got lost. It is two stops now, 8 dp: as
+// wide as the air above and below the message, two thirds of the air
+// between it and the message's first letter.
+//
+// That gap is also the ceiling. An edge as wide as the space it holds the
+// text off by stops reading as an edge and starts reading as a panel the
+// message sits beside; on this chip's padding it reaches that at 12 dp and
+// is unmistakably a tab at 14, which is why the widening stops two thirds
+// of the way there.
+//
+// What the extra width buys is the level rather than the edge — the edge
+// clears its floor against the chip at either width (see edgeFloor). Read
+// off the rendered chips as the weakest separation between two levels'
+// leading 16 px, which is about what one glance resolves of a mark this
+// size, the light chip goes from 21.8 to 36.7 and the dark chip from 10.2
+// to 21.6. The dark number is the one that mattered: a dark scheme's chip
+// is light, its edges are dark, and at 4 dp its weakest pair sat on the
+// threshold where two colours stop being two.
 func paintToast(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -583,7 +611,11 @@ func paintToast(
 ) layout.Dimensions {
 	padH := gtx.Dp(unit.Dp(tok.spacing.S3))
 	padV := gtx.Dp(unit.Dp(tok.spacing.S2))
-	edgeW := gtx.Dp(unit.Dp(tok.spacing.S1))
+	// The edge stays on the spacing scale rather than becoming a number of
+	// its own so that the two measures the judgement above rests on — the
+	// air above the message and the air beside it — keep their ratio to it
+	// under any scale a theme emits.
+	edgeW := gtx.Dp(unit.Dp(tok.spacing.S2))
 	r := gtx.Dp(unit.Dp(tok.radius.Md))
 	alpha := it.alpha
 
@@ -672,17 +704,23 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 
 // edgeFloor is the contrast the leading edge owes the inverse chip it sits
 // on. The edge is a graphic and not text, so 3:1 would satisfy WCAG, but it
-// is also the only thing on a toast that says which level this is, and it
-// says it in a sliver one spacing stop wide — so it is held to the body-text
-// floor instead, which is what a signal that narrow has to reach to be a
-// signal at all.
+// is also the only thing on a toast that says which level this is, so it is
+// held to the body-text floor instead.
+//
+// The number does not bind, which is worth knowing before anyone tunes it.
+// Over the whole seed sweep, both derivations, all four levels and both
+// schemes, asking for 3.0 picks exactly the rungs asking for 4.5 does: step
+// 500 in a light scheme, never worse than 5.52:1 over the dark chip, and
+// step 400 in a dark scheme, never worse than 7.58:1 over the light one.
+// What chooses the rung is the shape of the role's ramp against a ground
+// built out of the counterpart scheme — see edgeColor — and not this floor.
 const edgeFloor = 4.5
 
-// edgeColor maps Level to the colour of its leading edge: the most
-// chromatic rung of that level's own ramp that clears edgeFloor over the
-// inverse chip (tokens.MarkOn), so the edge flips with light/dark and
-// follows whatever seed, palette or high-contrast variant the theme is
-// emitting.
+// edgeColor maps Level to the colour of its leading edge: the rung of that
+// level's own ramp nearest the ramp's mid-value step that still clears
+// edgeFloor over the inverse chip (tokens.MarkOn), so the edge flips with
+// light/dark and follows whatever seed, palette or high-contrast variant
+// the theme is emitting.
 //
 // It reads a ramp rather than the pinned base the fill used to be tinted
 // with. The pins are tuned to be filled and written on — their depth is
@@ -696,11 +734,14 @@ const edgeFloor = 4.5
 // the light scheme its reds: over a light scheme's dark chip step 400 sits
 // at L* 74, where sRGB holds a third less chroma at the error hue than it
 // does two rungs deeper, and the error edge came out the pale salmon a red
-// turns into when it is asked to be that light. Asked for the most
-// chromatic rung that still reads, the light scheme takes step 500 for
-// error, success and info — the rung all three hold their anchor's full
-// chroma at — and step 400 for the amber, whose chroma peaks a rung
-// shallower; the dark scheme keeps step 400 throughout.
+// turns into when it is asked to be that light. Asked for a rung instead,
+// a light scheme takes step 500 at all four levels — the rung where each
+// role holds its anchor's full chroma — and a dark scheme takes step 400 at
+// all four. The dark answer is forced rather than chosen: a dark scheme's
+// ramps turn light at step 500, which measures 2.2:1 over the light chip a
+// dark scheme's toast is, so 400 is the nearest rung to the middle that
+// reads over that chip at all, and it is as chromatic as an edge on a dark
+// scheme's toast can be.
 //
 // Until F4.6 Success and Warning were Tailwind green and amber literals,
 // duplicated byte-for-byte between this file and alert/alert.go; theme's
