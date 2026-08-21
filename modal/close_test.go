@@ -160,12 +160,18 @@ func TestCloseMarkContrast(t *testing.T) {
 			if mark.Dx() != mark.Dy() {
 				t.Errorf("close mark measures %d×%d px, want a square mark", mark.Dx(), mark.Dy())
 			}
-			// It is a mark and not a speck. The platform reference puts a
-			// window's own close control at 14 px and the reference reading
-			// app's navigation marks at 10 px on a display where one pixel is
-			// one dp; a mark under that band is one nobody finds.
-			if mark.Dx() < 9 {
-				t.Errorf("close mark measures %d px across, want at least 9", mark.Dx())
+			// It is a mark and not a speck, and this is the assertion that
+			// says so — contrast alone never would, because the ink token is
+			// the same however little of it gets drawn.
+			//
+			// The floor is the platform's own: a window close control
+			// measures 14 dp on a display where one pixel is one dp, and the
+			// mark a dialog is left by has no business being smaller than the
+			// mark a window is left by. 13 rather than 14 only so a stroke
+			// that antialiases a shade differently is not a failure.
+			const markFloor = 13
+			if mark.Dx() < markFloor {
+				t.Errorf("close mark measures %d px across, want at least %d", mark.Dx(), markFloor)
 			}
 		})
 	}

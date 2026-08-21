@@ -44,9 +44,11 @@
 //
 // # The panel's close mark, measured
 //
-// The mark is a cross 8 dp corner to corner at a 2 dp stroke, which lands
-// 10 dp of ink on each axis, centred in the 20 dp icon box of a ghost
-// components/button — itself a 36 dp square at the comfortable density. The
+// The mark is a cross 12 dp corner to corner at a 2 dp stroke, which lands
+// 14 dp of ink on each axis — the size of this platform's own window close
+// control — centred in the 20 dp icon box of a ghost components/button,
+// itself a 36 dp square at the comfortable density. See [crossPadDp] for why
+// the mark fills 60% of that box rather than the third it used to. The
 // pointer target under it is 44 dp on each axis: tokens.MinHitTarget, the
 // floor for a STANDALONE control, which is the one that applies here.
 //
@@ -937,6 +939,22 @@ func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 	return -1
 }
 
+// crossPadDp is the inset from the icon box to each end of the cross, and so
+// what decides how much of that box the mark fills.
+//
+// It is 4 dp, which puts the cross 12 dp corner to corner in the 20 dp icon
+// box a comfortable icon button hands it — 60% of the box, the proportion a
+// glyph set draws a close mark at, and 14 dp of ink once the 2 dp stroke is
+// counted. That last number is the one it was chosen for: 14 dp is what this
+// platform's own window close control measures, so the mark a dialog is left
+// by is the size the platform leaves a window by.
+//
+// It was 6 dp — an 8 dp cross, 10 dp of ink, under a third of the box. That
+// mark measured the same contrast this one does, since the ink is the same
+// token, and was still the quietest thing on a surface where it is the only
+// control. Contrast was never the shortfall; area was.
+const crossPadDp = 4
+
 // crossIcon paints an "×" shape — two diagonal strokes — into a
 // sizePx×sizePx box at the current origin in colour col. It is the modal
 // close button's glyph, satisfying the button.Props.Icon painter contract
@@ -945,7 +963,7 @@ func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 func crossIcon(gtx layout.Context, sizePx int, col color.NRGBA) {
 	w := float32(sizePx)
 	h := float32(sizePx)
-	pad := float32(gtx.Dp(unit.Dp(6)))
+	pad := float32(gtx.Dp(unit.Dp(crossPadDp)))
 	stroke := float32(gtx.Dp(unit.Dp(2)))
 	if stroke < 1 {
 		stroke = 1
