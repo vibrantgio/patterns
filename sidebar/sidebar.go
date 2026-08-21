@@ -55,7 +55,11 @@
 //
 // The collapse affordance registers no focus tag either — it answers
 // pointer clicks only — so the rail's single stop stays the item list.
-// Its glyph is a placeholder filled square until components/icon lands.
+// Its glyph is the icon set's sidebar mark (components/icons) — the
+// control that shows and hides a window's sidebar — drawn at the icon
+// rule's size for the density (components/icon.Size). Until the set
+// landed it was a bare filled square, which read as debug furniture
+// rather than as a control.
 //
 // Item.Active seeds the selection rather than competing with it: the
 // highlighted row is always the list's selection, which starts at the
@@ -80,6 +84,8 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/icon"
+	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -377,7 +383,7 @@ func drawSidebar(
 	if st != nil {
 		tt = &st.toggle
 	}
-	drawToggle(gtx, tt, image.Pt(w, toggleH), colors)
+	drawToggle(gtx, tt, image.Pt(w, toggleH), colors, d)
 
 	// Items below the toggle, in a components/list scroll region filling the
 	// rest of the column (FX.6) — no scrollbar, like table's body:
@@ -412,16 +418,25 @@ func clickFor(st *liveState, i int) *gesture.Click {
 	return &st.clicks[i]
 }
 
-// drawToggle paints a chevron-like glyph centred in a (w × h) area at
-// the current offset and registers a pointer.Press hit area against tt.
-// In test or static rendering (tt == nil) only the glyph is drawn.
-func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.ColorTokens) {
-	// Glyph: a centred filled square as a deterministic affordance icon.
-	g := gtx.Dp(unit.Dp(16))
+// drawToggle paints the collapse affordance's glyph centred in a
+// (w × h) area at the current offset and registers a pointer.Press hit
+// area against tt. In test or static rendering (tt == nil) only the
+// glyph is drawn.
+//
+// The glyph is the icon set's sidebar mark — the control that shows and
+// hides a window's sidebar, resolved to the host platform's drawing —
+// at the icon rule's size for the density (icon.Size: the control's
+// inner content box), in the same secondary neutral the affordance has
+// always worn.
+func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.ColorTokens, d tokens.Density) {
+	g := gtx.Dp(icon.Size(d))
 	gx := (size.X - g) / 2
 	gy := (size.Y - g) / 2
-	rect := image.Rect(gx, gy, gx+g, gy+g)
-	paint.FillShape(gtx.Ops, colors.Ramps.Neutral.Step(700), clip.Rect(rect).Op())
+	if mark := icons.Mark(icons.Sidebar); mark != nil {
+		st := op.Offset(image.Pt(gx, gy)).Push(gtx.Ops)
+		mark(gtx, g, colors.Ramps.Neutral.Step(700))
+		st.Pop()
+	}
 
 	if tt == nil {
 		return
