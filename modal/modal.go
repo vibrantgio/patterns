@@ -42,6 +42,28 @@
 // destructive primary — see [Decision] for why that is a matter of the
 // struct's shape rather than of documentation.
 //
+// # The panel's close mark, measured
+//
+// The mark is a cross 8 dp corner to corner at a 2 dp stroke, which lands
+// 10 dp of ink on each axis, centred in the 20 dp icon box of a ghost
+// components/button — itself a 36 dp square at the comfortable density. The
+// pointer target under it is 44 dp on each axis: tokens.MinHitTarget, the
+// floor for a STANDALONE control, which is the one that applies here.
+//
+// Which floor applies is a question about neighbours rather than about how
+// large the mark is drawn. The smaller floor an inline mark takes exists
+// because a mark riding inside another control spends its slop on that
+// control and on whatever sits beside it. This mark rides on nothing: it
+// stands at the corner of a surface with the header's own inset on two sides
+// of it and a title — not a control — on the third, so there is nothing for
+// the slop to be taken from and no reason to accept less than the floor.
+//
+// Measured on the default seed, from the rendered pixels rather than from the
+// tokens that produced them, the mark reads 4.51:1 against the light scheme's
+// level-2 surface and 8.46:1 against the dark scheme's — clear in both of
+// WCAG 1.4.11's 3:1 for a non-text graphic, and in the light scheme clear of
+// the 4.5:1 that text would owe. close_test.go re-measures all of it.
+//
 // # Arrival is not this package's business
 //
 // The modal owns dismissal. It does not own how you arrived, and it has no
