@@ -8,11 +8,16 @@
 // stream of layout.Widget. Source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
-// "Centred" is approximate. The link row sits between two equal flexed
-// spacers, so it is centred in the space that Brand and Actions leave
-// over, not in the bar: a wide Brand against narrow Actions pushes the
-// links right of the true centre by half the difference. Match the two
-// slots' widths when that matters.
+// "Centred" is approximate horizontally and exact vertically. The link
+// row is centred in the space that Brand and Actions leave over, not in
+// the bar: a wide Brand against narrow Actions pushes the links right of
+// the true centre by half the difference. Match the two slots' widths
+// when that matters. Vertically there is no approximation — all three
+// slots are measured with no minimum height and drawn so that each one's
+// own middle lands on the bar's middle, whatever height the bar is given
+// and whatever a slot brings. A Brand that fills the height it is offered
+// and draws at the top of it — a plain column of text does — is centred
+// here all the same.
 //
 // Link.Active and Link.OnClick are independent. Active only selects the
 // Primary underline, and a nil OnClick makes a link non-interactive and
@@ -178,16 +183,67 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 		Right:  unit.Dp(sp.S4),
 	}
 	inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-			layout.Rigid(brandSlot(props.Brand)),
-			layout.Flexed(1, emptyWidget),
-			layout.Rigid(linksRow(shaper, props.Links, clicks, colors, sp, style, d)),
-			layout.Flexed(1, emptyWidget),
-			layout.Rigid(actionsRow(props.Actions, sp)),
+		return centredRow(gtx,
+			brandSlot(props.Brand),
+			linksRow(shaper, props.Links, clicks, colors, sp, style, d),
+			actionsRow(props.Actions, sp),
 		)
 	})
 
 	return layout.Dimensions{Size: size}
+}
+
+// centredRow lays the bar's three slots out on one shared centre line: the
+// brand packed against the leading edge, the actions against the trailing
+// edge, and the links in the middle of what those two leave over.
+//
+// The line is arithmetic rather than an alignment flag, and that is the whole
+// point of the function. A Flex hands its children the row's own minimum on
+// the cross axis, and a slot that honours a minimum it was never meant to
+// fill — a column of text is the usual one — comes back the full height of
+// the bar and then draws itself at the top of it, well above everything it
+// was supposed to be level with. A Flex also centres on its tallest child
+// rather than on the row, so a bar given more height than its contents need
+// centres them on a line that is not the bar's.
+//
+// Here every slot is measured with no cross minimum at all, so what comes
+// back is the height the slot actually wanted, and a slot dy tall is drawn at
+// h/2 - dy/2, which puts its own middle — top + dy/2 — on the row's middle
+// exactly, for every height, odd or even, and even for a slot taller than the
+// row it is in. Written the other way round, as half of what is left over,
+// the same line is a point out on odd heights and a point out the other way
+// on a slot that overflows.
+//
+// Slots are measured in document order, each offered only what the ones
+// before it left, so that is also the order they keep their width in when the
+// bar is too narrow for all three: the brand is the last to be squeezed. The
+// order they are recorded in is document order too, which is the order focus
+// traverses them.
+func centredRow(gtx layout.Context, brand, links, actions layout.Widget) layout.Dimensions {
+	width, h := gtx.Constraints.Max.X, gtx.Constraints.Max.Y
+	var (
+		calls [3]op.CallOp
+		sizes [3]image.Point
+	)
+	room := width
+	for i, w := range [3]layout.Widget{brand, links, actions} {
+		macro := op.Record(gtx.Ops)
+		cgtx := gtx
+		cgtx.Constraints = layout.Constraints{Max: image.Pt(max(0, room), h)}
+		sizes[i] = w(cgtx).Size
+		calls[i] = macro.Stop()
+		room = max(0, room-sizes[i].X)
+	}
+	// "Centred" is approximate, and deliberately so: the links sit in the
+	// middle of the space the end slots leave over, which is the middle of
+	// the bar only when those two are the same width.
+	xs := [3]int{0, sizes[0].X + (room+1)/2, width - sizes[2].X}
+	for i := range calls {
+		stack := op.Offset(image.Pt(xs[i], h/2-sizes[i].Y/2)).Push(gtx.Ops)
+		calls[i].Add(gtx.Ops)
+		stack.Pop()
+	}
+	return layout.Dimensions{Size: image.Pt(width, h)}
 }
 
 func brandSlot(w layout.Widget) layout.Widget {
@@ -197,12 +253,11 @@ func brandSlot(w layout.Widget) layout.Widget {
 	return w
 }
 
-// emptyWidget reports the minimum-constraint size so a Flexed parent's
-// allocated space is honoured for offset arithmetic. Returning a zero
-// Dimensions breaks Flex placement: subsequent children are positioned
-// as if no space were consumed.
-func emptyWidget(gtx layout.Context) layout.Dimensions {
-	return layout.Dimensions{Size: gtx.Constraints.Min}
+// emptyWidget takes no room at all. A nil Brand collapses the leading slot
+// this way, which leaves the links centred in the whole bar rather than in
+// what a zero-width slot left over — the same thing, arithmetically.
+func emptyWidget(layout.Context) layout.Dimensions {
+	return layout.Dimensions{}
 }
 
 func linksRow(shaper *text.Shaper, links []Link, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {

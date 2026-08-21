@@ -367,6 +367,99 @@ func TestNavbarCompactGolden(t *testing.T) {
 	golden.Render(t, "light-compact", image.Pt(canvasW, h), scene(w, lightBG))
 }
 
+// inkBand reports the first and last row of img holding the colour c, or
+// (-1, -1) when it holds none.
+func inkBand(img *image.RGBA, c color.NRGBA) (int, int) {
+	b := img.Bounds()
+	first, last := -1, -1
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			r, g, bl, _ := img.At(x, y).RGBA()
+			if uint8(r>>8) == c.R && uint8(g>>8) == c.G && uint8(bl>>8) == c.B {
+				if first < 0 {
+					first = y
+				}
+				last = y
+				break
+			}
+		}
+	}
+	return first, last
+}
+
+// TestNavbarPutsEverySlotOnOneCentreLine is the alignment the bar is read on,
+// measured: brand, links and actions each drawn so its own middle lands on the
+// bar's middle, at every height the bar is given.
+//
+// The brand fixture is the shape that used to break it. A widget that honours
+// a minimum height it was never meant to fill — a column of text laid out in a
+// vertical Flex is the everyday one — comes back the full height of the row
+// and inks only the top of it, and the bar used to hand every slot exactly
+// that minimum: the brand inked most of a line above the links beside it, on a
+// bar nobody had touched.
+//
+// Rows are compared doubled, so that a middle landing between two pixel rows
+// is one integer rather than a half that has to be tolerated: a slot of even
+// height on a bar of even height centres on a boundary, and the bar's own
+// middle is the boundary h/2.
+func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
+	shaper := defaultShaper(t)
+	style := tokens.DefaultTypography.LabelLarge
+	d := tokens.Comfortable
+
+	brandInk := color.NRGBA{R: 0, G: 0, B: 255, A: 255}
+	actionInk := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
+	const brandInkH, actionH = 10, 20
+	// cellH is a link cell as linkWidget builds one: the label's line box,
+	// the density's padding above and below, and the Active underline.
+	cellH := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
+
+	// A brand that fills the height it is offered and inks only the top of
+	// it, which is what a run of text in a column does.
+	brand := func(gtx layout.Context) layout.Dimensions {
+		paint.FillShape(gtx.Ops, brandInk, clip.Rect{Max: image.Pt(60, brandInkH)}.Op())
+		return layout.Dimensions{Size: image.Pt(60, max(gtx.Constraints.Min.Y, brandInkH))}
+	}
+
+	// The bar at its own height, and at two heights a caller might pin it to.
+	for _, h := range []int{barHeight(d, style), 64, 80} {
+		props := navbar.Props{
+			Brand:   brand,
+			Links:   []navbar.Link{{Label: linkLabels[0], Active: true}, {Label: linkLabels[1]}},
+			Actions: []layout.Widget{fillRect(actionInk, 30, actionH)},
+			Shaper:  shaper,
+		}
+		w := navbar.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, style, d)
+		img := golden.Capture(t, image.Pt(canvasW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
+
+		brandTop, brandBottom := inkBand(img, brandInk)
+		actionTop, actionBottom := inkBand(img, actionInk)
+		_, underlineBottom := inkBand(img, tokens.DefaultLight.Primary)
+		if brandTop < 0 || actionTop < 0 || underlineBottom < 0 {
+			t.Fatalf("bar %d px: brand, action or underline did not draw (%d, %d, %d); this proves nothing",
+				h, brandTop, actionTop, underlineBottom)
+		}
+		// The link cell's top is read off the underline, which is flush with
+		// its bottom edge — the cell itself draws no border to measure.
+		cellTop := underlineBottom + 1 - cellH
+		for _, c := range []struct {
+			what     string
+			centre2  int
+			inkFirst int
+			inkLast  int
+		}{
+			{"brand", brandTop + brandBottom, brandTop, brandBottom},
+			{"links", 2*cellTop + cellH - 1, cellTop, cellTop + cellH - 1},
+			{"actions", actionTop + actionBottom, actionTop, actionBottom},
+		} {
+			if c.centre2 != h-1 {
+				t.Errorf("bar %d px: the %s slot occupies rows %d..%d and is centred on %.1f, want the bar's own middle %.1f",
+					h, c.what, c.inkFirst, c.inkLast, float64(c.centre2)/2, float64(h-1)/2)
+			}
+		}
+	}
+}
+
 // TestNavbarKeepsItsBottomPadding is the assertion the compact golden's
 // window used to make by accident, and it is why the window is computed
 // rather than assumed. In a canvas of [barHeight] the Active underline —
