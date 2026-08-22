@@ -81,7 +81,7 @@ applications are its consumers. The
 go get github.com/vibrantgio/patterns
 ```
 
-Every module in the organization is on gioui.org v0.10.1,
+Every module in the organization is on gioui.org v0.10.2,
 github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 
 ## Packages
