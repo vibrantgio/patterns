@@ -12,11 +12,11 @@
 // an S4 gutter. A first pass measures the tallest card; a second pass
 // stretches every card to that height. Name, price and bullets stay at
 // the top; the CTA sits on the bottom inset, not flush under the last
-// bullet. Each card contains — top to bottom — an optional "Popular"
-// Primary chip (Highlighted tier only), the tier name in title
-// typography, a price / cadence pair in display typography with the
-// cadence muted, a vertical feature list with a leading checkmark glyph
-// rendered from a clip.Path, and a footer CTA button reusing
+// bullet. Each card contains — top to bottom — the tier name in title
+// typography (Highlighted cards put a "Popular" chip on that same
+// row, trailing), a price / cadence pair in display typography with
+// the cadence muted, a vertical feature list with a leading checkmark
+// glyph rendered from a clip.Path, and a footer CTA button reusing
 // components/button's filled visual. The Highlighted tier swaps the
 // 1 dp strong border for a 2 dp Primary border.
 //
@@ -76,7 +76,7 @@ type Tier struct {
 	CTA *CTA
 
 	// Highlighted selects the emphasised tier: a 2 dp Primary border and
-	// a small "Popular" chip rendered above the tier name.
+	// a small "Popular" chip on the name row, trailing.
 	Highlighted bool
 }
 
@@ -337,10 +337,7 @@ func drawTierContent(
 	click *widget.Clickable,
 ) layout.Dimensions {
 	var top []layout.Widget
-	if tier.Highlighted {
-		top = append(top, popularChipWidget(shaper, tok))
-	}
-	top = append(top, tierNameWidget(shaper, tier.Name, tok))
+	top = append(top, nameRowWidget(shaper, tier, tok))
 	top = append(top, priceRowWidget(shaper, tier.Price, tier.Cadence, tok))
 	for _, f := range tier.Features {
 		top = append(top, featureRowWidget(shaper, f, tok))
@@ -382,6 +379,27 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 		spaced = append(spaced, w)
 	}
 	return pllayout.Col(gtx, spaced...)
+}
+
+// nameRowWidget is the card's first row: the tier name leading. When
+// Highlighted, the Popular chip sits on the same line, trailing at the
+// inset's right edge. The chip is patterns/tag Filled.
+func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
+	name := tierNameWidget(shaper, tier.Name, tok)
+	if !tier.Highlighted {
+		return name
+	}
+	chip := popularChipWidget(shaper, tok)
+	return func(gtx layout.Context) layout.Dimensions {
+		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+			layout.Rigid(name),
+			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
+			}),
+			layout.Rigid(pllayout.HSpacer(tok.spacing.S2)),
+			layout.Rigid(chip),
+		)
+	}
 }
 
 // popularChipWidget renders a Primary-filled pill containing "Popular"

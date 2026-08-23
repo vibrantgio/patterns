@@ -93,7 +93,7 @@ func tier(i int, highlighted bool) pricing.Tier {
 }
 
 // threeTiers returns the full row, with the middle tier highlighted when
-// asked. Highlighting adds the package's own "Popular" chip above the name.
+// asked. Highlighting adds the package's own "Popular" chip on the name row.
 func threeTiers(highlightMiddle bool) []pricing.Tier {
 	return []pricing.Tier{tier(0, false), tier(1, highlightMiddle), tier(2, false)}
 }
@@ -141,7 +141,7 @@ func TestPricingHighlightDiffers(t *testing.T) {
 	a := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, plain, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
 	b := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, highlighted, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
 	if n := golden.PixelDiff(a, b); n == 0 {
-		t.Error("plain and highlighted pricing render identically; expected the 2 dp Primary border and Popular chip to introduce differences")
+		t.Error("plain and highlighted pricing render identically; expected the 2 dp Primary border and Popular chip on the name row to introduce differences")
 	}
 }
 
