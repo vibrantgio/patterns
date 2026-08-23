@@ -8,14 +8,17 @@
 // opaque configuration — copy it into your own app and modify as needed.
 //
 // Layout: each Tier renders as a rounded Surface card with an S5 inset.
-// Cards sit in an equal-width horizontal row separated by an S4 gutter,
-// each containing — top to bottom — an optional "Popular" Primary chip
-// (Highlighted tier only), the tier name in title typography, a price /
-// cadence pair in display typography with the cadence muted, a vertical
-// feature list with a leading checkmark glyph rendered from a clip.Path,
-// and a footer CTA button reusing components/button's filled visual. The
-// Highlighted tier swaps the 1 dp strong border for a 2 dp Primary
-// border.
+// Cards sit in an equal-width, equal-height horizontal row separated by
+// an S4 gutter. A first pass measures the tallest card; a second pass
+// stretches every card to that height. Name, price and bullets stay at
+// the top; the CTA sits on the bottom inset, not flush under the last
+// bullet. Each card contains — top to bottom — an optional "Popular"
+// Primary chip (Highlighted tier only), the tier name in title
+// typography, a price / cadence pair in display typography with the
+// cadence muted, a vertical feature list with a leading checkmark glyph
+// rendered from a clip.Path, and a footer CTA button reusing
+// components/button's filled visual. The Highlighted tier swaps the
+// 1 dp strong border for a 2 dp Primary border.
 //
 // No responsive breakpoint to stack tiers vertically is provided —
 // adopting this pattern at narrow widths is left to the caller.
@@ -215,22 +218,58 @@ func drawPricing(
 	if len(props.Tiers) == 0 {
 		return layout.Dimensions{}
 	}
+	// Measure each card's natural height, then draw again with every
+	// card's Min.Y set to that max so they share a floor. The Flex
+	// row's own Size.Y is Constrained to the incoming Min and cannot
+	// be the source of that max — an Exact canvas would stretch every
+	// card to the window.
+	rec := op.Record(gtx.Ops)
+	_, maxH := layoutTiers(gtx, shaper, props, tok, clicks, 0)
+	rec.Stop()
+	dims, _ := layoutTiers(gtx, shaper, props, tok, clicks, maxH)
+	return dims
+}
+
+func layoutTiers(
+	gtx layout.Context,
+	shaper *text.Shaper,
+	props Props,
+	tok resolvedTokens,
+	clicks []widget.Clickable,
+	minCardH int,
+) (layout.Dimensions, int) {
 	gap := pllayout.HSpacer(tok.spacing.S4)
 	children := make([]layout.FlexChild, 0, 2*len(props.Tiers)-1)
+	maxH := 0
 	for i := range props.Tiers {
 		if i > 0 {
 			children = append(children, layout.Rigid(gap))
 		}
 		i := i
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			// Flex forwards the parent's cross-axis Min. An Exact
+			// canvas would stretch every card to the window; drop
+			// that Min, then apply the shared height we measured.
+			if minCardH > 0 {
+				gtx.Constraints.Min.Y = minCardH
+				if gtx.Constraints.Max.Y < minCardH {
+					gtx.Constraints.Max.Y = minCardH
+				}
+			} else {
+				gtx.Constraints.Min.Y = 0
+			}
 			var click *widget.Clickable
 			if i < len(clicks) {
 				click = &clicks[i]
 			}
-			return drawTier(gtx, shaper, props.Tiers[i], tok, click)
+			d := drawTier(gtx, shaper, props.Tiers[i], tok, click)
+			if d.Size.Y > maxH {
+				maxH = d.Size.Y
+			}
+			return d
 		}))
 	}
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
+	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
 // drawTier draws a single tier card: a rounded Surface filled to its
@@ -246,17 +285,27 @@ func drawTier(
 ) layout.Dimensions {
 	pad := gtx.Dp(unit.Dp(tok.spacing.S5))
 	width := gtx.Constraints.Max.X
+	minH := gtx.Constraints.Min.Y
 
 	inner := gtx
 	inner.Constraints.Min = image.Point{}
 	inner.Constraints.Max.X = max(0, width-2*pad)
-	inner.Constraints.Max.Y = math.MaxInt32
+	if minH > 2*pad {
+		innerH := minH - 2*pad
+		inner.Constraints.Min.Y = innerH
+		inner.Constraints.Max.Y = innerH
+	} else {
+		inner.Constraints.Max.Y = math.MaxInt32
+	}
 
 	macro := op.Record(gtx.Ops)
 	innerDims := drawTierContent(inner, shaper, tier, tok, click)
 	contentCall := macro.Stop()
 
 	height := innerDims.Size.Y + 2*pad
+	if height < minH {
+		height = minH
+	}
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
@@ -277,8 +326,9 @@ func drawTier(
 	return layout.Dimensions{Size: image.Pt(width, height)}
 }
 
-// drawTierContent stacks the tier's inner widgets top-to-bottom with
-// S3 gaps between adjacent items.
+// drawTierContent stacks name, price and bullets at the top. When the
+// card is stretched to the row's shared height the CTA sits on the
+// bottom inset; the S3 gap above it is the minimum, not the only, space.
 func drawTierContent(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -286,20 +336,44 @@ func drawTierContent(
 	tok resolvedTokens,
 	click *widget.Clickable,
 ) layout.Dimensions {
-	var ws []layout.Widget
+	var top []layout.Widget
 	if tier.Highlighted {
-		ws = append(ws, popularChipWidget(shaper, tok))
+		top = append(top, popularChipWidget(shaper, tok))
 	}
-	ws = append(ws, tierNameWidget(shaper, tier.Name, tok))
-	ws = append(ws, priceRowWidget(shaper, tier.Price, tier.Cadence, tok))
+	top = append(top, tierNameWidget(shaper, tier.Name, tok))
+	top = append(top, priceRowWidget(shaper, tier.Price, tier.Cadence, tok))
 	for _, f := range tier.Features {
-		ws = append(ws, featureRowWidget(shaper, f, tok))
-	}
-	if tier.CTA != nil {
-		ws = append(ws, ctaWidget(shaper, tier.CTA, tok, click))
+		top = append(top, featureRowWidget(shaper, f, tok))
 	}
 
 	gap := tok.spacing.S3
+	if tier.CTA != nil {
+		top = append(top, ctaWidget(shaper, tier.CTA, tok, click))
+	}
+	if tier.CTA == nil || gtx.Constraints.Min.Y <= 0 {
+		return spacedCol(gtx, top, gap)
+	}
+	// Stretching: last item is the CTA. Keep it on the floor; the
+	// items above stay at the top. The S3 above the CTA is the
+	// minimum gap, already in spacedCol's last slot — pull the CTA
+	// out and put the extra space above that gap.
+	head, cta := top[:len(top)-1], top[len(top)-1]
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return spacedCol(gtx, head, gap)
+		}),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, gtx.Constraints.Min.Y)}
+		}),
+		layout.Rigid(pllayout.VSpacer(gap)),
+		layout.Rigid(cta),
+	)
+}
+
+func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimensions {
+	if len(ws) == 0 {
+		return layout.Dimensions{}
+	}
 	spaced := make([]layout.Widget, 0, 2*len(ws)-1)
 	for i, w := range ws {
 		if i > 0 {

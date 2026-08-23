@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
@@ -17,13 +18,11 @@ import (
 )
 
 const (
-	// The canvas grew from 720×280 in F4.4b. A tier card's natural height is
-	// its name, price row, feature list and CTA stacked; with every string
-	// blank that came to well under 240 px and 280 was generous. Filled in it
-	// does not fit, and the highlighted tier is taller again by the "Popular"
-	// chip above its name — at 280 the middle card's CTA was cut off at the
-	// canvas edge. 340 clears both.
-	canvasW, canvasH = 720, 340
+	// The canvas grew from 720×280 in F4.4b and 720×340 after F4.4b's
+	// filled-in copy. AE7.1 stretches every card to the tallest — the
+	// highlighted Team with four feature lines plus the Popular chip —
+	// so 340 clips the shared CTA row. 400 clears it.
+	canvasW, canvasH = 720, 400
 	// scene leaves an S5-equivalent margin around the pricing row so
 	// the row's outer cards retain breathing room from the canvas edge.
 	marginPx = 20
@@ -75,8 +74,8 @@ type tierSpec struct {
 // MaxLines:1 beside a checkmark, so a longer one would be ellipsized rather
 // than wrapped.
 var tierSpecs = [3]tierSpec{
-	{"Starter", "$0", "/mo", []string{"One project", "Community help", "Light and dark"}},
-	{"Team", "$29", "/mo", []string{"Ten projects", "Email support", "Shared tokens"}},
+	{"Starter", "$0", "/mo", []string{"One project", "Community help"}},
+	{"Team", "$29", "/mo", []string{"Ten projects", "Email support", "Shared tokens", "Audit log"}},
 	{"Studio", "$99", "/mo", []string{"Unlimited work", "Priority support", "Custom ramps"}},
 }
 
@@ -161,4 +160,40 @@ func TestPricingLightDarkDiffer(t *testing.T) {
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Error("light and dark pricing render identically; expected colour differences")
 	}
+}
+
+// TestPricingUnevenFeaturesMatchTallest pins AE7.1: a row whose tiers
+// have 1, 4 and 2 feature lines is as tall as a row of three copies of
+// the 4-line tier. The short cards stretch; they do not set the height.
+func TestPricingUnevenFeaturesMatchTallest(t *testing.T) {
+	shaper := defaultShaper(t)
+	cta := &pricing.CTA{Label: "Go"}
+	short := pricing.Tier{Name: "A", Features: []string{"one"}, CTA: cta}
+	tall := pricing.Tier{Name: "B", Features: []string{"one", "two", "three", "four"}, CTA: cta}
+	mid := pricing.Tier{Name: "C", Features: []string{"one", "two"}, CTA: cta}
+
+	size := image.Pt(720, 400)
+	render := func(tiers []pricing.Tier) layout.Dimensions {
+		return drawOnce(t, size, pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable))
+	}
+	uneven := render([]pricing.Tier{short, tall, mid})
+	allTall := render([]pricing.Tier{tall, tall, tall})
+	allShort := render([]pricing.Tier{short, short, short})
+	if uneven.Size.Y != allTall.Size.Y {
+		t.Errorf("uneven row height %d, all-tall %d; cards must share the tallest height", uneven.Size.Y, allTall.Size.Y)
+	}
+	if allShort.Size.Y >= uneven.Size.Y {
+		t.Errorf("short row height %d should be less than uneven %d", allShort.Size.Y, uneven.Size.Y)
+	}
+}
+
+func drawOnce(t *testing.T, size image.Point, w layout.Widget) layout.Dimensions {
+	t.Helper()
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: size},
+		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+		Ops:         &ops,
+	}
+	return w(gtx)
 }
