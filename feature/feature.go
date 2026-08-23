@@ -8,10 +8,13 @@
 // opaque configuration — copy it into your own app and modify as needed.
 //
 // Layout: an S6 outer inset. The grid lays Items into rows of `Columns`
-// equal-width cells (the last row pads with empty cells), separated by an
-// S5 gap horizontally between cells and vertically between rows. Each cell
-// stacks (top to bottom) an optional icon sized to an S8 × S8 square, the
-// Title in title-medium typography in Text, and the Body in body-medium
+// equal-width, equal-height cells (the last row pads with empty cells),
+// separated by an S5 gap horizontally between cells and vertically
+// between rows. In a row the titles share one top line and the bodies
+// start on one line under the tallest title, so a wrapping title does
+// not shove its own body down alone. Each cell stacks (top to bottom)
+// an optional icon sized to an S8 × S8 square, the Title in
+// title-medium typography in Text, and the Body in body-medium
 // typography in the low-contrast neutral-700 step.
 //
 // The Icon slot is opaque — callers supply any layout.Widget. No
@@ -189,6 +192,15 @@ func drawFeature(gtx layout.Context, shaper *text.Shaper, props Props, tok resol
 	})
 }
 
+// rowSlots is the shared band heights for one feature row: every cell
+// reserves the tallest icon, title and body so titles share a top line
+// and bodies start under the tallest title.
+type rowSlots struct {
+	iconH  int
+	titleH int
+	bodyH  int
+}
+
 // drawRow draws row r of the grid as a Flex of equal-width Flexed(1)
 // cells separated by S5 HSpacer gutters. Trailing positions past
 // len(Items) render as empty cells so per-cell widths stay uniform across
@@ -201,6 +213,11 @@ func drawRow(
 	r int,
 ) layout.Dimensions {
 	cols := props.Columns
+	gapPx := gtx.Dp(unit.Dp(tok.spacing.S5))
+	avail := max(0, gtx.Constraints.Max.X-gapPx*(cols-1))
+	cellW := avail / cols
+	slots := measureRow(gtx, shaper, props, tok, r, cellW)
+
 	children := make([]layout.FlexChild, 0, 2*cols-1)
 	for c := range cols {
 		if c > 0 {
@@ -209,7 +226,7 @@ func drawRow(
 		idx := r*cols + c
 		if idx < len(props.Items) {
 			item := props.Items[idx]
-			children = append(children, layout.Flexed(1, cellWidget(shaper, item, tok)))
+			children = append(children, layout.Flexed(1, cellWidget(shaper, item, tok, slots)))
 		} else {
 			children = append(children, layout.Flexed(1, emptyCell))
 		}
@@ -217,17 +234,59 @@ func drawRow(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
 }
 
-// cellWidget stacks the cell's optional icon, title, and body in a column
-// with S3 gaps between adjacent items.
-func cellWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Widget {
+func measureRow(
+	gtx layout.Context,
+	shaper *text.Shaper,
+	props Props,
+	tok resolvedTokens,
+	r, cellW int,
+) rowSlots {
+	rec := op.Record(gtx.Ops)
+	defer rec.Stop()
+	var slots rowSlots
+	cols := props.Columns
+	for c := range cols {
+		idx := r*cols + c
+		if idx >= len(props.Items) {
+			continue
+		}
+		item := props.Items[idx]
+		cgtx := gtx
+		cgtx.Constraints = layout.Constraints{Max: image.Pt(cellW, 1<<20)}
+		if item.Icon != nil {
+			if h := iconCellWidget(item.Icon, tok)(cgtx).Size.Y; h > slots.iconH {
+				slots.iconH = h
+			}
+		}
+		if h := titleWidget(shaper, item.Title, tok)(cgtx).Size.Y; h > slots.titleH {
+			slots.titleH = h
+		}
+		if h := bodyWidget(shaper, item.Body, tok)(cgtx).Size.Y; h > slots.bodyH {
+			slots.bodyH = h
+		}
+	}
+	return slots
+}
+
+// cellWidget stacks the cell's optional icon, title, and body in a
+// column with S3 gaps, each band as tall as the row's tallest so a
+// wrapping title does not shove only its own body down.
+func cellWidget(shaper *text.Shaper, item Item, tok resolvedTokens, slots rowSlots) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		var ws []layout.Widget
-		if item.Icon != nil {
-			ws = append(ws, iconCellWidget(item.Icon, tok))
+		if slots.iconH > 0 {
+			if item.Icon != nil {
+				ws = append(ws, topBand(slots.iconH, iconCellWidget(item.Icon, tok)))
+			} else {
+				ws = append(ws, topBand(slots.iconH, emptyCell))
+			}
 		}
-		ws = append(ws, titleWidget(shaper, item.Title, tok))
-		ws = append(ws, bodyWidget(shaper, item.Body, tok))
-
+		if slots.titleH > 0 {
+			ws = append(ws, topBand(slots.titleH, titleWidget(shaper, item.Title, tok)))
+		}
+		if slots.bodyH > 0 {
+			ws = append(ws, topBand(slots.bodyH, bodyWidget(shaper, item.Body, tok)))
+		}
 		gap := tok.spacing.S3
 		spaced := make([]layout.Widget, 0, 2*len(ws)-1)
 		for i, w := range ws {
@@ -237,6 +296,26 @@ func cellWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Widge
 			spaced = append(spaced, w)
 		}
 		return pllayout.Col(gtx, spaced...)
+	}
+}
+
+// topBand draws w at the top of a band of height h. Extra space sits
+// below the content so the next band starts on a shared line.
+func topBand(h int, w layout.Widget) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		rec := op.Record(gtx.Ops)
+		cgtx := gtx
+		cgtx.Constraints.Min = image.Point{}
+		if cgtx.Constraints.Max.Y < 1 {
+			cgtx.Constraints.Max.Y = 1 << 20
+		}
+		d := w(cgtx)
+		call := rec.Stop()
+		call.Add(gtx.Ops)
+		return layout.Dimensions{
+			Size:     image.Pt(gtx.Constraints.Max.X, max(d.Size.Y, h)),
+			Baseline: d.Baseline,
+		}
 	}
 }
 

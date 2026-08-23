@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
@@ -98,8 +99,12 @@ func TestFeatureGolden(t *testing.T) {
 	darkBG := color.NRGBA{R: 20, G: 20, B: 20, A: 255}
 
 	three := items(3)
+	// One wrapping title pins AE7.2: bodies stay on one line under
+	// the tallest title, and the three cells share a bottom.
+	three[0].Title = wrappingTitle
 	two := items(2)
 	six := items(6)
+	six[0].Title = wrappingTitle
 
 	cases := []struct {
 		name    string
@@ -204,4 +209,46 @@ func TestFeatureLineHeightIsDetectable(t *testing.T) {
 	if n := golden.PixelDiff(base, tall); n == 0 {
 		t.Error("raising BodyMedium's line height changed no pixels; the role's line height never reaches the shaper")
 	}
+}
+
+// wrappingTitle is long enough to wrap in a three-up cell at 720 px.
+const wrappingTitle = "Token values from one shared theme"
+
+// TestFeatureWrappedTitleSharesHeight pins AE7.2: a row whose first
+// title wraps is as tall as a row where every title wraps to the same
+// height, and taller than a row of short titles.
+func TestFeatureWrappedTitleSharesHeight(t *testing.T) {
+	shaper := defaultShaper(t)
+	short := items(3)
+	oneLong := items(3)
+	oneLong[0].Title = wrappingTitle
+	allLong := items(3)
+	for i := range allLong {
+		allLong[i].Title = wrappingTitle
+	}
+
+	size := image.Pt(canvasW, 1<<16)
+	render := func(cells []feature.Item) layout.Dimensions {
+		return drawOnce(t, size, feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography))
+	}
+	got := render(oneLong)
+	want := render(allLong)
+	shortH := render(short)
+	if got.Size.Y != want.Size.Y {
+		t.Errorf("one wrapping title: height %d, all wrapping: %d; cells must share the tallest title band", got.Size.Y, want.Size.Y)
+	}
+	if shortH.Size.Y >= got.Size.Y {
+		t.Errorf("short-title row height %d should be less than wrapping-title row %d", shortH.Size.Y, got.Size.Y)
+	}
+}
+
+func drawOnce(t *testing.T, size image.Point, w layout.Widget) layout.Dimensions {
+	t.Helper()
+	var ops op.Ops
+	gtx := layout.Context{
+		Constraints: layout.Constraints{Max: size},
+		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+		Ops:         &ops,
+	}
+	return w(gtx)
 }
