@@ -132,10 +132,8 @@ Return-bound default and its inert backdrop. Run it with `go run
 
 ## Usage
 
-Patterns compose by handing one pattern's stream to another's slot. This is
-`landing.go` from
-[workbench/sitedocs](https://github.com/vibrantgio/workbench/tree/master/sitedocs)
-— the marketing patterns mounted as the scrolling sections of a
+Patterns compose by handing one pattern's stream to another's slot. Here a
+landing page mounts the marketing patterns as the scrolling sections of a
 `StackedPage` shell, which pins the navbar, owns the scroll region and re-emits
 whenever any section emits. Note that nothing passes a shaper — the theme
 carries the typography:
