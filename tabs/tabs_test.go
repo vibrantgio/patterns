@@ -132,6 +132,55 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	}
 }
 
+// TestTheStripStandsOneRungOverThePanel is AK6.4's guard on the pattern's
+// two areas. The panel is content and fills at Props.Ground; the strip is
+// furniture and fills exactly one rung above it (ADR-021 R1, R2, R4). Before
+// this, one Surface fill covered both, so a tab panel could never be the
+// window's own paper without the application painting over the pattern.
+//
+// The claim is read off sampled pixels and never off token arithmetic: the
+// strip over a level-0 panel and the panel of a level-1 instance are the same
+// rung, so the capture says "one rung up" by matching one fill against the
+// other through the same GPU round-trip that produced both.
+func TestTheStripStandsOneRungOverThePanel(t *testing.T) {
+	shaper := defaultShaper(t)
+	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+
+	// An out-of-range selection draws no content, so the whole panel below
+	// the strip is the pattern's own fill and nothing else.
+	fills := func(ground tokens.ElevationLevel) (strip, panel [3]uint8) {
+		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Ground: ground}
+		w := tabs.Render(shaper, props, -1, tokens.DefaultLight, tokens.Spacing,
+			tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		img := golden.Capture(t, canvasSize, scene(w, bg))
+		at := func(x, y int) [3]uint8 {
+			off := img.PixOffset(x, y)
+			return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
+		}
+		stripH := int(tokens.Comfortable.ControlHeight)
+		// Right of the last tab cell the strip is bare band; well below it
+		// the panel is bare plane.
+		return at(canvasSize.X-1, stripH/2), at(canvasSize.X-1, stripH+8)
+	}
+
+	groundStrip, groundPanel := fills(tokens.Level0)
+	if groundStrip == groundPanel {
+		t.Errorf("strip and panel render the same fill %v on a level-0 ground; the strip is furniture and owes its panel one rung", groundStrip)
+	}
+
+	raisedStrip, raisedPanel := fills(tokens.Level1)
+	if raisedStrip == raisedPanel {
+		t.Errorf("strip and panel render the same fill %v on a level-1 ground", raisedStrip)
+	}
+	if groundStrip != raisedPanel {
+		t.Errorf("the strip over a level-0 panel is %v and a level-1 panel is %v; one rung up from level 0 is level 1, so these are the same fill",
+			groundStrip, raisedPanel)
+	}
+	if groundPanel == raisedPanel {
+		t.Errorf("Props.Ground did not move the panel: level 0 and level 1 both render %v", groundPanel)
+	}
+}
+
 // ---- Interaction tests ----
 
 func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {

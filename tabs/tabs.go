@@ -2,6 +2,11 @@
 // strip with a Primary-coloured underline on the selected tab, plus
 // a content panel rendered below that shows the selected tab's content.
 //
+// The two are different kinds of area and wear different rungs. The panel
+// is content and fills at [Props.Ground], whose zero value is the window
+// ground; the strip is furniture and fills exactly one rung above it. See
+// Props.Ground for why the ground is the caller's to say.
+//
 // The package follows the Phase 4 Composition contract: Tabs is a
 // callable Go function consuming a components theme observable, returning a
 // stream of layout.Widget. Source is intentionally short and free of
@@ -51,6 +56,28 @@ type Props struct {
 	// defaults to a constant 0. Values outside [0, len(Tabs)) render as
 	// "no tab selected" (no underline, empty content area).
 	Selected rx.Observable[int]
+
+	// Ground is the rung the content panel fills at — the surface the
+	// selected tab's content is read on. The zero value is Level0, the window
+	// ground, because a tab panel holds what the window exists to show rather
+	// than something standing around it: ADR-021 R1 puts a resting content
+	// expanse on the Background pin. Set Level1 where the panel genuinely
+	// rests on furniture — inside a dialog, on a pane, or as a specimen
+	// lifted off a page — and the strip above it moves with it.
+	//
+	// The strip is NOT this rung. It is chrome furniture — a row of handles
+	// on the panel — so it fills exactly one rung above Ground, walked from
+	// the panel rather than named as an absolute step (ADR-021 R4). At the
+	// default that is the semantic Surface over the Background pin, which is
+	// what a desktop tab strip looks like; on a Level1 panel it is neutral
+	// 300 over neutral 200, the same one-step separation.
+	//
+	// patterns/table's Props carries the identical field for the identical
+	// reason, and the two patterns are meant to keep saying it the same way.
+	// The one difference is [Render]: table's static path takes no Props and
+	// pins its own specimen rung, while this one is handed the whole Props
+	// and honours this field like the observable path does.
+	Ground tokens.ElevationLevel
 
 	// OnSelect is invoked when the user changes the selection via click,
 	// Arrow-Left/Right (wrapping), Home, or End. May be nil.
@@ -145,6 +172,11 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
 // default desktop look; before F3.4 the static path was pinned to
 // Comfortable with no way to say otherwise.
+//
+// [Props.Ground] is read here exactly as the observable path reads it: this
+// function is handed the whole Props, so a specimen that is deliberately
+// lifted off the page it is shown on says Level1 at its own call site
+// rather than having a rung pinned behind its back.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -231,12 +263,19 @@ func drawTabs(
 	d tokens.Density,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
+	// The panel plane first, at the caller's ground, then the strip band one
+	// rung over it. Before AK6.4 this was one Surface fill across both, which
+	// left every tab panel in the system standing on furniture: the two apps
+	// that read a document in a tab panel each painted level 0 back over the
+	// panel rect from inside their own content closures to undo it.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(props.Ground), clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
 	if stripH > size.Y {
 		stripH = size.Y
 	}
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(raisedFrom(props.Ground)),
+		clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
 
 	stripGtx := gtx
 	stripGtx.Constraints = layout.Exact(image.Pt(size.X, stripH))
@@ -252,6 +291,31 @@ func drawTabs(
 	}
 
 	return layout.Dimensions{Size: size}
+}
+
+// raisedFrom is the rung one step above ground — the band a tab strip wears,
+// and the reason Props.Ground is a level rather than a colour. ADR-021 R4:
+// rungs are walked from the surface a thing is lying on, not from an absolute
+// step, so a strip over a level-0 panel fills at level 1 (the semantic
+// Surface) and a strip over a level-1 panel fills at level 2. Reading an
+// absolute Surface instead — which is what this band did while the whole
+// pattern painted one fill — puts the strip level with its own panel the
+// moment the panel is printed on the window's paper, and R2 says furniture
+// stands exactly one rung off the content it frames. Level3 is the ceiling
+// the ladder stops at.
+//
+// patterns/table carries the same function under the same name for the same
+// rule; the two are deliberate twins rather than a missed hoist. A pattern in
+// this library is source you copy into your own app (see this package's doc
+// comment), so a shared internal helper would cost every copy an import it
+// cannot satisfy. The hoist that would not — a method on
+// tokens.ElevationLevel, where the ladder itself lives — is a change to a
+// tier-0 module that no task has asked for; it is recorded rather than taken.
+func raisedFrom(ground tokens.ElevationLevel) tokens.ElevationLevel {
+	if ground >= tokens.Level3 {
+		return tokens.Level3
+	}
+	return ground + 1
 }
 
 func drawStrip(
