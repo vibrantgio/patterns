@@ -310,10 +310,12 @@ func drawTier(
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
-	paint.FillShape(gtx.Ops, tok.color.Surface, rrect.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
 
-	// A tier's edge is derived against the Surface fill it circles — the
-	// level-1 storey — so the card reads as an object in either scheme. The
+	// A tier fills at the level-1 storey and its edge is derived against
+	// that fill — the fill named the tok.color.Surface ramp alias until
+	// ADR-022 re-founded the ladder — so the card reads as an object in
+	// either scheme. The
 	// highlighted tier trades that edge for the accent, which is its own
 	// pairing and says which tier is being pushed.
 	strokeW := float32(gtx.Dp(unit.Dp(1)))

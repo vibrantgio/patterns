@@ -396,11 +396,13 @@ func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, t
 		w = minH
 	}
 
-	// The outlined CTA is an edge around a Surface fill and nothing else, so
+	// The outlined CTA is an edge around a raised fill and nothing else, so
 	// the edge is derived rather than named: the neutral rung that reaches
-	// the graphic floor against that fill, which is the level-1 storey.
+	// the graphic floor against that fill, which is the level-1 storey. The
+	// fill is asked of the same storey, having named the tok.color.Surface
+	// ramp alias until ADR-022 re-founded the ladder out from under it.
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
-	paint.FillShape(gtx.Ops, tok.color.Surface, rrect.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
 	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
 
 	offX := (w - labelDims.Size.X) / 2

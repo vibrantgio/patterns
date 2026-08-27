@@ -245,10 +245,13 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
-	// The card's edge is derived against the Surface fill it circles — the
-	// level-1 storey — rather than named at a rung that means two different
-	// contrasts in the two schemes.
-	paint.FillShape(gtx.Ops, tok.color.Surface, rrect.Op(gtx.Ops))
+	// The card fills at the level-1 storey and its edge is derived against
+	// that fill, rather than named at a rung that means two different
+	// contrasts in the two schemes. The fill used to name tok.color.Surface,
+	// which is a neutral-ramp alias and stopped being the level-1 storey
+	// when ADR-022 re-founded the ladder — leaving the edge derived against
+	// a fill that was not there.
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
 	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
 
