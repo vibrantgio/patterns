@@ -58,7 +58,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 		ds := &asideDragState{current: defaultAsideDp}
 		return rx.Map(inputs, func(next rx.Tuple5[rx.Tuple2[tokens.ColorTokens, tokens.Density], layout.Widget, layout.Widget, layout.Widget, unit.Dp]) layout.Widget {
 			tok, sbW, nbW, asW, wdp := next.First, next.Second, next.Third, next.Fourth, next.Fifth
-			colors, navH := tok.First, navbarHeight(tok.Second)
+			colors, navH := tok.First, NavbarHeight(tok.Second)
 			ext := clampAsideWidth(wdp)
 			if asW == nil {
 				asW = emptyWidget
@@ -122,7 +122,7 @@ func RenderThreeColumn(
 	hasAside := asideW != nil
 	w := clampAsideWidth(asideWidth)
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawThreeColumn(gtx, nbW, sidebarW, props.Main, asideW, props.Footer, w, colors, nil, hasAside, navbarHeight(d))
+		return drawThreeColumn(gtx, nbW, sidebarW, props.Main, asideW, props.Footer, w, colors, nil, hasAside, NavbarHeight(d))
 	}
 }
 

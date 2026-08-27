@@ -163,7 +163,7 @@ type Props struct {
 }
 
 // Layout-affecting constants. The footer slot has a fixed height and the
-// navbar slot a density-derived one (see navbarHeight), so the main area
+// navbar slot a density-derived one (see NavbarHeight), so the main area
 // is deterministic. The aside column tracks an absolute dp width clamped
 // to [minAsideDp, maxAsideDp]. The footer is a status strip — a surface,
 // not a control — so its height deliberately does not follow density
@@ -206,14 +206,17 @@ const (
 	defaultAsideDp = 320
 )
 
-// navbarHeight returns the navbar slot's pinned height for a density:
-// ControlHeight + 2·PaddingY — a bar wrapping ControlHeight controls with
-// the density's vertical control padding as breathing room (52 dp
-// Comfortable, 40 dp Compact; E1.4). patterns/navbar insets its content by
+// NavbarHeight returns the pinned height of the navbar band the shell draws
+// for a density: ControlHeight + 2·PaddingY — a bar wrapping ControlHeight
+// controls with the density's vertical control padding as breathing room (52
+// dp Comfortable, 40 dp Compact; E1.4). patterns/navbar insets its content by
 // the same PaddingY, so a components/button action fills the slot exactly. The
 // pre-density 64 dp pin was sized around the 44 dp hit-target-era navbar
 // content, not a bar rule.
-func navbarHeight(d tokens.Density) unit.Dp {
+//
+// This is the number an app needs when it caps a shell window's top edge at
+// the depth of the navbar band.
+func NavbarHeight(d tokens.Density) unit.Dp {
 	return unit.Dp(d.ControlHeight + 2*d.PaddingY)
 }
 
@@ -288,7 +291,7 @@ func sidebarHeaderMainObservable(th rx.Observable[theme.Theme], props Props) rx.
 	return rx.Map(combined, func(next rx.Tuple3[layout.Widget, layout.Widget, tokens.Density]) layout.Widget {
 		sbW, nbW, d := next.First, next.Second, next.Third
 		main := props.Main
-		return composeSidebarHeaderMain(sbW, nbW, main, navbarHeight(d))
+		return composeSidebarHeaderMain(sbW, nbW, main, NavbarHeight(d))
 	})
 }
 
@@ -305,7 +308,7 @@ func staticSidebarHeaderMain(
 		sidebarW = emptyWidget
 	}
 	nbW := navbar.Render(shaper, props.Navbar, colors, sp, label, d)
-	return composeSidebarHeaderMain(sidebarW, nbW, props.Main, navbarHeight(d))
+	return composeSidebarHeaderMain(sidebarW, nbW, props.Main, NavbarHeight(d))
 }
 
 // composeSidebarHeaderMain stacks the three slots so that Tab focus

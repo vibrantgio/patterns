@@ -44,7 +44,7 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 		list := &layout.List{Axis: layout.Vertical}
 		return rx.Map(inputs, func(next rx.Tuple4[tokens.ColorTokens, layout.Widget, []layout.Widget, tokens.Density]) layout.Widget {
 			colors, nbW, secW := next.First, next.Second, next.Third
-			navH := navbarHeight(next.Fourth)
+			navH := NavbarHeight(next.Fourth)
 			footer := props.Footer
 			maxW := props.ContentMaxWidth
 			return func(gtx layout.Context) layout.Dimensions {
@@ -81,7 +81,7 @@ func RenderStackedPage(
 	footer := props.Footer
 	maxW := props.ContentMaxWidth
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawStackedPage(gtx, nbW, sections, footer, colors, maxW, list, navbarHeight(d))
+		return drawStackedPage(gtx, nbW, sections, footer, colors, maxW, list, NavbarHeight(d))
 	}
 }
 
