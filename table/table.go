@@ -21,7 +21,10 @@
 // is missing is the traversal. Body rows are not interactive at all: they
 // register no focus tag, no click and no selection, and the only keyboard
 // reach in the table is Tab onto a sortable header cell. Nothing is
-// unreachable, because nothing is reachable.
+// unreachable, because nothing is reachable. Props.Current does not change
+// that: it is a fill the consumer asks for over a row it already knows
+// about, drawn only for rows the frame laid out, and the table stores no
+// selection of its own for a keyboard to reach.
 //
 // So this is a latent version of the same problem rather than a live one, and
 // the instruction it leaves is for whoever adds row selection: take it from
@@ -101,6 +104,41 @@ type Props[T any] struct {
 	// the clicked column and re-emits Sort and a re-sorted Items slice.
 	OnSort func(gtx layout.Context, col int)
 
+	// Ground is the rung the table's own plane fills at — the paper the
+	// grid is printed on. The zero value is Level0, the window ground,
+	// because a table is what a window exists to show rather than something
+	// standing around it: ADR-021 R1 puts a resting content expanse on the
+	// Background pin, and a table that raised itself one rung would leave a
+	// window's furniture standing level with its content. Set Level1 where
+	// the table genuinely rests on furniture — inside a dialog, on a panel,
+	// or as a specimen lifted off a page — and the walks that read from this
+	// ground move with it.
+	//
+	// [Render], the static specimen path, keeps the semantic Surface it has
+	// always drawn and takes no Props at all; this field is the observable
+	// path's.
+	Ground tokens.ElevationLevel
+
+	// Current marks the row the window is currently showing — the record
+	// open in a detail pane beside the table, the item a reader navigated
+	// to. It is called once per VISIBLE row per frame and its row is filled
+	// from the Primary ramp's tinted end before the cells draw, which is the
+	// ink ADR-021 R5 reserves for what is chosen. Nil (the default) marks
+	// nothing, and the table renders exactly as it did before the prop
+	// existed.
+	//
+	// This is a display mark, not selection state: the table stores nothing,
+	// the predicate answers from whatever the consumer already holds, and a
+	// row scrolled out of the viewport costs nothing because it is never
+	// asked. Keyboard traversal over rows is still unbuilt, and the
+	// instruction for whoever builds it is unchanged — take it from
+	// components/list's LayoutSelectable, which moves an index over every
+	// row, not from a focus tag per row. When it arrives it wants a SECOND
+	// ink: R5 keeps the neutral state walks for a cursor and this tint for
+	// the current item, so a list can show both at once without either
+	// standing in for the other.
+	Current func(item T) bool
+
 	// Shaper is an explicit per-instance override of the text shaper. Leave
 	// it nil in normal use: the table then shapes its header labels with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
@@ -136,9 +174,10 @@ const (
 type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
-	header  tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density   // row/header height source (E1.4)
-	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
+	header  tokens.TextStyle      // the LabelLarge role: typeface, weight, size, line height
+	density tokens.Density        // row/header height source (E1.4)
+	shaper  *text.Shaper          // the theme's shaper; nil in the Render path
+	ground  tokens.ElevationLevel // the rung the table's plane fills at (Props.Ground)
 }
 
 // Table returns an rx.Observable[layout.Widget] that emits a new widget
@@ -169,6 +208,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 					header:  typ.LabelLarge,
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
+					ground:  props.Ground,
 				}
 			},
 		)
@@ -187,7 +227,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 			}
 			return func(gtx layout.Context) layout.Dimensions {
 				processHeaderClicks(gtx, props.Columns, clicks, props.OnSort)
-				return drawTable(gtx, shaper, props.Columns, rows, sk, state, clicks, tok)
+				return drawTable(gtx, shaper, props.Columns, rows, sk, state, clicks, tok, props.Current)
 			}
 		})
 	})
@@ -197,6 +237,11 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // pre-resolved tokens. Intended for golden-image testing and static
 // demonstrations; production code should use Table, which reads both of the
 // parameters below off the theme.
+//
+// Its plane is the semantic Surface and its header the rung above that,
+// which is a specimen deliberately lifted off the page it is shown on. A
+// table that is a window's own content belongs on the window ground
+// instead: that is [Props.Ground], and it is the observable path's.
 //
 // header is the LabelLarge role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the grid draws
@@ -215,10 +260,14 @@ func Render[T any](
 	header tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
-	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d}
+	// Level1 rather than the Props default: this path draws a specimen for a
+	// golden or a gallery page, where the table is deliberately lifted off
+	// whatever it is shown on, and its output is pinned by images that
+	// predate the prop.
+	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, ground: tokens.Level1}
 	state := list.NewState()
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawTable(gtx, shaper, columns, items, sk, state, nil, tok)
+		return drawTable(gtx, shaper, columns, items, sk, state, nil, tok, nil)
 	}
 }
 
@@ -254,9 +303,10 @@ func drawTable[T any](
 	state *list.State,
 	clicks []widget.Clickable,
 	tok resolvedTokens,
+	current func(item T) bool,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, tok.color.Surface, clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.ground), clip.Rect{Max: size}.Op())
 
 	widths := columnWidths(gtx, columns, size.X)
 	// E1.4 row rule: the header is a row in the grid, so its height is
@@ -284,7 +334,7 @@ func drawTable[T any](
 	bGtx := gtx
 	bGtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
 	list.Layout(bGtx, state, items, func(rGtx layout.Context, item T) layout.Dimensions {
-		return drawRow(rGtx, columns, widths, item, tok)
+		return drawRow(rGtx, columns, widths, item, tok, current != nil && current(item))
 	})
 	bStack.Pop()
 
@@ -337,6 +387,23 @@ func columnWidths[T any](gtx layout.Context, columns []Column[T], totalW int) []
 	return out
 }
 
+// raisedFrom is the rung one step above ground — the band a table's header
+// wears, and the reason Props.Ground is a level rather than a colour.
+// ADR-021 R4: rungs are walked from the surface a thing is lying on, not
+// from an absolute step, so a header over a level-0 plane fills at level 1
+// and a header over a level-1 plane fills at level 2. Reading an absolute
+// neutral 300 instead — which is what this band did while every table in the
+// system happened to rest on Surface — puts the header two rungs off its own
+// grid the moment the grid is printed on the window's paper, and R2 calls two
+// rungs a mistake in either direction. Level3 is the ceiling the ladder
+// stops at; a table that deep has bigger problems than its header.
+func raisedFrom(ground tokens.ElevationLevel) tokens.ElevationLevel {
+	if ground >= tokens.Level3 {
+		return tokens.Level3
+	}
+	return ground + 1
+}
+
 // drawHeaderRow renders the bold-weight header labels with optional sort
 // chevrons and clickable hit areas for sortable columns. The trailing
 // divider line marks the boundary between the header and the body.
@@ -350,7 +417,7 @@ func drawHeaderRow[T any](
 	tok resolvedTokens,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, tok.color.Ramps.Neutral.Step(300), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(raisedFrom(tok.ground)), clip.Rect{Max: size}.Op())
 
 	x := 0
 	for i, col := range columns {
@@ -462,16 +529,27 @@ func drawHeaderCell[T any](
 // per-row layout cost stays bounded regardless of cell content. Rows are
 // stacked full-width strips: their hit area stays the row bounds (no
 // 44 dp extension — rows would steal each other's slop).
+//
+// current fills the row from the Primary ramp's tinted end BEFORE the cells
+// draw, so a Cell closure's own painting still lands on top of it and the
+// divider still closes the row underneath. It is one FillShape on at most
+// one visible row per frame.
 func drawRow[T any](
 	gtx layout.Context,
 	columns []Column[T],
 	widths []int,
 	item T,
 	tok resolvedTokens,
+	current bool,
 ) layout.Dimensions {
 	rowH := gtx.Dp(list.RowHeight(tok.density))
 	totalW := gtx.Constraints.Max.X
 	rowSize := image.Pt(totalW, rowH)
+
+	if current {
+		paint.FillShape(gtx.Ops, tok.color.Ramps.Primary.Step(300),
+			clip.Rect{Max: rowSize}.Op())
+	}
 
 	x := 0
 	for i, col := range columns {

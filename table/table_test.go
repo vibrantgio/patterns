@@ -241,6 +241,13 @@ func TestTableGolden(t *testing.T) {
 				Items:   rx.Of([]int{0, 1, 2, 3}),
 				Sort:    rx.Of(table.Sort{Column: 0, Asc: true}),
 				Shaper:  shaper,
+				// A specimen, deliberately lifted off the page it is shown
+				// on, so the grid has an edge in the image. The default
+				// ground — the window pin, where a table that IS a window's
+				// content belongs — is pinned by
+				// TestGroundPicksTheRungThePlaneFillsAt instead, which can
+				// state the rule in tokens rather than in pixels.
+				Ground: tokens.Level1,
 			}
 			w := liveWidget(t, table.Table(rx.Of(densityTheme(tc.density)), props))
 			golden.Render(t, tc.name, size, scene(w, lightBG))
@@ -272,4 +279,99 @@ func equalInts(a, b []int) bool {
 		}
 	}
 	return true
+}
+
+// TestGroundPicksTheRungThePlaneFillsAt pins what Props.Ground decides: the
+// paper the grid is printed on. The zero value is the window ground, because
+// ADR-021 R1 puts a resting content expanse on the Background pin — a table
+// that raised itself one rung by default would put the biggest thing in a
+// window level with the furniture framing it. Level1 is the opt-in for a
+// table that really is resting on furniture, or is a specimen lifted off a
+// page.
+//
+// The corner sampled is inside the table's rect and outside every cell's
+// text, over a sentinel no fill in this package resolves to, so a plane that
+// went unpainted would be caught as loudly as one painted at the wrong rung.
+func TestGroundPicksTheRungThePlaneFillsAt(t *testing.T) {
+	shaper := defaultShaper(t)
+	sentinel := color.NRGBA{R: 255, G: 0, B: 255, A: 255}
+	size := image.Pt(360, 200)
+	cols := []table.Column[int]{
+		{Header: "ID", Width: unit.Dp(80), Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
+	}
+
+	for _, tc := range []struct {
+		name   string
+		ground tokens.ElevationLevel
+		want   color.NRGBA
+	}{
+		{"default is the window ground", tokens.Level0, tokens.DefaultLight.SurfaceAt(tokens.Level0)},
+		{"level 1 is the semantic Surface", tokens.Level1, tokens.DefaultLight.SurfaceAt(tokens.Level1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			props := table.Props[int]{
+				Columns: cols,
+				Items:   rx.Of([]int{0, 1, 2, 3}),
+				Sort:    rx.Of(table.Sort{Column: -1}),
+				Shaper:  shaper,
+				Ground:  tc.ground,
+			}
+			w := liveWidget(t, table.Table(rx.Of(densityTheme(tokens.Comfortable)), props))
+			img := golden.Capture(t, size, scene(w, sentinel))
+			got := pixelAt(img, size.X-2, size.Y-2)
+			if got == sentinel {
+				t.Fatalf("bottom-right pixel is the sentinel; the table painted no plane")
+			}
+			if got != tc.want {
+				t.Errorf("plane fill = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestCurrentFillsTheChosenRow pins ADR-021 R5's half of the same window: the
+// row the consumer names as current carries the Primary-tinted fill, and a
+// table asked to mark nothing marks nothing. The sample sits in the first
+// body row, past the one column's text, where only a row fill can reach.
+func TestCurrentFillsTheChosenRow(t *testing.T) {
+	shaper := defaultShaper(t)
+	size := image.Pt(360, 200)
+	cols := []table.Column[int]{
+		{Header: "ID", Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
+	}
+	// Row 0 sits directly under the header band, and both bands are exactly
+	// Density.ControlHeight (the E1.3 row rule); PxPerDp is 1 here.
+	rowH := int(tokens.Comfortable.ControlHeight)
+	rowMid := image.Pt(size.X-8, rowH+rowH/2)
+
+	render := func(current func(int) bool) color.NRGBA {
+		props := table.Props[int]{
+			Columns: cols,
+			Items:   rx.Of([]int{0, 1, 2, 3}),
+			Sort:    rx.Of(table.Sort{Column: -1}),
+			Shaper:  shaper,
+			Current: current,
+		}
+		w := liveWidget(t, table.Table(rx.Of(densityTheme(tokens.Comfortable)), props))
+		img := golden.Capture(t, size, scene(w, color.NRGBA{R: 255, G: 0, B: 255, A: 255}))
+		return pixelAt(img, rowMid.X, rowMid.Y)
+	}
+
+	ground := tokens.DefaultLight.SurfaceAt(tokens.Level0)
+	if got := render(nil); got != ground {
+		t.Errorf("unmarked table row = %v, want the plane %v; a nil Current must mark nothing", got, ground)
+	}
+	want := tokens.DefaultLight.Ramps.Primary.Step(300)
+	if got := render(func(i int) bool { return i == 0 }); got != want {
+		t.Errorf("current row = %v, want the Primary tint %v", got, want)
+	}
+	if got := render(func(i int) bool { return i == 1 }); got != ground {
+		t.Errorf("row 0 = %v while row 1 is current; the mark followed the wrong item", got)
+	}
+}
+
+// pixelAt reads one pixel as the opaque NRGBA every token in the set is.
+func pixelAt(img *image.RGBA, x, y int) color.NRGBA {
+	r, g, b, _ := img.At(x, y).RGBA()
+	return color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 0xff}
 }
