@@ -221,7 +221,7 @@ func drawThreeColumn(
 	dividerW := 0
 	asidePx := 0
 	if hasAside {
-		dividerW = gtx.Dp(unit.Dp(dividerDp))
+		dividerW = gtx.Dp(unit.Dp(asideDividerDp))
 		if dividerW < 1 {
 			dividerW = 1
 		}

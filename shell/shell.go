@@ -1,8 +1,8 @@
 // Package shell provides the Patterns Shell pattern: a top-level
 // application layout. Four variants are offered via Props.Layout —
 // SidebarHeaderMain composes a leading sidebar, a top navbar, and a
-// main content slot; SplitPane composes two slots separated by a
-// draggable divider on either axis; ThreeColumn composes a full-width
+// main content slot; SplitPane composes two slots abutting a draggable
+// hairline seam on either axis; ThreeColumn composes a full-width
 // top navbar, a leading sidebar, a main column, an optional resizable
 // trailing aside, and an optional footer strip; StackedPage composes a
 // pinned full-width navbar over a shell-owned vertical scroll of page
@@ -47,8 +47,11 @@ const (
 	// across the top of the remaining area, and a main content slot
 	// below the navbar.
 	SidebarHeaderMain Layout = iota
-	// SplitPane renders Left and Right slots separated by a draggable
-	// vertical divider whose position is governed by SplitRatio.
+	// SplitPane renders Left and Right slots abutting a draggable
+	// vertical hairline seam whose position is governed by SplitRatio.
+	// The seam runs the window's whole height, so it is painted one
+	// hairline wide and dragged by a band several times that — see
+	// splitSeamDp and splitGrabDp.
 	SplitPane
 	// ThreeColumn renders a navbar across the full width of the top
 	// edge (unlike SidebarHeaderMain, where the sidebar claims the full
@@ -161,14 +164,41 @@ type Props struct {
 
 // Layout-affecting constants. The footer slot has a fixed height and the
 // navbar slot a density-derived one (see navbarHeight), so the main area
-// is deterministic; the divider has a fixed pixel width large enough to
-// register a hit area on touch pointers. The aside column tracks an
-// absolute dp width clamped to [minAsideDp, maxAsideDp]. The footer is a
-// status strip — a surface, not a control — so its height deliberately
-// does not follow density (E1.4 verdict).
+// is deterministic. The aside column tracks an absolute dp width clamped
+// to [minAsideDp, maxAsideDp]. The footer is a status strip — a surface,
+// not a control — so its height deliberately does not follow density
+// (E1.4 verdict).
 const (
-	footerHDp      = 48
-	dividerDp      = 6
+	footerHDp = 48
+
+	// asideDividerDp is the ThreeColumn aside divider, which paints at
+	// its full width and grabs the same rectangle. It is bounded above
+	// by the full-width navbar and below by the footer, so it separates
+	// two columns of furniture without ever reaching the window's edge.
+	asideDividerDp = 6
+
+	// splitSeamDp is what the SplitPane seam paints, and the room it
+	// takes between the panes: a hairline.
+	//
+	// The seam is the one edge in this package that runs the whole cross
+	// axis, top edge to bottom edge. Whatever band an application paints
+	// across the top of its window, the seam crosses it — so the seam's
+	// width is the width of the scar it leaves there, and a thick one
+	// severs the band into two pieces with the window's title marooned on
+	// the smaller of them. Platform split dividers are one point for the
+	// same reason: at that width an edge reads as an edge, and anything
+	// wider starts reading as a third column that nothing occupies.
+	splitSeamDp = 1
+
+	// splitGrabDp is the pointer band centred on that hairline.
+	//
+	// Paint and grab are deliberately different sizes. A hairline is what
+	// the eye wants and a poor target for a pointer, so the band reaches
+	// into both panes rather than reserving a gutter of its own, and it is
+	// registered after them — the topmost area takes the hit, which is
+	// what should happen to a press this close to the seam.
+	splitGrabDp = 6
+
 	minRatio       = 0.05
 	maxRatio       = 0.95
 	minAsideDp     = 160
@@ -411,9 +441,19 @@ func processDrag(gtx layout.Context, ds *dragState, axis layout.Axis, onChange f
 }
 
 // drawSplitPane lays the panes along axis: for layout.Horizontal the
-// panes sit side by side separated by a vertical divider line; for
+// panes sit side by side separated by a vertical hairline seam; for
 // layout.Vertical they stack with a horizontal one. Geometry is
 // computed in main-axis terms and mapped back through axis.Convert.
+//
+// The op-stream order is leading pane, trailing pane, seam, grab band.
+// The panes come first because Tab traversal follows the op stream and a
+// reader expects leading before trailing. The seam is painted after both
+// so a pane that overruns its constraints cannot erase it. The grab band
+// comes last because it is the only one of the four whose rectangle
+// overlaps its neighbours: Gio hands a hit to the topmost area covering
+// it and stops there, so registering the band after the panes is what
+// keeps a press two pixels from the seam a drag rather than a click on
+// whatever the pane happens to have put at its edge.
 func drawSplitPane(
 	gtx layout.Context,
 	ratio float32,
@@ -425,11 +465,15 @@ func drawSplitPane(
 	size := gtx.Constraints.Max
 	total := axis.Convert(size).X
 	cross := axis.Convert(size).Y
-	dividerPx := gtx.Dp(unit.Dp(dividerDp))
-	if dividerPx < 1 {
-		dividerPx = 1
+	seamPx := gtx.Dp(unit.Dp(splitSeamDp))
+	if seamPx < 1 {
+		seamPx = 1
 	}
-	inner := total - dividerPx
+	grabPx := gtx.Dp(unit.Dp(splitGrabDp))
+	if grabPx < seamPx {
+		grabPx = seamPx
+	}
+	inner := total - seamPx
 	if inner < 0 {
 		inner = 0
 	}
@@ -442,7 +486,7 @@ func drawSplitPane(
 	}
 	rightPx := inner - leftPx
 
-	// Background to make the divider visible even if Left/Right are nil.
+	// Background to make the seam visible even if Left/Right are nil.
 	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
 
 	// Leading pane.
@@ -454,14 +498,37 @@ func drawSplitPane(
 		st.Pop()
 	}
 
-	// Divider.
-	dividerRect := image.Rectangle{
-		Min: axis.Convert(image.Pt(leftPx, 0)),
-		Max: axis.Convert(image.Pt(leftPx+dividerPx, cross)),
+	// Trailing pane.
+	if right != nil {
+		st := op.Offset(axis.Convert(image.Pt(leftPx+seamPx, 0))).Push(gtx.Ops)
+		rgtx := gtx
+		rgtx.Constraints = layout.Exact(axis.Convert(image.Pt(rightPx, cross)))
+		right(rgtx)
+		st.Pop()
 	}
-	paint.FillShape(gtx.Ops, dividerColor(colors), clip.Rect(dividerRect).Op())
+
+	// Seam: the hairline the panes abut, drawn the full cross axis.
+	seamRect := image.Rectangle{
+		Min: axis.Convert(image.Pt(leftPx, 0)),
+		Max: axis.Convert(image.Pt(leftPx+seamPx, cross)),
+	}
+	paint.FillShape(gtx.Ops, dividerColor(colors), clip.Rect(seamRect).Op())
+
+	// Grab band: wider than the seam, centred on it, over both panes.
 	if ds != nil {
-		area := clip.Rect(dividerRect).Push(gtx.Ops)
+		grabMin := leftPx - (grabPx-seamPx)/2
+		grabMax := grabMin + grabPx
+		if grabMin < 0 {
+			grabMin = 0
+		}
+		if grabMax > total {
+			grabMax = total
+		}
+		grabRect := image.Rectangle{
+			Min: axis.Convert(image.Pt(grabMin, 0)),
+			Max: axis.Convert(image.Pt(grabMax, cross)),
+		}
+		area := clip.Rect(grabRect).Push(gtx.Ops)
 		event.Op(gtx.Ops, &ds.tag)
 		cursor := pointer.CursorColResize
 		if axis == layout.Vertical {
@@ -469,15 +536,6 @@ func drawSplitPane(
 		}
 		cursor.Add(gtx.Ops)
 		area.Pop()
-	}
-
-	// Trailing pane.
-	if right != nil {
-		st := op.Offset(axis.Convert(image.Pt(leftPx+dividerPx, 0))).Push(gtx.Ops)
-		rgtx := gtx
-		rgtx.Constraints = layout.Exact(axis.Convert(image.Pt(rightPx, cross)))
-		right(rgtx)
-		st.Pop()
 	}
 
 	return layout.Dimensions{Size: size}
