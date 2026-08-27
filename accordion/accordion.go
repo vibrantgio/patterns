@@ -240,7 +240,13 @@ func drawAccordion(
 	style tokens.TextStyle,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
+	// The stack's own ground is the window's floor: an accordion is a
+	// navigation construct whose header rows are chrome, so what shows
+	// between and behind them is the desk rather than a plane above the
+	// document (ADR-022 V2). It used to fill colors.Surface, a neutral-ramp
+	// alias that is the floor in the light scheme — where these pixels do
+	// not move — and the raised rung in the dark one.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	headerH := gtx.Dp(unit.Dp(headerHDp))
 	bodyH := gtx.Dp(unit.Dp(bodyHDp))

@@ -195,8 +195,12 @@ func drawThreeColumn(
 		rowH = 0
 	}
 
-	// Background so the divider and empty slots read against Surface.
-	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
+	// Backstop so the divider and the empty slots read against something.
+	// It is the window's floor — the storey beneath the paper in both
+	// schemes (ADR-022 V2), which is what a three-column frame's uncovered
+	// ground is. It used to fill colors.Surface, a neutral-ramp alias that
+	// coincides with the floor in the light scheme only.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// Navbar spans the full width — unlike SidebarHeaderMain, where the
 	// sidebar claims the full height and the navbar starts after it.

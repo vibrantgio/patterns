@@ -374,7 +374,14 @@ func drawSidebar(
 	h := gtx.Constraints.Max.Y
 	size := image.Pt(w, h)
 
-	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
+	// The sidebar is chrome furniture, so it fills at the window's floor —
+	// the storey beneath the paper, in both schemes (ADR-022 V2). It used
+	// to fill colors.Surface, which is a neutral-ramp alias rather than a
+	// storey: in the light scheme that rung IS the floor, so light sidebars
+	// keep their pixels to the byte, and in the dark scheme it was the
+	// raised rung, which painted the desk a storey above the document
+	// lying on it.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// Toggle affordance at the top: a row like the items, so it shares
 	// the density's control height.

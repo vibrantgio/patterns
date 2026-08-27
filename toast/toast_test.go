@@ -71,14 +71,17 @@ func item(id int64, l toast.Level) toast.Toast {
 // stack ordering are the load-bearing visual signal and the text carries
 // the LabelMedium role; one scene stands the column on the bottom edge's
 // midpoint, where the design language puts a transient confirmation. The
-// scenes composite over the theme's own Surface — the colour app panes
-// are painted with — so a toast fill that stops separating from real app
-// backgrounds fails the diff instead of hiding behind an arbitrary grey
-// (the regression that shipped the ~1.2:1 Surface-on-Surface toast).
+// scenes composite over the window's furniture floor — the storey app panes
+// are painted with since ADR-022 — so a toast fill that stops separating
+// from real app backgrounds fails the diff instead of hiding behind an
+// arbitrary grey (the regression that shipped the ~1.2:1 Surface-on-Surface
+// toast). The scenes used to name the theme's Surface for that ground, which
+// is a neutral-ramp alias and only coincidentally a pane's colour: it is the
+// floor in the light scheme and the raised rung in the dark one.
 func TestStackGolden(t *testing.T) {
 	shaper := defaultShaper(t)
-	lightBG := tokens.DefaultLight.Surface
-	darkBG := tokens.DefaultDark.Surface
+	lightBG := tokens.DefaultLight.SurfaceAt(tokens.LevelFloor)
+	darkBG := tokens.DefaultDark.SurfaceAt(tokens.LevelFloor)
 
 	cases := []struct {
 		name   string

@@ -171,7 +171,13 @@ const underlineDp = 2
 
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
+	// A navigation bar is chrome furniture, so it fills at the window's
+	// floor: the storey beneath the paper, in both schemes (ADR-022 V2).
+	// colors.Surface, which this used to fill, is a neutral-ramp alias and
+	// not a storey — it coincides with the floor in the light scheme and
+	// with the raised rung in the dark one, so a dark bar was painted
+	// nearer the reader than the content it navigates.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// E1.4: the vertical inset is the density's control padding, so a
 	// ControlHeight control in a density-pinned slot (ControlHeight +

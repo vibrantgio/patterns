@@ -489,8 +489,13 @@ func drawSplitPane(
 	}
 	rightPx := inner - leftPx
 
-	// Background to make the seam visible even if Left/Right are nil.
-	paint.FillShape(gtx.Ops, colors.Surface, clip.Rect{Max: size}.Op())
+	// Backstop so the seam is visible even if Left/Right are nil. It is the
+	// window's floor: whatever a split pane does not cover is the desk the
+	// panes lie on, and since ADR-022 the desk is the storey beneath the
+	// paper in both schemes rather than the colors.Surface ramp alias this
+	// used to fill — a rung that is the floor in the light scheme and the
+	// raised storey in the dark one.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// Leading pane.
 	if left != nil {
