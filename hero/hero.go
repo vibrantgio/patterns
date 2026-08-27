@@ -37,6 +37,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/patterns/internal/outline"
 	"github.com/vibrantgio/patterns/tag"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -395,9 +396,12 @@ func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, t
 		w = minH
 	}
 
+	// The outlined CTA is an edge around a Surface fill and nothing else, so
+	// the edge is derived rather than named: the neutral rung that reaches
+	// the graphic floor against that fill, which is the level-1 storey.
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
 	paint.FillShape(gtx.Ops, tok.color.Surface, rrect.Op(gtx.Ops))
-	paint.FillShape(gtx.Ops, tok.color.Ramps.Neutral.Step(500), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
 
 	offX := (w - labelDims.Size.X) / 2
 	offY := (h - labelDims.Size.Y) / 2

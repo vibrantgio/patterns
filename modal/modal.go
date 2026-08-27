@@ -118,6 +118,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/patterns/internal/outline"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -642,7 +643,9 @@ func drawModal(
 	off := op.Offset(surfPos).Push(gtx.Ops)
 	surfRRect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(surfW, surfH)}, SE: r, SW: r, NE: r, NW: r}
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level2), surfRRect.Op(gtx.Ops))
-	paint.FillShape(gtx.Ops, tok.color.Ramps.Neutral.Step(500), clip.Stroke{
+	// The surface's edge is derived against the storey it circles — the same
+	// Level2 the fill above is painted at, named once for both.
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level2), clip.Stroke{
 		Path:  surfRRect.Path(gtx.Ops),
 		Width: float32(gtx.Dp(unit.Dp(1))),
 	}.Op())

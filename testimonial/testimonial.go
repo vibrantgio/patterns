@@ -40,6 +40,7 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/patterns/internal/outline"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -244,9 +245,12 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
+	// The card's edge is derived against the Surface fill it circles — the
+	// level-1 storey — rather than named at a rung that means two different
+	// contrasts in the two schemes.
 	paint.FillShape(gtx.Ops, tok.color.Surface, rrect.Op(gtx.Ops))
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	paint.FillShape(gtx.Ops, tok.color.Ramps.Neutral.Step(500), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
 
 	off := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
 	contentCall.Add(gtx.Ops)
@@ -364,14 +368,16 @@ func avatarWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Wid
 	}
 }
 
-// drawPlaceholder paints a hollow step-500-stroked circle of diameter
-// `size` and, when name is non-empty, the first rune centred inside it
-// in BodyMedium neutral 700.
+// drawPlaceholder paints a hollow circle of diameter `size` and, when name is
+// non-empty, the first rune centred inside it in BodyMedium neutral 700. The
+// circle is hollow, so the ground on both sides of its line is the card's own
+// Surface fill — the level-1 storey — and the line is derived against that
+// rather than named at a rung.
 func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size int, tok resolvedTokens) {
 	r := size / 2
 	stroke := float32(gtx.Dp(unit.Dp(1)))
 	circle := clip.RRect{Rect: image.Rectangle{Max: image.Pt(size, size)}, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, tok.color.Ramps.Neutral.Step(500), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
 	if name == "" {
 		return
 	}

@@ -41,6 +41,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/patterns/internal/outline"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -336,7 +337,9 @@ func drawPopover(
 			SE:   r, SW: r, NE: r, NW: r,
 		}
 		paint.FillShape(gtx.Ops, fill, surfRRect.Op(gtx.Ops))
-		paint.FillShape(gtx.Ops, tok.color.Ramps.Neutral.Step(500), clip.Stroke{
+		// The surface's edge is derived against the storey it circles — the
+		// same Level3 the fill above is painted at, named once for both.
+		paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level3), clip.Stroke{
 			Path:  surfRRect.Path(gtx.Ops),
 			Width: float32(gtx.Dp(unit.Dp(1))),
 		}.Op())

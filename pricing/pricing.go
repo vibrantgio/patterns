@@ -44,6 +44,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/patterns/internal/outline"
 	"github.com/vibrantgio/patterns/tag"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -311,8 +312,12 @@ func drawTier(
 
 	paint.FillShape(gtx.Ops, tok.color.Surface, rrect.Op(gtx.Ops))
 
+	// A tier's edge is derived against the Surface fill it circles — the
+	// level-1 storey — so the card reads as an object in either scheme. The
+	// highlighted tier trades that edge for the accent, which is its own
+	// pairing and says which tier is being pushed.
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	strokeColor := tok.color.Ramps.Neutral.Step(500)
+	strokeColor := outline.Ink(tok.color, tokens.Level1)
 	if tier.Highlighted {
 		strokeW = float32(gtx.Dp(unit.Dp(2)))
 		strokeColor = tok.color.Primary

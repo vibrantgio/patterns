@@ -40,6 +40,7 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/patterns/internal/outline"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -113,7 +114,10 @@ func drawCard(gtx layout.Context, props Props, colors tokens.ColorTokens, sp tok
 	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
 
 	if !props.Elevated {
-		paint.FillShape(gtx.Ops, colors.Ramps.Neutral.Step(500), clip.Stroke{
+		// The outlined card's edge is what makes it an object, so it is
+		// derived rather than named: the neutral rung that reaches the
+		// graphic floor against the level-1 fill it circles.
+		paint.FillShape(gtx.Ops, outline.Ink(colors, tokens.Level1), clip.Stroke{
 			Path:  rrect.Path(gtx.Ops),
 			Width: float32(gtx.Dp(unit.Dp(1))),
 		}.Op())
