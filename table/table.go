@@ -387,23 +387,6 @@ func columnWidths[T any](gtx layout.Context, columns []Column[T], totalW int) []
 	return out
 }
 
-// raisedFrom is the rung one step above ground — the band a table's header
-// wears, and the reason Props.Ground is a level rather than a colour.
-// ADR-021 R4: rungs are walked from the surface a thing is lying on, not
-// from an absolute step, so a header over a level-0 plane fills at level 1
-// and a header over a level-1 plane fills at level 2. Reading an absolute
-// neutral 300 instead — which is what this band did while every table in the
-// system happened to rest on Surface — puts the header two rungs off its own
-// grid the moment the grid is printed on the window's paper, and R2 calls two
-// rungs a mistake in either direction. Level3 is the ceiling the ladder
-// stops at; a table that deep has bigger problems than its header.
-func raisedFrom(ground tokens.ElevationLevel) tokens.ElevationLevel {
-	if ground >= tokens.Level3 {
-		return tokens.Level3
-	}
-	return ground + 1
-}
-
 // drawHeaderRow renders the bold-weight header labels with optional sort
 // chevrons and clickable hit areas for sortable columns. The trailing
 // divider line marks the boundary between the header and the body.
@@ -417,7 +400,13 @@ func drawHeaderRow[T any](
 	tok resolvedTokens,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(raisedFrom(tok.ground)), clip.Rect{Max: size}.Op())
+	// The header is furniture over the grid's own plane, so its band is one
+	// rung above the rung the plane fills at — walked from that ground and
+	// not named as an absolute step (ADR-021 R4, [tokens.ElevationLevel.Raised]).
+	// An absolute neutral 300 here would read right only while every table
+	// happened to rest on Surface, and would put the header two rungs off its
+	// own grid the moment the grid is printed on the window's paper.
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.ground.Raised()), clip.Rect{Max: size}.Op())
 
 	x := 0
 	for i, col := range columns {

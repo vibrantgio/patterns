@@ -274,7 +274,12 @@ func drawTabs(
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(raisedFrom(props.Ground)),
+	// The strip is furniture over the panel it caps, so its band is one rung
+	// above the panel's own rung — walked from that ground and not named as an
+	// absolute step (ADR-021 R4, [tokens.ElevationLevel.Raised]). An absolute
+	// Surface here would leave the strip level with its own panel the moment
+	// the panel is printed on the window's paper.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(props.Ground.Raised()),
 		clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
 
 	stripGtx := gtx
@@ -291,31 +296,6 @@ func drawTabs(
 	}
 
 	return layout.Dimensions{Size: size}
-}
-
-// raisedFrom is the rung one step above ground — the band a tab strip wears,
-// and the reason Props.Ground is a level rather than a colour. ADR-021 R4:
-// rungs are walked from the surface a thing is lying on, not from an absolute
-// step, so a strip over a level-0 panel fills at level 1 (the semantic
-// Surface) and a strip over a level-1 panel fills at level 2. Reading an
-// absolute Surface instead — which is what this band did while the whole
-// pattern painted one fill — puts the strip level with its own panel the
-// moment the panel is printed on the window's paper, and R2 says furniture
-// stands exactly one rung off the content it frames. Level3 is the ceiling
-// the ladder stops at.
-//
-// patterns/table carries the same function under the same name for the same
-// rule; the two are deliberate twins rather than a missed hoist. A pattern in
-// this library is source you copy into your own app (see this package's doc
-// comment), so a shared internal helper would cost every copy an import it
-// cannot satisfy. The hoist that would not — a method on
-// tokens.ElevationLevel, where the ladder itself lives — is a change to a
-// tier-0 module that no task has asked for; it is recorded rather than taken.
-func raisedFrom(ground tokens.ElevationLevel) tokens.ElevationLevel {
-	if ground >= tokens.Level3 {
-		return tokens.Level3
-	}
-	return ground + 1
 }
 
 func drawStrip(
