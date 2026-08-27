@@ -1,19 +1,22 @@
 // Package pagination provides the Patterns Pagination pattern: a horizontal
-// row of numbered page buttons flanked by prev/next chevrons. The current
-// page button is highlighted via Primary/OnPrimary; the other page buttons
-// use a neutral tinted-fill pair (neutral 300 fill, neutral 700 label) so
-// they remain visually distinct from the active page.
+// row of numbered page buttons flanked by prev/next chevrons. Every cell is
+// one tinted-fill pair — a ramp's step 300 as fill, the same ramp's step 700
+// as label — and the only thing the current page changes is which ramp the
+// pair comes off: Primary for the page the reader is on, neutral for the
+// pages they are not. So the row says "this one" in hue and in nothing else,
+// and the two kinds of cell read at one weight (light 4.54 against the
+// neutrals' 4.51, dark 8.40 against 8.46).
 //
 // Page cells are drawn natively (E1.4). They previously bridged through
 // components/button.Render, but that static bridge's frozen signature renders
 // at tokens.Comfortable — inside a density-sized ControlHeight square its
 // Comfortable PaddingX (16 dp) truncated the page digit to a sliver, and
 // nothing was gained: the bridge only ever drew the normal state (no
-// hover/press/focus visuals reached it). Drawing the cell here — the same
-// Primary/neutral fill, radius.Md corners, centred digit — keeps the
-// visuals aligned with components/button while letting every metric follow the
-// density. The trade-off, accepted deliberately: future components/button
-// styling changes must be mirrored here by hand.
+// hover/press/focus visuals reached it). Drawing the cell here — a tinted
+// fill, radius.Md corners, centred digit — keeps the visuals aligned with
+// components/button while letting every metric follow the density. The
+// trade-off, accepted deliberately: future components/button styling changes
+// must be mirrored here by hand.
 //
 // The package follows the Phase 4 Composition contract: Pagination is a
 // callable Go function consuming a components theme observable, returning a
@@ -180,6 +183,17 @@ type resolvedTokens struct {
 // (extending to the 44 dp pointer floor would overlap the neighbouring
 // cell's slop — the E1.3 stacked/tiled-controls precedent).
 
+// The tinted-fill pair every page cell is drawn from, stated once because the
+// current cell and the resting ones differ only in which ramp they read it
+// off. Step 300 is the tinted end ADR-021 R5 names as a window's chosen-item
+// fill — the step the sidebar pill and the selected table row already wear —
+// and step 700 is the rung four along from it, which is where a ramp's own
+// colour clears WCAG AA body text over its own 300 in both schemes.
+const (
+	cellFillStep  = 300
+	cellLabelStep = 700
+)
+
 func drawPagination(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -216,16 +230,36 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 
 // pageCellWidget returns a clickable ControlHeight-square cell rendering
 // page n natively (see the package doc for why the components/button.Render
-// bridge was dropped in E1.4). The current page uses the real
-// Primary/OnPrimary pair — components/button's normal-state colours — and
-// other pages a neutral tinted fill (step 300) with low-contrast text
-// (step 700), so they remain visually distinct from both the active page
-// and the surrounding surface.
+// bridge was dropped in E1.4). Both kinds of cell take one recipe — the
+// ramp's step 300 as fill, its step 700 as label — and the current page is
+// the cell that takes it off the Primary ramp rather than the neutral one.
+//
+// The current page used to fill with the Primary PIN and label with
+// OnPrimary, which is components/button's normal state and the wrong answer
+// for a mark that says "this is the one you are on". ADR-021 R5 gives that
+// answer one fill across a window, the Primary ramp's tinted step 300, and
+// the pin is not it: the pin runs saturated in the light scheme (#723AD4)
+// and pale in the dark one (#D0C4FF) while the step runs the other way
+// (#D8CEFF / #3F0085), so a window that marked its sidebar and its table
+// with the step and its pager with the pin said the same thing in two
+// opposite tones at once and swapped which was which with the scheme. Moving
+// the fill to the step inverts the chip rather than repainting it — what was
+// the fill is now very nearly the ink, the pin's own colour, in both schemes.
+//
+// OnPrimary cannot come along: it is derived against the pin and measures
+// 1.48:1 light and 1.32:1 dark over the step, which is no text at all. The
+// label is re-derived over the new fill instead, off the fill's own ramp at
+// the same offset the neutral cells use, and lands at 4.54:1 light and
+// 8.40:1 dark — clear of WCAG AA body text either way, and within a
+// twentieth of a point of what the resting cells beside it measure (4.51 and
+// 8.46), so the current page is the coloured cell rather than the louder or
+// the fainter one.
 func pageCellWidget(shaper *text.Shaper, n int, current bool, click *widget.Clickable, tok resolvedTokens) layout.Widget {
-	bg, fg := tok.color.Ramps.Neutral.Step(300), tok.color.Ramps.Neutral.Step(700)
+	ramp := tok.color.Ramps.Neutral
 	if current {
-		bg, fg = tok.color.Primary, tok.color.OnPrimary
+		ramp = tok.color.Ramps.Primary
 	}
+	bg, fg := ramp.Step(cellFillStep), ramp.Step(cellLabelStep)
 	label := strconv.Itoa(n)
 
 	return func(gtx layout.Context) layout.Dimensions {

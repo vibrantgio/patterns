@@ -14,6 +14,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/pagination"
+	tcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -118,6 +119,94 @@ func TestPaginationLightDarkDiffer(t *testing.T) {
 		t.Error("light and dark render identically; expected token-pair colour differences")
 	}
 }
+
+// TestTheCurrentPageWearsTheChosenItemStep is ADR-021 R5 read off the
+// rendered row rather than off the source: the cell for the page the reader
+// is on fills from the Primary ramp's tinted end — step 300, the same fill a
+// sidebar's open row and a table's selected row take — and its digit is
+// re-derived over that fill instead of carrying OnPrimary along, which is
+// derived against the PIN and cannot read on the step.
+//
+// The pin is what this cell used to fill with, and the reason it is wrong is
+// visible only across the pair of schemes: the pin runs saturated in light
+// and pale in dark while the step runs the other way, so a window marking its
+// other chosen items with the step and its pager with the pin inverted
+// against itself when the scheme changed. Both schemes are therefore checked,
+// and the resting cell beside the current one is checked too — a mark says
+// nothing if every cell wears it.
+func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
+	shaper := defaultShaper(t)
+	sharpRadius := tokens.RadiusScale{}
+	const page, pageCount = 3, 5
+
+	// The cell's own geometry, derived rather than measured: the row is a
+	// leading chevron, then one ControlHeight square per page, every pair
+	// separated by an S2 gap, laid out middle-aligned in the canvas. Sampling
+	// three pixels in from the cell's leading top corner clears both the
+	// (sharp) corner and the centred digit.
+	side := int(tokens.Comfortable.ControlHeight)
+	gap := int(tokens.Spacing.S2)
+	cellAt := func(n int) image.Point {
+		x := side + gap + (n-1)*(side+gap)
+		y := (canvasH - side) / 2
+		return image.Pt(x+3, y+3)
+	}
+
+	for _, tc := range []struct {
+		name string
+		c    tokens.ColorTokens
+		bg   color.NRGBA
+	}{
+		{"light", tokens.DefaultLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}},
+		{"dark", tokens.DefaultDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			props := pagination.Props{Page: page, PageCount: pageCount, Shaper: shaper}
+			w := pagination.Render(shaper, props, tc.c, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			img := golden.Capture(t, canvasSize, scene(w, tc.bg))
+
+			at := func(p image.Point) color.NRGBA {
+				r, g, b, _ := img.At(p.X, p.Y).RGBA()
+				return color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 0xff}
+			}
+
+			tint := tc.c.Ramps.Primary.Step(300)
+			if got := at(cellAt(page)); got != tint {
+				t.Errorf("current page cell = %v, want the chosen-item step %v", got, tint)
+			}
+			if got := at(cellAt(page)); got == tc.c.Primary {
+				t.Errorf("current page cell fills with the Primary pin %v; the pin inverts against the step between schemes", got)
+			}
+			if got, want := at(cellAt(page-1)), tc.c.Ramps.Neutral.Step(300); got != want {
+				t.Errorf("resting page cell = %v, want the neutral fill %v", got, want)
+			}
+
+			// The digit over the new fill. OnPrimary is the ink that used to
+			// ride with the pin and is the one thing that may not follow the
+			// fill down: it measures 1.48:1 light and 1.32:1 dark here.
+			ink := tc.c.Ramps.Primary.Step(700)
+			if got := tcolor.ContrastRatio(ink, tint); got < aaBodyText {
+				t.Errorf("current page digit %v over %v = %.2f:1, below WCAG AA body text %.1f:1", ink, tint, got, aaBodyText)
+			}
+			if got := tcolor.ContrastRatio(tc.c.OnPrimary, tint); got >= aaBodyText {
+				t.Errorf("OnPrimary %v now reads %.2f:1 over %v; this test's premise has moved", tc.c.OnPrimary, got, tint)
+			}
+
+			// And it reads at the weight the cells beside it do, so the
+			// current page is the coloured cell rather than the loud or the
+			// faint one.
+			resting := tcolor.ContrastRatio(tc.c.Ramps.Neutral.Step(700), tc.c.Ramps.Neutral.Step(300))
+			current := tcolor.ContrastRatio(ink, tint)
+			if d := current / resting; d < 0.75 || d > 1.35 {
+				t.Errorf("current digit reads %.2f:1 against the resting cells' %.2f:1; one cell in the row is a different weight from the others", current, resting)
+			}
+		})
+	}
+}
+
+// aaBodyText is WCAG 2.1 AA's contrast floor for body-sized text, which a
+// page digit in the LabelLarge role is.
+const aaBodyText = 4.5
 
 // liveWidget subscribes to obs and returns its last emitted widget.
 func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
