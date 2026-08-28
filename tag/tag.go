@@ -135,14 +135,14 @@ const (
 	// label's line box on purpose: the mark is an affordance on a chip,
 	// not a second word in it.
 	//
-	// It is even, and that is the whole of why it is 10 and not 9. The
+	// It is even, and that is the whole of why it is 8 and not 9. The
 	// pill's height is its line box plus S1, and both are even, so an
 	// odd-sided mark cannot be centred in it: at 9 the mark sat five rows
 	// below the pill's top edge and six above its bottom, next to a label
 	// centred six and six. On a word the half-pixel would be invisible; an
 	// x is symmetric about both axes, so it showed as a mark floating high
 	// beside type that did not.
-	closeMarkDp = 10
+	closeMarkDp = 8
 	// closeStrokeDp is the width of each of the x's two strokes, in dp. It
 	// is a quarter wider than the pill's own 1 dp ring because a diagonal
 	// spends part of its width on anti-aliasing while the ring's
