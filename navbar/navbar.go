@@ -37,6 +37,7 @@ package navbar
 
 import (
 	"image"
+	"image/color"
 
 	"gioui.org/font"
 	"gioui.org/io/pointer"
@@ -310,6 +311,20 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 	return &clicks[i]
 }
 
+// activeUnderlineInk is the colour an active link's underline is drawn in:
+// the primary pin while it clears the graphic floor against the bar's own
+// floor fill — the underline's ground, since the bar is chrome filled at
+// tokens.LevelFloor (see drawNavbar) — and otherwise the rung of the
+// primary ramp that does (AV1.2; [tokens.ColorTokens.InkOn]).
+//
+// It used to be the bare Primary pin, which reads only because the
+// canonical seed's own primary clears the bar already; a pastel seed's pin
+// put a sub-floor underline on the bar that no golden ever showed. Nothing
+// moves on the canonical seed.
+func activeUnderlineInk(colors tokens.ColorTokens) color.NRGBA {
+	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelFloor), tokens.GraphicFloor)
+}
+
 // linkWidget renders a single link as a label centred inside
 // (S3, Density.PaddingY) padding — the horizontal 12 dp stays on the
 // spacing scale (the E1.3 input rule), the vertical padding follows
@@ -317,7 +332,7 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 // visible even when the label rasterises to zero width, which an empty
 // Link.Label does. Links are adjacent cells in
 // a row, so their hit area stays the cell bounds (extension would steal
-// a neighbour's slop).
+// a neighbour's slop). The underline itself is [activeUnderlineInk].
 func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		inner := func(gtx layout.Context) layout.Dimensions {
@@ -354,7 +369,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tok
 
 			if l.Active {
 				underline := image.Rect(0, cellH-underlineH, cellW, cellH)
-				paint.FillShape(gtx.Ops, colors.Primary, clip.Rect(underline).Op())
+				paint.FillShape(gtx.Ops, activeUnderlineInk(colors), clip.Rect(underline).Op())
 			}
 			return layout.Dimensions{Size: image.Pt(cellW, cellH)}
 		}

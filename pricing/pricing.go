@@ -273,10 +273,24 @@ func layoutTiers(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
+// tierPrimaryInk is the primary ink a tier card draws directly on its own
+// level-1 fill — the highlighted tier's ring and every tier's feature
+// checkmarks: the primary pin while it clears the graphic floor against
+// that fill, and otherwise the rung of the primary ramp that does (AV1.2;
+// [tokens.ColorTokens.InkOn]).
+//
+// Both used to be the bare Primary pin, which reads only because the
+// canonical seed's own primary clears the level-1 fill already; a pastel
+// seed's pin put a sub-floor ring and checkmarks on the card that no
+// golden ever showed. Nothing moves on the canonical seed.
+func tierPrimaryInk(c tokens.ColorTokens) color.NRGBA {
+	return c.InkOn(tokens.RolePrimary, c.SurfaceAt(tokens.Level1), tokens.GraphicFloor)
+}
+
 // drawTier draws a single tier card: a rounded Surface filled to its
 // allocated width with content height matching the inner stack plus
-// S5 padding on all sides. The border is 2 dp Primary when Highlighted,
-// 1 dp neutral step-500 (strong border) otherwise.
+// S5 padding on all sides. The border is 2 dp [tierPrimaryInk] when
+// Highlighted, 1 dp neutral step-500 (strong border) otherwise.
 func drawTier(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -317,12 +331,12 @@ func drawTier(
 	// ADR-022 re-founded the ladder — so the card reads as an object in
 	// either scheme. The
 	// highlighted tier trades that edge for the accent, which is its own
-	// pairing and says which tier is being pushed.
+	// pairing and says which tier is being pushed: [tierPrimaryInk].
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
 	strokeColor := outline.Ink(tok.color, tokens.Level1)
 	if tier.Highlighted {
 		strokeW = float32(gtx.Dp(unit.Dp(2)))
-		strokeColor = tok.color.Primary
+		strokeColor = tierPrimaryInk(tok.color)
 	}
 	paint.FillShape(gtx.Ops, strokeColor, clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
 
@@ -453,9 +467,11 @@ func featureRowWidget(shaper *text.Shaper, label string, tok resolvedTokens) lay
 	}
 }
 
-// checkmarkWidget paints a small Primary-stroked check ("✓") inside an
-// S4 box using a clip.Path. The path is a two-segment polyline traced
-// over the box; the stroke width is 2 dp.
+// checkmarkWidget paints a small check ("✓") inside an S4 box using a
+// clip.Path, in [tierPrimaryInk] — the same derivation the highlighted
+// tier's ring uses, since both are the primary ink drawn on the card's own
+// level-1 fill. The path is a two-segment polyline traced over the box;
+// the stroke width is 2 dp.
 func checkmarkWidget(tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		box := gtx.Dp(unit.Dp(tok.spacing.S4))
@@ -467,7 +483,7 @@ func checkmarkWidget(tok resolvedTokens) layout.Widget {
 		path.MoveTo(f32.Pt(s*0.2, s*0.55))
 		path.LineTo(f32.Pt(s*0.45, s*0.8))
 		path.LineTo(f32.Pt(s*0.8, s*0.25))
-		paint.FillShape(gtx.Ops, tok.color.Primary, clip.Stroke{
+		paint.FillShape(gtx.Ops, tierPrimaryInk(tok.color), clip.Stroke{
 			Path:  path.End(),
 			Width: stroke,
 		}.Op())

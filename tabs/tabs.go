@@ -22,6 +22,7 @@ package tabs
 
 import (
 	"image"
+	"image/color"
 
 	"gioui.org/font"
 	"gioui.org/io/key"
@@ -311,12 +312,15 @@ func drawStrip(
 	if len(props.Tabs) == 0 {
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	}
+	// The underline is drawn on the strip band, one rung above the panel
+	// (see drawTabs), so that is the ground its ink is measured against.
+	stripGround := props.Ground.Raised()
 	children := make([]layout.FlexChild, 0, len(props.Tabs))
 	for i := range props.Tabs {
 		i := i
 		children = append(children, layout.Rigid(tabCell(
 			shaper, props.Tabs[i].Label, clickFor(clicks, i), i == selected,
-			colors, sp, style,
+			colors, sp, style, stripGround,
 		)))
 	}
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
@@ -329,11 +333,26 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 	return &clicks[i]
 }
 
+// underlineInk is the colour a selected tab's underline is drawn in: the
+// primary pin while it clears the graphic floor against ground — the strip
+// band the underline actually sits on — and otherwise the rung of the
+// primary ramp that does (AV1.2; [tokens.ColorTokens.InkOn]).
+//
+// It used to be the bare Primary pin. That reads only because the
+// canonical seed's own primary clears the strip already; a pastel seed's
+// pin put a sub-floor underline on the band that no golden ever showed.
+// Nothing moves on the canonical seed.
+func underlineInk(colors tokens.ColorTokens, ground tokens.ElevationLevel) color.NRGBA {
+	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(ground), tokens.GraphicFloor)
+}
+
 // tabCell renders a single tab label centred inside (S3, S2) padding,
-// with a strip-height cell. When selected, a Primary-coloured underline
-// of underlineDp px is drawn along the cell's bottom edge. The cell
-// width is at least 2×S3 so the underline is visible even when the
-// label rasterises to zero width, which an empty Tab.Label does.
+// with a strip-height cell. When selected, an underline of underlineDp px
+// is drawn along the cell's bottom edge in [underlineInk], measured
+// against ground — the strip band the underline actually sits on, passed
+// in rather than assumed. The cell width is at least 2×S3 so the
+// underline is visible even when the label rasterises to zero width,
+// which an empty Tab.Label does.
 func tabCell(
 	shaper *text.Shaper,
 	label string,
@@ -342,6 +361,7 @@ func tabCell(
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
+	ground tokens.ElevationLevel,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		stripH := gtx.Constraints.Max.Y
@@ -382,7 +402,7 @@ func tabCell(
 
 			if selected {
 				underline := image.Rect(0, cellH-underlineH, cellW, cellH)
-				paint.FillShape(gtx.Ops, colors.Primary, clip.Rect(underline).Op())
+				paint.FillShape(gtx.Ops, underlineInk(colors, ground), clip.Rect(underline).Op())
 			}
 			return layout.Dimensions{Size: image.Pt(cellW, cellH)}
 		}
