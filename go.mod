@@ -8,6 +8,7 @@ require (
 	github.com/vibrantgio/components v1.2.0
 	github.com/vibrantgio/effects v0.2.4
 	github.com/vibrantgio/mvu v1.0.0
+	github.com/vibrantgio/mvu/desktop v1.0.0
 	github.com/vibrantgio/theme v1.3.0
 )
 
