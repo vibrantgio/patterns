@@ -19,10 +19,10 @@ github.com/vibrantgio/effects v0.2.4 h1:PrZRblu9L84PTFbS+Ixf17MJedU0tRoh/SKQursH
 github.com/vibrantgio/effects v0.2.4/go.mod h1:dC8fqIV5Amr/CLih1AWLZz9Ssdh91Ude2h74Eusb2iE=
 github.com/vibrantgio/font v0.4.1 h1:MCn+Sf9jRxjjdgxVGAu+7DRpKFiFLIq5SW3kQOTYDNM=
 github.com/vibrantgio/font v0.4.1/go.mod h1:nU+TnuoartKhdAnHASqn/yNO+t1zLheH1CHgbJJf0FY=
-github.com/vibrantgio/mvu v1.0.0 h1:uzI83VLYJq1UgIIA2mF6JiKaJtRJLWi1ET7+Jv+7Okw=
-github.com/vibrantgio/mvu v1.0.0/go.mod h1:JnRAUuuD8MFkViuHyRlbK8re/XLnTjz/yq7OWERYnvw=
-github.com/vibrantgio/mvu/desktop v1.0.0 h1:5SQ29Cp3R2Ou1zId4wF2mrJLBoQZKAlkXxRiARkITcs=
-github.com/vibrantgio/mvu/desktop v1.0.0/go.mod h1:DSOdNy33oRkqWm16ncGkMX3zyVtLNrk9aW/OC/vMOOU=
+github.com/vibrantgio/mvu v1.0.1 h1:XYVx2nT1kuQjZrL5Lw9RChor/97nI4Oj55N0eZju2bE=
+github.com/vibrantgio/mvu v1.0.1/go.mod h1:JnRAUuuD8MFkViuHyRlbK8re/XLnTjz/yq7OWERYnvw=
+github.com/vibrantgio/mvu/desktop v1.0.1 h1:SFflXq53UFW9x9nhie+el9Za84vlEhKPDJrkMjvaDw8=
+github.com/vibrantgio/mvu/desktop v1.0.1/go.mod h1:K0TrJ4+WamGDtRr8UWdACHQmOcTpL4Q7bnTJui5D/7U=
 github.com/vibrantgio/svg v0.0.9 h1:0OCCmVFz13IIDR3oDZeyw0IMy2RKWKWReQIlsRRz9zw=
 github.com/vibrantgio/svg v0.0.9/go.mod h1:H867wFCLH1Lfz+uoklXwtvOTAQgg/7DC0KoZm6nRHUA=
 github.com/vibrantgio/theme v1.3.0 h1:SiJC9EI7XFgUDKUIOCMzdSYNIK55kiD8TtOkWVNxs8A=
