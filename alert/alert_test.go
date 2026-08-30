@@ -38,11 +38,10 @@ func defaultShaper(t *testing.T) *text.Shaper {
 }
 
 // variantTitle is the Title each variant carries. Alert draws its title in
-// the TitleMedium role and omits the title row entirely when Title is empty —
-// which every golden here did until F4.4b, so the row itself was unrecorded.
-// F4.2 pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image.
+// the TitleMedium role and omits the title row entirely when Title is empty.
+// Latin text in Roboto rasterises identically on every machine via
+// DeterministicShaper; keep this ASCII only so no symbol reaches a stored
+// image.
 func variantTitle(v alert.Variant) string {
 	switch v {
 	case alert.Success:
@@ -77,10 +76,9 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// TestAlertGolden records or diffs every variant × {light, dark} pair.
-// The Measurable contract requires at minimum info-light, info-dark,
-// warning-light, error-light; the full 4×2 matrix is recorded so cross-
-// variant regressions surface immediately.
+// TestAlertGolden records or diffs every variant × {light, dark} pair; the
+// full 4×2 matrix is recorded so cross-variant regressions surface
+// immediately.
 func TestAlertGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 32)

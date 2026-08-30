@@ -61,14 +61,13 @@ func iconFill(c color.NRGBA) layout.Widget {
 // wrap onto more than one line in a three-up cell, which is the whole point:
 // the BodyMedium role's line height only shows in the gap between baselines,
 // so a body that fits on one line would pin everything about the role except
-// that (F4.4). ASCII only — both embedded faces carry every rune, so no
+// that. ASCII only — both embedded faces carry every rune, so no
 // machine-dependent fallback face can reach a stored image.
 const featureBody = "Every token flows from one theme value, so a change lands everywhere at once."
 
-// item returns an Item with the deterministic icon fill and real text. The
-// labels were blank until F4.4, on the theory that font rasterisation was
-// non-deterministic; F4.2 pinned the faces by configuration, and Latin text in
-// Roboto rasterises identically on every machine.
+// item returns an Item with the deterministic icon fill and real text: Latin
+// text in Roboto rasterises identically on every machine, so real labels are
+// safe in goldens.
 func item(title string) feature.Item {
 	return feature.Item{
 		Icon:  iconFill(color.NRGBA{R: 60, G: 110, B: 200, A: 255}),
@@ -99,8 +98,8 @@ func TestFeatureGolden(t *testing.T) {
 	darkBG := color.NRGBA{R: 20, G: 20, B: 20, A: 255}
 
 	three := items(3)
-	// One wrapping title pins AE7.2: bodies stay on one line under
-	// the tallest title, and the three cells share a bottom.
+	// One wrapping title: bodies stay on one line under the tallest
+	// title, and the three cells share a bottom.
 	three[0].Title = wrappingTitle
 	two := items(2)
 	six := items(6)
@@ -117,10 +116,9 @@ func TestFeatureGolden(t *testing.T) {
 		{"light-3-up", tokens.DefaultLight, lightBG, 3, three, canvasSize},
 		{"dark-3-up", tokens.DefaultDark, darkBG, 3, three, canvasSize},
 		{"light-2-up", tokens.DefaultLight, lightBG, 2, two, canvasSize},
-		// Two rows of real text do not fit the one-row canvas: with blank
-		// labels a cell was an icon fill and nothing else, and 320 px was
-		// generous. The taller canvas is what keeps the second row's bodies
-		// on screen rather than cut off at the edge.
+		// Two rows of real text do not fit the one-row canvas; the taller
+		// canvas keeps the second row's bodies on screen rather than cut
+		// off at the edge.
 		{"light-6-items-3-up", tokens.DefaultLight, lightBG, 3, six, image.Pt(canvasW, 2*canvasH)},
 	}
 	for _, tc := range cases {
@@ -149,7 +147,7 @@ func TestFeatureColumnsDefaultsToThree(t *testing.T) {
 	}
 }
 
-// ---- typography (F4.4) ----
+// ---- typography ----
 
 // withBodyLineHeight returns a copy of the default typography whose BodyMedium
 // role — the role the cell bodies draw in — is on a taller line box, and
@@ -169,30 +167,15 @@ func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 	return scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
 }
 
-// TestFeatureLineHeightGolden is the golden that pins a role's line height at
-// a value that is not the role's own — the only one in the org that varies the
-// property rather than inheriting it — and it lives here because feature's cell
-// body is the widest wrapped run the system draws.
+// TestFeatureLineHeightGolden pins a role's line height at a value that is
+// not the role's own, on feature's cell body — the widest wrapped run the
+// system draws.
 //
-// It used to live here for a narrower reason, worth recording because it is no
-// longer true. gioui.org/text spends the line height on the gap between
-// baselines and nowhere else — calculateYOffsets baselines the first line at
-// that line's own ascent — and widget.Label reports the glyph ink bounds as its
-// size, so through widget.Label alone a MaxLines:1 label renders identically at
-// any LineHeight. That made a wrapped run the only place the property was
-// observable at all, and this was the only golden that had one. F4.4c built
-// theme/typeset to correct it and F4.4d put every patterns label on it, so
-// the property now moves single-line controls too and a dozen goldens in components
-// pin it.
-//
-// What is left is still worth a golden, and it says more than it did. typeset
-// adds the missing first-line box as a deficit rather than a floor, so this
-// three-line body occupies exactly 3 × the line height instead of two gaps plus
-// one line of glyph ink. Measured on BodyMedium at 14 dp, whose natural line
-// inks 17 px: the run is 60 px at line height 20 and 96 px at 32, so the +12
-// this test applies lengthens it by 36 px. Before typeset the same two renders
-// were 57 and 81, and the +12 bought only 24 — the first line's own leading was
-// the part Gio never drew.
+// typeset adds the missing first-line box as a deficit rather than a floor,
+// so this three-line body occupies exactly 3 × the line height instead of
+// two gaps plus one line of glyph ink. Measured on BodyMedium at 14 dp,
+// whose natural line inks 17 px: the run is 60 px at line height 20 and 96
+// px at 32, so the +12 this test applies lengthens it by 36 px.
 func TestFeatureLineHeightGolden(t *testing.T) {
 	golden.Render(t, "light-3-up-tall-body-lines", canvasSize,
 		featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight+12))
@@ -214,8 +197,8 @@ func TestFeatureLineHeightIsDetectable(t *testing.T) {
 // wrappingTitle is long enough to wrap in a three-up cell at 720 px.
 const wrappingTitle = "Token values from one shared theme"
 
-// TestFeatureWrappedTitleSharesHeight pins AE7.2: a row whose first
-// title wraps is as tall as a row where every title wraps to the same
+// TestFeatureWrappedTitleSharesHeight pins the invariant that a row whose
+// first title wraps is as tall as a row where every title wraps to the same
 // height, and taller than a row of short titles.
 func TestFeatureWrappedTitleSharesHeight(t *testing.T) {
 	shaper := defaultShaper(t)

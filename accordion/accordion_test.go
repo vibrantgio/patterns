@@ -59,11 +59,9 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 }
 
 // sectionTitles names the three sections in document order, so the goldens
-// show three distinct headers rather than three copies. The titles were blank
-// until F4.4b, on the theory that font rasterisation was non-deterministic;
-// F4.2 pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image.
+// show three distinct headers rather than three copies. Latin text in Roboto
+// rasterises identically on every machine under DeterministicShaper; titles
+// are ASCII only so no symbol reaches a stored image.
 //
 // The header is a fixed 48 dp tall (headerHDp) whatever the title, so the
 // geometry every interaction test here computes from that number is unchanged

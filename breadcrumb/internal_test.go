@@ -11,8 +11,8 @@ import (
 // TestLabelColorRule asserts the Specific contract: in a breadcrumb of n
 // items, the last segment renders in Text (current location) and the
 // preceding segments render in neutral 700. The goldens carry real labels
-// since F4.4b and so do show the two foregrounds apart, but only as pixels;
-// this pure-Go test guards the rule itself, on every step of both ramps.
+// and so do show the two foregrounds apart, but only as pixels; this
+// pure-Go test guards the rule itself, on every step of both ramps.
 func TestLabelColorRule(t *testing.T) {
 	for _, c := range []tokens.ColorTokens{tokens.DefaultLight, tokens.DefaultDark} {
 		const n = 3

@@ -2,10 +2,10 @@
 // block with an optional eyebrow tag, a display Title, a Subtitle, an
 // optional Visual slot, and an optional dual call-to-action pair.
 //
-// The package follows the Phase 4 Composition contract: Hero is a callable
-// Go function consuming a components theme observable, returning a stream of
-// layout.Widget. The source is intentionally short and free of opaque
-// configuration — copy it into your own app and modify as needed.
+// Hero is a callable Go function consuming a components theme observable
+// and returning a stream of layout.Widget. The source is intentionally
+// short and free of opaque configuration — copy it into your own app and
+// modify as needed.
 //
 // Layout: an S6 outer inset. When Visual is nil the content stacks in a
 // single centered column; when Visual is non-nil the text column and the
@@ -50,14 +50,6 @@ import (
 // word in it, and the locally-rendered outlined twin lines up beside it.
 // A label that needs more room gets it: [ctaGtx] measures the label first and
 // widens the cell to label + 2×PaddingX, up to whatever the row can give.
-//
-// It was a maximum until F4.4c, and the doc claimed the growth anyway. It
-// could not happen: the cell clamped Max.X to 120 dp, components/button then
-// clamped its MaxLines:1 label to that less 2×PaddingX, and the growth branch
-// compared the cell width against a label width that had already been clamped
-// to fit inside it — so the comparison could never fire and "Read the docs"
-// drew as "Read the do…". Measuring the label before choosing the cell width
-// is what makes the promise true rather than merely written down.
 const ctaIntrinsicWidth = unit.Dp(120)
 
 // CTA describes a hero call-to-action. Label populates the button label and
@@ -92,9 +84,9 @@ type Props struct {
 	// subtitle and CTA labels with the theme's shaper (Typography.Shaper()),
 	// which is built once for the process and shared by every component
 	// reading that typography — the cache lives behind the Typography value,
-	// so it survives the copy this component's map function makes of it
-	// (spectrum F5.1). Set it only when this instance must shape with a
-	// different shaper than the theme provides.
+	// so it survives the copy this component's map function makes of it.
+	// Set it only when this instance must shape with a different shaper
+	// than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -110,7 +102,7 @@ type resolvedTokens struct {
 	title    tokens.TextStyle // the DisplaySmall role
 	subtitle tokens.TextStyle // the BodyLarge role
 	label    tokens.TextStyle // the LabelLarge role (CTA labels)
-	density  tokens.Density   // CTA control height and inner padding (E1.4)
+	density  tokens.Density   // CTA control height and inner padding
 	shaper   *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -121,8 +113,8 @@ type resolvedTokens struct {
 func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies the LabelSmall/DisplaySmall/BodyLarge/
-	// LabelLarge text styles and the theme's cached shaper (ADR-003: the
-	// theme owns the typeface); the density sizes both CTAs.
+	// LabelLarge text styles and the theme's cached shaper; the density
+	// sizes both CTAs.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
@@ -257,18 +249,17 @@ func textColumn(
 }
 
 // eyebrowWidget renders a Primary-tinted pill containing the eyebrow label
-// in Primary color — patterns/tag's Tonal variant (ADR-007: ramp steps
-// 100–300 are tinted fills), drawn through the shared chip so every pill in
-// the vocabulary is one drawing. The pill background keeps the eyebrow
-// visible even when the label rasterises to zero width (e.g., in
-// deterministic empty-label golden tests).
+// in Primary color — patterns/tag's Tonal variant (ramp steps 100–300 are
+// tinted fills), drawn through the shared chip so every pill in the
+// vocabulary is one drawing. The pill background keeps the eyebrow visible
+// even when the label rasterises to zero width (e.g., in deterministic
+// empty-label golden tests).
 func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
 	return tag.Render(shaper, label, tag.Tonal, tok.color, tok.spacing, tok.radius, tok.eyebrow)
 }
 
-// titleWidget renders the DisplaySmall-role title in Text. A zero
-// style weight (the legacy Render path synthesizes size-only styles)
-// falls back to SemiBold, matching the pre-Typography rendering.
+// titleWidget renders the DisplaySmall-role title in Text. A zero style
+// weight falls back to SemiBold.
 func titleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, label, tok.color.Text, tok.title, font.SemiBold)
 }
@@ -361,11 +352,8 @@ func secondaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, c
 }
 
 func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, tok resolvedTokens) layout.Dimensions {
-	// E1.4: mirror components/button exactly — the drawn height is the density's
-	// ControlHeight and the inner padding is its PaddingX/PaddingY. Before
-	// F3.4 this was a hardcoded 44 dp, which had been prism/button's height
-	// until E1.3 re-cut it; the twin had been 8 dp taller than the filled
-	// CTA it is meant to line up with ever since.
+	// Mirror components/button exactly — the drawn height is the density's
+	// ControlHeight and the inner padding is its PaddingX/PaddingY.
 	padH := gtx.Dp(unit.Dp(tok.density.PaddingX))
 	padV := gtx.Dp(unit.Dp(tok.density.PaddingY))
 	minH := gtx.Dp(unit.Dp(tok.density.ControlHeight))
@@ -399,8 +387,7 @@ func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, t
 	// The outlined CTA is an edge around a raised fill and nothing else, so
 	// the edge is derived rather than named: the neutral rung that reaches
 	// the graphic floor against that fill, which is the level-1 storey. The
-	// fill is asked of the same storey, having named the tok.color.Surface
-	// ramp alias until ADR-022 re-founded the ladder out from under it.
+	// fill is asked of the same storey.
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
 	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())

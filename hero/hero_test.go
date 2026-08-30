@@ -38,12 +38,9 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// The hero's four text slots. They were empty — and the eyebrow a single
-// space, which is how it got a pill with nothing in it — until F4.4b, on the
-// theory that font rasterisation was non-deterministic; F4.2 pinned the faces
-// by configuration and F4.3 moved every golden onto DeterministicShaper, so
-// Latin text in Roboto rasterises identically on every machine. ASCII only,
-// per F4.2 — no symbol reaches a stored image.
+// The hero's four text slots. ASCII only: Latin text in Roboto rasterises
+// identically on every machine when shaped with DeterministicShaper, so no
+// symbol reaches a stored image.
 //
 // The title is short on purpose: with a Visual the text column is half of a
 // 480 px canvas, and DisplaySmall is the largest role in the scale, so a
@@ -56,17 +53,12 @@ const (
 	secondaryCTA = "Read docs"
 )
 
-// Both CTA labels are short for a reason worth writing down, because it is
-// the one thing filling these labels in revealed. ctaGtx clamps every CTA
-// cell to ctaIntrinsicWidth (120 dp) so the filled and outlined twins share a
+// Both CTA labels stay short on purpose: ctaGtx clamps every CTA cell to
+// ctaIntrinsicWidth (120 dp) so the filled and outlined twins share a
 // footprint, and both button bodies then clamp the label to that width minus
 // 2×PaddingX and lay it out MaxLines:1 — so a label wider than roughly
-// 88 px is ellipsized, not grown into. "Read the docs" came out as
-// "Read the do…". That contradicts ctaIntrinsicWidth's own doc comment,
-// which promises "wider labels still grow the button"; the growth branch in
-// components/button can never fire, because the label was already clamped to the
-// width being compared against. These two labels fit, so the goldens record
-// the hero rather than the clamp.
+// 88 px is ellipsized, not grown into. These two labels fit, so the goldens
+// record the hero rather than the clamp.
 
 // heroText returns the Props every case starts from: a title and a subtitle,
 // no eyebrow, no CTAs, no visual.
@@ -194,13 +186,9 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 	}
 }
 
-// TestLongCTALabelGrowsTheButton pins ctaIntrinsicWidth as a floor rather than
-// a cap, which is the third of the three false sizing claims F4.4/F4.4b found:
-// its own doc promised that "wider labels still grow the button", and the
-// clamp made that impossible. The cell pinned Max.X to 120 dp, components/button
-// clamped its MaxLines:1 label to 120 − 2×PaddingX, and the growth branch then
-// compared the cell against a label already trimmed to fit inside it. "Read
-// the docs" drew as "Read the do…" and nothing in the suite noticed.
+// TestLongCTALabelGrowsTheButton pins ctaIntrinsicWidth as a floor rather
+// than a cap: a label wider than the floor must grow the button rather than
+// being clipped to it.
 //
 // The measurement is the filled CTA's own pixels: the widest unbroken run of
 // the Primary fill on any scanline is the button's width, since the button is

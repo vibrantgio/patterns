@@ -2,10 +2,10 @@
 // rounded banner with a leading variant icon, a Title, and an arbitrary
 // Body widget. Variants are Info, Success, Warning, and Error.
 //
-// The package follows the Phase 4 Composition contract: Alert is a callable
-// Go function consuming a components theme observable, returning a stream of
-// layout.Widget. Source is intentionally short and free of opaque
-// configuration — copy it into your own app and modify as needed.
+// Alert is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. Source is intentionally short and
+// free of opaque configuration — copy it into your own app and modify as
+// needed.
 //
 // One thing about the variants is worth knowing before you theme them: all
 // four draw the same right-pointing chevron glyph, differing only in
@@ -17,19 +17,6 @@
 // here. Info is the info role, not the accent: an informational banner that
 // wore the brand said whatever the brand happened to say, and under a
 // red-heavy brand it said "error" louder than the error variant did.
-//
-// That supersedes two earlier arrangements. Until F4.6 success and warning
-// were Tailwind green and amber literals defined in this file, picked
-// between light and dark by comparing the luminance of Surface against
-// Text; the theme's hue-anchored status ramps replaced both copies and the
-// light-mode sniff with them. And until this pattern took the container
-// token, the banner mixed its own ground: the pinned base composited over
-// the neutral Surface at 12% alpha, in non-linear sRGB. That is neither
-// hue-preserving nor chroma-preserving, and all four grounds came out
-// within a rounding error of grey — the red one at chroma 0.019 with its
-// hue dragged seven degrees toward magenta, which is a red banner that
-// reads as dirty pink. The blend and its local helpers are gone; the
-// theme derives the ground.
 //
 // The banner fills the constraints it is given rather than shrinking to
 // its content — it reports gtx.Constraints.Max as its size — so an Alert
@@ -79,8 +66,8 @@ type Props struct {
 	// shaper (Typography.Shaper()), which is built once for the process and
 	// shared by every component reading that typography — the cache lives
 	// behind the Typography value, so it survives the copy this component's
-	// map function makes of it (spectrum F5.1). Set it only when this
-	// instance must shape with a different shaper than the theme provides.
+	// map function makes of it. Set it only when this instance must shape
+	// with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -93,7 +80,7 @@ type Props struct {
 func Alert(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the TitleMedium text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Typography),
@@ -180,9 +167,8 @@ func drawAlert(gtx layout.Context, shaper *text.Shaper, props Props, colors toke
 }
 
 // iconWidget renders the variant icon — a right-pointing filled chevron —
-// into a fixed sizeDp square. The richer per-variant icon set will arrive
-// once components/icon lands; until then all variants share the chevron shape
-// and differentiate by colour.
+// into a fixed sizeDp square. All variants share this chevron shape and
+// differentiate by colour only.
 func iconWidget(sizeDp float32, col color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		sz := gtx.Dp(unit.Dp(sizeDp))
@@ -216,9 +202,9 @@ func titleWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens
 		paint.ColorOp{Color: fg}.Add(gtx.Ops)
 		material := mColor.Stop()
 		// Shape with the TitleMedium role's typeface, weight, size and
-		// line height. The legacy Render path synthesizes a size-only
-		// style; its zero weight falls back to SemiBold so the title keeps
-		// its pre-Typography emphasis against the body.
+		// line height. A zero weight in style falls back to SemiBold, so
+		// the title keeps its emphasis against the body even when style
+		// carries only a size.
 		f := typeset.Font(style, font.SemiBold)
 		wl := typeset.Label(style, 1)
 		return typeset.Layout(gtx, shaper, wl, f, unit.Sp(style.Size), label, material)

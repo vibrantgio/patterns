@@ -2,20 +2,18 @@
 // container with optional Header / Body / Footer slots, in either an
 // outlined or elevated variant.
 //
-// Elevation (goal G-E2): a card is raised in place, not floating, so
-// both variants read as raised by tonal surface step alone (ADR-007) —
-// no cast shadow. The default outlined card sits on the standing
-// content plane at SurfaceAt(Level1) (Neutral step 200) with a 1 dp
-// Neutral step-500 stroke, ADR-007's strong border; the Elevated
-// variant fills one storey deeper at SurfaceAt(Level2) (Neutral step
-// 300). E2.2's verdict retired the Elevated variant's effects/depth
-// shadow: shadows are reserved for surfaces that float and can leave
-// (toasts, menus), which a card is not.
+// A card is raised in place, not floating, so both variants read as raised
+// by tonal surface step alone — no cast shadow. The default outlined card
+// sits on the standing content plane at SurfaceAt(Level1) (Neutral step
+// 200) with a 1 dp Neutral step-500 stroke; the Elevated variant fills one
+// storey deeper at SurfaceAt(Level2) (Neutral step 300), with no shadow:
+// shadows are reserved for surfaces that float and can leave (toasts,
+// menus), which a card is not.
 //
-// The package follows the Phase 4 Composition contract: Card is a callable
-// Go function consuming a components theme observable, returning a stream of
-// layout.Widget. The source is intentionally short and free of opaque
-// configuration — copy it into your own app and modify as needed.
+// Card is a callable Go function consuming a components theme observable
+// and returning a stream of layout.Widget. The source is intentionally
+// short and free of opaque configuration — copy it into your own app and
+// modify as needed.
 //
 // Card draws no text of its own, which is why Props carries no Shaper
 // where its sibling patterns do: all three slots are caller-supplied
@@ -47,9 +45,9 @@ import (
 
 // Props configures a Card. All slot fields are optional; nil slots are
 // simply omitted from the inner stack. Elevated swaps the outlined
-// variant (a level-1 fill with a 1 dp neutral step-500 stroke, ADR-007's
-// strong border) for a level-2 tonal fill (SurfaceAt(Level2)) with no
-// stroke and no shadow — a card is raised in place, per E2.2's verdict.
+// variant (a level-1 fill with a 1 dp neutral step-500 stroke) for a
+// level-2 tonal fill (SurfaceAt(Level2)) with no stroke and no shadow — a
+// card is raised in place.
 type Props struct {
 	Header layout.Widget
 	Body   layout.Widget
@@ -104,7 +102,7 @@ func drawCard(gtx layout.Context, props Props, colors tokens.ColorTokens, sp tok
 	gap := gtx.Dp(unit.Dp(sp.S3))
 
 	// The card is raised by tonal step alone: level 1 for the default
-	// outlined variant, level 2 for Elevated (no shadow — E2.2's verdict).
+	// outlined variant, level 2 for Elevated (no shadow).
 	fill := colors.SurfaceAt(tokens.Level1)
 	if props.Elevated {
 		fill = colors.SurfaceAt(tokens.Level2)

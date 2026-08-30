@@ -2,10 +2,10 @@
 // grid laid out as `Columns × N`, suitable for a marketing or onboarding
 // "features" section.
 //
-// The package follows the Phase 4 Composition contract: Feature is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. The source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Feature is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. The source is intentionally short and
+// free of opaque configuration — copy it into your own app and modify as
+// needed.
 //
 // Layout: an S6 outer inset. The grid lays Items into rows of `Columns`
 // equal-width, equal-height cells (the last row pads with empty cells),
@@ -70,9 +70,8 @@ type Props struct {
 	// the theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -99,8 +98,7 @@ func Feature(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies the TitleMedium and BodyMedium text
-	// styles and the theme's cached shaper (ADR-003: the theme owns the
-	// typeface).
+	// styles and the theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest3(t.Color, t.Spacing, t.Typography),
@@ -332,9 +330,8 @@ func iconCellWidget(icon layout.Widget, tok resolvedTokens) layout.Widget {
 	}
 }
 
-// titleWidget renders the title in the TitleMedium role in Text. A
-// zero style weight (the legacy Render path synthesizes a size-only
-// style) falls back to SemiBold, matching the pre-Typography rendering.
+// titleWidget renders the title in the TitleMedium role in Text. A zero
+// style weight falls back to SemiBold.
 func titleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, label, tok.color.Text, tok.title, font.SemiBold)
 }

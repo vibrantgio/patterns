@@ -6,17 +6,10 @@
 // currently-open Section so the parent's flip-the-bool handler converges
 // on a single-open state without additional bookkeeping.
 //
-// The package follows the Phase 4 Composition contract: Accordion is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. Source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
-//
-// Note on components/button: the implementation plan suggested reusing
-// components/button for header rows, but a Button renders with a Primary
-// background fill, 6 dp corner radius, and 44 dp minimum height — none
-// of which fit a full-width accordion header. The headers here use the
-// same widget.Clickable + custom rendering pattern as patterns/navbar,
-// patterns/sidebar, and patterns/tabs, which faced the same mismatch.
+// Accordion is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. Source is intentionally
+// short and free of opaque configuration — copy it into your own app and
+// modify as needed.
 package accordion
 
 import (
@@ -75,9 +68,8 @@ type Props struct {
 	// the theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -114,7 +106,7 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest3(t.Color, t.Spacing, t.Typography),
@@ -134,8 +126,6 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 		clicks := make([]widget.Clickable, len(props.Sections))
 		return rx.Map(inputs, func(n rx.Tuple2[resolvedTokens, map[int]bool]) layout.Widget {
 			tok, openMap := n.First, n.Second
-			// Props.Shaper is an explicit override; the theme's shaper is
-			// the default.
 			shaper := props.Shaper
 			if shaper == nil {
 				shaper = tok.shaper
@@ -243,9 +233,7 @@ func drawAccordion(
 	// The stack's own ground is the window's floor: an accordion is a
 	// navigation construct whose header rows are chrome, so what shows
 	// between and behind them is the desk rather than a plane above the
-	// document (ADR-022 V2). It used to fill colors.Surface, a neutral-ramp
-	// alias that is the floor in the light scheme — where these pixels do
-	// not move — and the raised rung in the dark one.
+	// document.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	headerH := gtx.Dp(unit.Dp(headerHDp))
@@ -300,10 +288,8 @@ func drawHeader(
 	padH := gtx.Dp(unit.Dp(sp.S3))
 
 	inner := func(gtx layout.Context) layout.Dimensions {
-		// Chevron, centred inside the leading icon column.
 		drawChevron(gtx, open, image.Pt(chevW, size.Y), colors.Text)
 
-		// Title label, trailing the chevron column.
 		labelMaxW := size.X - chevW - padH
 		if labelMaxW > 0 {
 			labelGtx := gtx
@@ -316,8 +302,8 @@ func drawHeader(
 			material := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. Zero fields (the legacy Render path synthesizes
-			// a size-only style) fall back to the shaper's defaults.
+			// line height. Zero fields (the Render path can synthesize a
+			// size-only style) fall back to the shaper's defaults.
 			f := typeset.Font(style, font.Normal)
 			wl := typeset.Label(style, 1)
 			mLabel := op.Record(gtx.Ops)

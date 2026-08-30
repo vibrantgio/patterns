@@ -43,11 +43,9 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 
 // trail is the three-segment fixture: a real path, in document order, so the
 // last segment is the current location and the two before it are the
-// low-contrast ancestors. The labels were blank until F4.4b, on the theory
-// that font rasterisation was non-deterministic; F4.2 pinned the faces by
-// configuration and F4.3 moved every golden onto DeterministicShaper, so
-// Latin text in Roboto rasterises identically on every machine. ASCII only,
-// per F4.2 — no symbol reaches a stored image.
+// low-contrast ancestors. Labels are ASCII only, so Latin text in Roboto
+// rasterises identically on every machine and no symbol reaches a stored
+// image.
 func trail() []breadcrumb.Item {
 	return []breadcrumb.Item{{Label: "Home"}, {Label: "Design"}, {Label: "Tokens"}}
 }
@@ -55,19 +53,8 @@ func trail() []breadcrumb.Item {
 // TestBreadcrumbGolden records or diffs the three Measurable goldens. The
 // chevron separators are deterministic clip paths and the labels carry the
 // typography; the single-segment golden is the structural assertion ("no
-// chevrons when n == 1") and now also shows that the lone segment takes the
+// chevrons when n == 1") and also shows that the lone segment takes the
 // current-location colour that internal_test asserts numerically.
-//
-// The two three-segment images moved one pixel in F5.3, and the reason is
-// worth keeping. capture constrains the canvas with layout.Exact, and a
-// horizontal layout.Flex passes its own cross minimum straight to every Rigid
-// child — so each segment label was handed Min.Y == Max.Y == 32. widget.Label
-// constrained its result to that 32 and theme/typeset then added the line
-// box deficit on top, so a label reported 35 px for a 32 px slot and the
-// chevrons centred against a row 3 px taller than the row actually was.
-// typeset now constrains the corrected height instead of correcting the
-// constrained one, the trail measures its slot, and the chevrons sit one pixel
-// higher. The labels themselves did not move.
 func TestBreadcrumbGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}

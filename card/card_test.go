@@ -58,21 +58,19 @@ func defaultShaper(t *testing.T) *text.Shaper {
 
 // textSlot returns a slot widget that draws s in the given role.
 //
-// Card is the one pattern here whose Props carries no Shaper, because it draws
-// no text of its own: all three slots are caller-supplied widgets, so the
-// typeface inside a card is settled by whoever builds them. This is that
-// caller. Filling the slots with text rather than coloured bars is what makes
-// the goldens show the slot stack absorbing real content — the S3 gaps between
-// surviving slots, and whether anything is clipped at the card's inner edge.
+// Card's Props carries no Shaper because it draws no text of its own: all
+// three slots are caller-supplied widgets, so the typeface inside a card is
+// settled by whoever builds them. This is that caller. Text slots rather
+// than coloured bars let the goldens show the slot stack absorbing real
+// content — the S3 gaps between surviving slots, and whether anything is
+// clipped at the card's inner edge.
 //
-// ASCII only, per F4.2 — no symbol reaches a stored image.
+// ASCII only — no symbol reaches a stored image.
 //
-// It draws through theme/typeset, like every other text site in this
-// organization: a role's LineHeight is the CSS line box, and handing it to
-// gioui.org/widget.Label does not produce that box. This helper built the label
-// by hand until F5.6, which made the goldens record a layout no correct caller
-// produces — the one thing a golden must never do. See the repository
-// AGENTS.md and llms.txt "LINE HEIGHT NEEDS theme/typeset".
+// Text here must draw through theme/typeset rather than
+// gioui.org/widget.Label: a role's LineHeight is the CSS line box, and
+// Label does not produce that box. See the repository AGENTS.md and
+// llms.txt "LINE HEIGHT NEEDS theme/typeset".
 func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLines int, s string) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		m := op.Record(gtx.Ops)
@@ -112,10 +110,9 @@ func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// TestCardGolden records or diffs the four canonical card variants. The slots
-// carry real text since F4.4b: light-header-only is then the assertion that a
-// lone slot is not padded as though the other two were there but empty, which
-// is legible in a way three coloured bars never made it.
+// TestCardGolden records or diffs the four canonical card variants.
+// light-header-only asserts that a lone slot is not padded as though the
+// other two were there but empty.
 func TestCardGolden(t *testing.T) {
 	cases := []struct {
 		name       string

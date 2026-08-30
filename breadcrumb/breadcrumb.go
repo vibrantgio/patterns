@@ -4,10 +4,10 @@
 // preceding segments render in the low-contrast neutral-700 step and may
 // invoke an OnClick callback to navigate.
 //
-// The package follows the Phase 4 Composition contract: Breadcrumb is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. Source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Breadcrumb is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. Source is intentionally
+// short and free of opaque configuration — copy it into your own app and
+// modify as needed.
 //
 // Colour and interactivity are decided independently and can disagree.
 // The Text "current location" colour goes to the last Item by
@@ -84,9 +84,8 @@ type Props struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -161,8 +160,8 @@ type resolvedTokens struct {
 
 // resolveTokens flattens the nested theme observables into a stream of
 // concrete snapshots, one per token change. The typography emission supplies
-// both the TitleSmall text style and the theme's cached shaper (ADR-003: the
-// theme owns the typeface). Both live paths read the same snapshot.
+// both the TitleSmall text style and the theme's cached shaper, since the
+// theme owns the typeface. Both live paths read the same snapshot.
 func resolveTokens(th rx.Observable[theme.Theme]) rx.Observable[resolvedTokens] {
 	return rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
