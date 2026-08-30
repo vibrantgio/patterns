@@ -5,7 +5,6 @@ package tooltip
 // observable — because every write and every read happens during layout, on
 // the single goroutine Gio runs a frame on. The hazard a synchronised bus
 // guards against cannot arise here, so there is nothing for a guard to buy.
-// See ADR-008 in the plan.
 //
 // # The register is the scope
 //
@@ -17,13 +16,10 @@ package tooltip
 // tree.
 //
 // A Props with no Arbiter gets one of its own and therefore arbitrates with
-// nobody. Until G0C.4 it joined a package-level default instead, which was
-// indistinguishable from per-window in a single-window process and was a
-// data race in a two-window one; there is now no package state for a second
-// window to reach, so sharing is something a caller does on purpose or not
-// at all. Two tooltips that both forget an Arbiter can be up together — a
-// cosmetic fault anyone can see, which is the trade this makes against a
-// race nobody can.
+// nobody: there is no package-level state for a second window to reach, so
+// sharing is something a caller does on purpose or not at all. Two tooltips
+// that both forget an Arbiter can be up together — a cosmetic fault anyone
+// can see, which is the trade this makes against a race nobody can.
 //
 // # The register is also the visibility
 //
@@ -38,9 +34,7 @@ package tooltip
 // The incumbent stops painting on the first frame it is laid out after
 // losing top: in the same frame when the claimant comes earlier in the
 // widget tree, on the next frame when it does not, because a widget already
-// laid out cannot un-paint. The Subject-era arbitration cost that frame too
-// — it cost it in both tree orders — so nothing here is slower and one
-// ordering is a frame quicker.
+// laid out cannot un-paint.
 //
 // # Claim on the edge, never on the level
 //
@@ -52,8 +46,7 @@ package tooltip
 type Arbiter struct {
 	// top is the tooltip currently visible, or nil. The state pointer is
 	// the identity: it is unique per subscription for as long as anything
-	// can reference it, which is exactly the lifetime an id counter used to
-	// synthesise.
+	// can reference it.
 	top *tooltipState
 }
 

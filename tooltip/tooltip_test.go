@@ -61,14 +61,9 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 // TestTooltipGolden records or diffs the two Measurable goldens —
 // light-shown-top and dark-shown-bottom. The trigger is a small solid
 // rectangle and the surface contains a short label rendered in the
-// theme's Surface colour against the Text-filled bubble.
-//
-// Tooltip is the one component here that F4.4b found already carrying real
-// text: Text is part of its contract, so these goldens have rasterised glyphs
-// since they were first recorded, and every case already passed Props.Shaper.
-// What they take from F4.3 is the pinned face — before it, "Save" shaped with
-// whatever the machine had, and a flake here was indistinguishable from a
-// missing font.
+// theme's Surface colour against the Text-filled bubble. Text is part of
+// the component's contract, so every case rasterises real glyphs and must
+// pass Props.Shaper to keep the rendered face pinned and deterministic.
 func TestTooltipGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	trigger := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)

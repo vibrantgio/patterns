@@ -6,17 +6,15 @@
 //
 // Arbitration is frame state: a plain Arbiter written and read during
 // layout on the frame goroutine, in which a tooltip is visible exactly
-// while it holds top. See ADR-008 and arbitration.go; before G0C.2 this ran
-// through a mutex plus a prism/coordination Subject that nothing ever
-// subscribed to.
+// while it holds top. See arbitration.go.
 //
-// The package follows the Phase 4 Composition contract: Tooltip is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. The source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// The package follows the Composition contract: Tooltip is a callable Go
+// function consuming a components theme observable, returning a stream of
+// layout.Widget. The source is intentionally short and free of opaque
+// configuration — copy it into your own app and modify as needed.
 //
-// Elevation (goal G-E2): the tooltip deliberately takes NO rung on the
-// tonal elevation ladder. Its bubble is inverse-video — it fills with
+// Elevation: the tooltip deliberately takes NO rung on the tonal elevation
+// ladder. Its bubble is inverse-video — it fills with
 // the high-contrast Text colour and paints its label in Surface —
 // because a tooltip is too small for a one-or-two-step neutral fill to
 // read at a glance; inversion is the stronger cue for a tiny transient
@@ -53,9 +51,8 @@ import (
 
 // DefaultDelay is the show-after-entry delay applied when Props.Delay is
 // zero or negative. It resolves from the motion scale's slowest stop
-// (DurXSlow, MD3 long2 = 500 ms — E3.1's mapping of the local 500 ms
-// constant it replaced); the live path reads the same stop from its
-// Theme.Motion snapshot, so a themed motion scale retimes the delay.
+// (DurXSlow, MD3 long2 = 500 ms); the live path reads the same stop from
+// its Theme.Motion snapshot, so a themed motion scale retimes the delay.
 var DefaultDelay = tokens.Motion.DurXSlow
 
 // Placement is the side of the trigger on which the tooltip surface sits.
@@ -81,9 +78,8 @@ type Props struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -115,8 +111,7 @@ type resolvedTokens struct {
 func Tooltip(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelSmall text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface); the
-	// motion emission supplies the show delay.
+	// theme's cached shaper; the motion emission supplies the show delay.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Motion),
@@ -264,7 +259,7 @@ func drawTooltip(
 	//    runs on gtx.Now and the claim is a store into a plain register.
 	//    Nothing polls "am I still top" — losing top is not an event this
 	//    tooltip has to notice, because holding it is the only thing that
-	//    makes it paint. See ADR-008 and arbitration.go.
+	//    makes it paint. See arbitration.go.
 	if live {
 		switch {
 		case active && st.entryAt.IsZero():

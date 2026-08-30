@@ -2,10 +2,10 @@ package tooltip
 
 import "testing"
 
-// TestArbiterClaimHidesIncumbent pins the core of ADR-008's idiom as
-// tooltip takes it: the claim is the event, and because visibility is read
-// off the register rather than mirrored beside it, the store is the whole
-// of the incumbent's dismissal.
+// TestArbiterClaimHidesIncumbent verifies that claiming the register is the
+// whole of the incumbent's dismissal: visibility is read directly off the
+// register rather than mirrored beside it, so the claim itself hides
+// whoever held top before it.
 func TestArbiterClaimHidesIncumbent(t *testing.T) {
 	var a, b tooltipState
 
@@ -46,11 +46,10 @@ func TestArbiterReleaseOnlyByHolder(t *testing.T) {
 	}
 }
 
-// TestNilArbiterArbitratesAlone pins what replaced the package-level default
-// at G0C.4: a Props with no Arbiter gets one of its own, so two of them
-// arbitrate with nobody rather than sharing process-global state. The scope a
-// lock-free value is safe at is one window, and the only way to reach that
-// scope is to say so.
+// TestNilArbiterArbitratesAlone verifies that a Props with no Arbiter gets
+// one of its own, so two of them arbitrate with nobody rather than sharing
+// state. The scope a lock-free value is safe at is one window, and the only
+// way to reach that scope is to say so.
 func TestNilArbiterArbitratesAlone(t *testing.T) {
 	first, second := newState(Props{}), newState(Props{})
 	if first.arb == nil || second.arb == nil {

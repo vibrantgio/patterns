@@ -19,12 +19,10 @@ import (
 )
 
 // These interaction tests are white-box because tooltip exposes no
-// callbacks: visibility is "this state holds arbitration top". The popover
-// pattern asserts arbitration through OnDismiss; tooltip has no such
-// callback — the register is the visibility — so the equivalent inspection
-// happens here, against an Arbiter the test owns. Each test making its own
-// set is what replaced the clearTop cleanups the process-global register
-// used to need.
+// callbacks: visibility is "this state holds arbitration top". Tooltip has
+// no dismissal callback to assert against — the register is the visibility
+// — so the equivalent inspection happens here, against an Arbiter the test
+// owns.
 
 const intCanvasW, intCanvasH = 320, 240
 
@@ -145,11 +143,11 @@ func TestHoverExitHides(t *testing.T) {
 }
 
 // TestSecondTooltipDismissesFirst verifies Measurable (c): once tooltip A
-// is shown, another tooltip taking arbitration top hides A — and, the part
-// the dwell timer adds to popover's story, A does not take it straight
-// back. A's show condition is a level ("entry + delay is in the past"), so
-// without the claimed latch A would re-claim on its very next layout and
-// the two would trade the register every frame. One dwell, one show.
+// is shown, another tooltip taking arbitration top hides A, and A does not
+// take it straight back. A's show condition is a level ("entry + delay is
+// in the past"), so without the claimed latch A would re-claim on its very
+// next layout and the two would trade the register every frame. One dwell,
+// one show.
 func TestSecondTooltipDismissesFirst(t *testing.T) {
 	const delay = 50 * time.Millisecond
 	arb, st, w := hoverRig(delay)
@@ -203,10 +201,9 @@ func TestSecondTooltipDismissesFirst(t *testing.T) {
 }
 
 // TestOvertakenTooltipDoesNotStealBackInTheSameFrame is the tree-order half
-// of the latch, and the case that decided the shape of this conversion.
-// When the claimant sits earlier in the widget tree than the incumbent, the
-// incumbent lays out *after* losing top with its hover unchanged and its
-// dwell long since elapsed. A claim guarded on "am I visible" would take
+// of the latch. When the claimant sits earlier in the widget tree than the
+// incumbent, the incumbent lays out *after* losing top with its hover
+// unchanged and its dwell long since elapsed. A claim guarded on "am I visible" would take
 // top straight back, inside that same frame and after the claimant had
 // already painted — two tooltips on screen, every frame, which is exactly
 // the invariant this package exists to hold. Guarded on the dwell instead,
