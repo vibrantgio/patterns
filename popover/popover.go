@@ -4,10 +4,9 @@
 // click dismissal and popover-vs-popover arbitration are frame state:
 // opening a second popover dismisses the first, through a plain Arbiter
 // written and read during layout on the frame goroutine. See ADR-008 and
-// arbitration.go; before G0C.1 this ran through a prism/coordination
-// Subject that nothing ever subscribed to.
+// arbitration.go.
 //
-// Elevation (goal G-E2): the popover surface (and its tail) fills at
+// Elevation: the popover surface (and its tail) fills at
 // SurfaceAt(Level3) (Neutral step 400), the deepest rung of the ladder.
 // A popover is an unscrimmed, shadowless transient overlay — unlike the
 // modal (level 2), which has a scrim, and the toast, which takes no rung
@@ -21,10 +20,21 @@
 // stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
+// THE CANVAS IS THE ROOM. The popover stands its anchor in the canvas its
+// caller hands it — at [Alignment]'s edge of it — and keeps the surface inside
+// that canvas across the placement's cross axis, nudging it back where it
+// would run off rather than letting it clip. So the canvas must be the room
+// the caller actually has, the content column or the window, and not a box
+// cut to the anchor's own size: a canvas that cannot hold the surface is not
+// a bound, and the popover leaves such a surface where the anchor puts it.
+// Aligning the anchor is the popover's job for the same reason — it is the
+// one place the drawn anchor, the surface and the room are all known, so an
+// anchor handed here reports the shape it drew and nothing wider.
+//
 // Open/close is instantaneous in this package; entrance/exit transitions
-// are deferred to a later Effects-integration goal. No collision-aware
-// reflow — if the chosen Placement would clip the viewport, the surface
-// clips. Automatic flip is deferred.
+// are deferred to a later Effects-integration goal. Automatic flip to the
+// opposite side of the anchor is deferred: the clamp is a cross-axis nudge,
+// not a placement search.
 package popover
 
 import (
@@ -56,10 +66,42 @@ const (
 	Right
 )
 
+// Alignment is where across the canvas the popover stands its anchor.
+//
+// It is the placement half of the canvas contract: the anchor draws the
+// shape it has and this says which of the canvas's edges that shape is set
+// against, so the popover knows the drawn rect exactly and can aim the tail
+// at it. An anchor that widens its own report to reach an edge instead
+// leaves the popover aiming at the middle of a box nothing was drawn in.
+type Alignment int
+
+const (
+	// AlignCenter is the zero value: the anchor stands across the canvas's
+	// middle, which is what a canvas cut to the anchor's own size wants.
+	AlignCenter Alignment = iota
+
+	// AlignLeading stands the anchor against the canvas's leading edge.
+	AlignLeading
+
+	// AlignTrailing stands the anchor against the canvas's trailing edge.
+	AlignTrailing
+)
+
 // outsideMargin is how far the outside-press absorber reaches beyond the
-// caller's canvas on every side. The popover cannot know the window bounds
-// from inside its canvas, so the margin is simply larger than any display.
+// caller's canvas on every side. Presses land anywhere in the window and
+// every one of them outside this popover dismisses it, so the margin is
+// simply larger than any display.
 const outsideMargin = unit.Dp(8192)
+
+// tailRun is the tail's span along the surface edge it stands on. Its depth
+// is not a constant: it is whatever gap the placement left between the
+// surface and the anchor, so the glyph always bridges exactly.
+const tailRun = unit.Dp(12)
+
+// strokeWidth is the surface outline's weight, and the depth the tail's fill
+// reaches back into the surface so that outline is interrupted rather than
+// drawn across the tail's base.
+const strokeWidth = unit.Dp(1)
 
 // Props configures a Popover. Anchor must be non-nil; Content may be nil
 // (the surface renders as an empty rounded rectangle of minimum size).
@@ -94,6 +136,11 @@ type Props struct {
 	Content   layout.Widget
 	Placement Placement
 	OnDismiss func(gtx layout.Context)
+
+	// Align is which edge of the canvas the anchor is stood against. The
+	// zero value centres it. See [Alignment] and the package doc's canvas
+	// contract.
+	Align Alignment
 
 	// Arbiter is the set of popovers this one arbitrates within: opening it
 	// dismisses whichever popover of the same set was open. Give each window
@@ -213,11 +260,11 @@ func newState(props Props) *popoverState {
 	return &popoverState{arb: arb, dismiss: props.OnDismiss}
 }
 
-// drawPopover lays out the anchor at the canvas centre, then — when open —
-// the floating surface adjacent to the anchor per Placement plus a
-// triangular tail glyph pointing at the anchor. When live, it also
-// registers three event tags (outside, anchor, surface) and dispatches
-// the events drained for them.
+// drawPopover stands the anchor at Align's edge of the canvas, then — when
+// open — the floating surface adjacent to it per Placement, nudged back
+// inside the canvas where it would run off, plus a tail glyph seated on the
+// anchor. When live, it also registers three event tags (outside, anchor,
+// surface) and dispatches the events drained for them.
 func drawPopover(
 	gtx layout.Context,
 	props Props,
@@ -229,12 +276,11 @@ func drawPopover(
 	r := gtx.Dp(unit.Dp(tok.radius.Md))
 	pad := gtx.Dp(unit.Dp(tok.spacing.S3))
 	gap := gtx.Dp(unit.Dp(tok.spacing.S2))
-	tailH := gtx.Dp(unit.Dp(6))
-	tailW := gtx.Dp(unit.Dp(12))
+	tailW := gtx.Dp(tailRun)
 
-	// 1. Record the anchor into a macro to measure its dims; centre it
-	//    in the canvas. The anchor's last-recorded layout rect is the
-	//    basis for surface positioning math below.
+	// 1. Record the anchor into a macro to measure its dims; stand it at
+	//    Align's edge of the canvas. That rect is the DRAWN anchor — the
+	//    basis for the surface's position and for where the tail points.
 	anchorMacro := op.Record(gtx.Ops)
 	anchorGtx := gtx
 	anchorGtx.Constraints = layout.Constraints{Max: canvas}
@@ -243,7 +289,7 @@ func drawPopover(
 		anchorDims = props.Anchor(anchorGtx)
 	}
 	anchorOps := anchorMacro.Stop()
-	anchorPos := image.Pt((canvas.X-anchorDims.Size.X)/2, (canvas.Y-anchorDims.Size.Y)/2)
+	anchorPos := image.Pt(alignX(props.Align, canvas.X, anchorDims.Size.X), (canvas.Y-anchorDims.Size.Y)/2)
 	anchorRect := image.Rectangle{Min: anchorPos, Max: anchorPos.Add(anchorDims.Size)}
 
 	// 2. If open, record the content into a macro to measure its dims;
@@ -293,13 +339,14 @@ func drawPopover(
 			y := anchorMidY - surfH/2
 			surfaceRect = image.Rect(x, y, x+surfW, y+surfH)
 		}
+		surfaceRect = clampToCanvas(surfaceRect, canvas, props.Placement)
 	}
 
-	// 3. Outside-press absorber. The caller's canvas is often just the
-	//    anchor's box (the popover-canvas coupling), so the absorber extends
-	//    a wide margin beyond it on every side to catch presses anywhere in
-	//    the window. Registered first so that anchor- and surface-clip tags
-	//    (registered later) win for presses inside their own bounds.
+	// 3. Outside-press absorber. The canvas is the room this popover may
+	//    use, not the window, so the absorber extends a wide margin beyond
+	//    it on every side to catch presses anywhere in the window.
+	//    Registered first so that anchor- and surface-clip tags (registered
+	//    later) win for presses inside their own bounds.
 	if live {
 		margin := gtx.Dp(outsideMargin)
 		outsideClip := clip.Rect{
@@ -311,7 +358,7 @@ func drawPopover(
 	}
 
 	// 4. Anchor: anchor-absorber tag, then the recorded anchor ops at the
-	//    centred offset. The absorber catches presses on the anchor so
+	//    aligned offset. The absorber catches presses on the anchor so
 	//    they do not bubble to the outside-absorber and dismiss.
 	{
 		anchorOff := op.Offset(anchorPos).Push(gtx.Ops)
@@ -326,22 +373,26 @@ func drawPopover(
 
 	// 5. Surface + tail + content, only when open. The surface absorbs
 	//    presses; the tail is a triangular path bridging the gap to the
-	//    anchor, drawn in the surface fill colour. Level 3 on the
-	//    elevation ladder: an unscrimmed, shadowless transient overlay
-	//    separates by fill alone (see the package doc).
+	//    anchor, drawn in the surface fill colour and carrying the surface's
+	//    own edge around it. Level 3 on the elevation ladder: an unscrimmed,
+	//    shadowless transient overlay separates by fill alone (see the
+	//    package doc).
 	if openNow {
 		fill := tok.color.SurfaceAt(tokens.Level3)
+		// The surface's edge is derived against the storey it circles — the
+		// same Level3 the fill is painted at, named once for both, and the
+		// tail's own edge is the same ink for the same reason.
+		edge := outline.Ink(tok.color, tokens.Level3)
+		stroke := float32(gtx.Dp(strokeWidth))
 		surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
 		surfRRect := clip.RRect{
 			Rect: image.Rectangle{Max: surfaceRect.Size()},
 			SE:   r, SW: r, NE: r, NW: r,
 		}
 		paint.FillShape(gtx.Ops, fill, surfRRect.Op(gtx.Ops))
-		// The surface's edge is derived against the storey it circles — the
-		// same Level3 the fill above is painted at, named once for both.
-		paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level3), clip.Stroke{
+		paint.FillShape(gtx.Ops, edge, clip.Stroke{
 			Path:  surfRRect.Path(gtx.Ops),
-			Width: float32(gtx.Dp(unit.Dp(1))),
+			Width: stroke,
 		}.Op())
 		if live {
 			absorbClip := clip.Rect{Max: surfaceRect.Size()}.Push(gtx.Ops)
@@ -353,7 +404,7 @@ func drawPopover(
 		contentOff.Pop()
 		surfOff.Pop()
 
-		drawTail(gtx, anchorRect, surfaceRect, props.Placement, tailW, tailH, fill)
+		drawTail(gtx, anchorRect, surfaceRect, props.Placement, tailW, r, fill, edge, stroke)
 	}
 
 	if live {
@@ -363,56 +414,132 @@ func drawPopover(
 	return layout.Dimensions{Size: canvas}
 }
 
-// drawTail paints a triangle bridging the gap between the surface and the
-// anchor, with its tip pointing at the anchor. The base of the triangle
-// touches the surface edge facing the anchor; the tip touches the anchor
-// edge facing the surface. Coordinates are canvas-absolute (no transform
-// is on the stack when this is called).
-func drawTail(gtx layout.Context, anchor, surface image.Rectangle, p Placement, w, h int, fill color.NRGBA) {
-	fw := float32(w)
-	fh := float32(h)
-	var pts [3]f32.Point
+// alignX is where across a canvas of width canvasW a shape of width shapeW
+// stands, for each Alignment. A shape wider than the canvas starts at the
+// leading edge whatever the alignment says, because there is no room to
+// stand it anywhere else.
+func alignX(a Alignment, canvasW, shapeW int) int {
+	slack := canvasW - shapeW
+	if slack <= 0 {
+		return 0
+	}
+	switch a {
+	case AlignLeading:
+		return 0
+	case AlignTrailing:
+		return slack
+	default:
+		return slack / 2
+	}
+}
+
+// clampToCanvas nudges the surface back inside the canvas along the axis the
+// placement does not travel on — the axis on which leaving the canvas is an
+// overflow rather than the point. The placement axis is left alone: a
+// Bottom-placed surface is meant to hang below the canvas.
+//
+// A canvas too small to hold the surface is not a bound and is left alone:
+// shoving an over-wide surface against one edge only moves the overflow to
+// the other, and the caller that cut its canvas to the anchor has said
+// nothing about the room it has. The tail is aimed at the anchor rather than
+// at the surface, so it keeps pointing where it did through the nudge.
+func clampToCanvas(surface image.Rectangle, canvas image.Point, p Placement) image.Rectangle {
 	switch p {
-	case Top:
-		cx := float32((anchor.Min.X + anchor.Max.X) / 2)
-		baseY := float32(surface.Max.Y)
-		pts = [3]f32.Point{
-			{X: cx - fw/2, Y: baseY},
-			{X: cx + fw/2, Y: baseY},
-			{X: cx, Y: baseY + fh},
+	case Top, Bottom:
+		if surface.Dx() > canvas.X {
+			return surface
 		}
-	case Bottom:
-		cx := float32((anchor.Min.X + anchor.Max.X) / 2)
-		baseY := float32(surface.Min.Y)
-		pts = [3]f32.Point{
-			{X: cx - fw/2, Y: baseY},
-			{X: cx + fw/2, Y: baseY},
-			{X: cx, Y: baseY - fh},
+		if surface.Min.X < 0 {
+			return surface.Add(image.Pt(-surface.Min.X, 0))
 		}
-	case Left:
-		cy := float32((anchor.Min.Y + anchor.Max.Y) / 2)
-		baseX := float32(surface.Max.X)
-		pts = [3]f32.Point{
-			{X: baseX, Y: cy - fw/2},
-			{X: baseX, Y: cy + fw/2},
-			{X: baseX + fh, Y: cy},
+		if surface.Max.X > canvas.X {
+			return surface.Add(image.Pt(canvas.X-surface.Max.X, 0))
 		}
-	case Right:
-		cy := float32((anchor.Min.Y + anchor.Max.Y) / 2)
-		baseX := float32(surface.Min.X)
-		pts = [3]f32.Point{
-			{X: baseX, Y: cy - fw/2},
-			{X: baseX, Y: cy + fw/2},
-			{X: baseX - fh, Y: cy},
+	case Left, Right:
+		if surface.Dy() > canvas.Y {
+			return surface
+		}
+		if surface.Min.Y < 0 {
+			return surface.Add(image.Pt(0, -surface.Min.Y))
+		}
+		if surface.Max.Y > canvas.Y {
+			return surface.Add(image.Pt(0, canvas.Y-surface.Max.Y))
 		}
 	}
-	var path clip.Path
-	path.Begin(gtx.Ops)
-	path.MoveTo(pts[0])
-	path.LineTo(pts[1])
-	path.LineTo(pts[2])
-	path.Close()
-	paint.FillShape(gtx.Ops, fill, clip.Outline{Path: path.End()}.Op())
+	return surface
+}
+
+// drawTail paints the glyph bridging the gap between the surface and the
+// anchor, with its tip on the anchor. Its base stands on the surface edge
+// facing the anchor and its depth is that gap, so the glyph meets both and
+// floats over neither. Its centre is the DRAWN anchor's midline, held back
+// from the surface's rounded corners by the radius so the base always
+// stands on the flat run of the edge.
+//
+// The fill reaches one stroke back into the surface, covering the outline
+// under the base; the two slanted sides are then stroked in the same ink.
+// The surface's edge therefore runs into the tail and out again rather than
+// being drawn straight through it. Coordinates are canvas-absolute (no
+// transform is on the stack when this is called).
+func drawTail(gtx layout.Context, anchor, surface image.Rectangle, p Placement, run, radius int, fill, edge color.NRGBA, stroke float32) {
+	var (
+		depth     int
+		centre    int
+		lo, hi    int
+		base, tip float32
+		vertical  = p == Top || p == Bottom
+		toward    float32
+	)
+	switch p {
+	case Top:
+		depth = anchor.Min.Y - surface.Max.Y
+		centre, lo, hi = (anchor.Min.X+anchor.Max.X)/2, surface.Min.X+radius, surface.Max.X-radius
+		base, toward = float32(surface.Max.Y), 1
+	case Bottom:
+		depth = surface.Min.Y - anchor.Max.Y
+		centre, lo, hi = (anchor.Min.X+anchor.Max.X)/2, surface.Min.X+radius, surface.Max.X-radius
+		base, toward = float32(surface.Min.Y), -1
+	case Left:
+		depth = anchor.Min.X - surface.Max.X
+		centre, lo, hi = (anchor.Min.Y+anchor.Max.Y)/2, surface.Min.Y+radius, surface.Max.Y-radius
+		base, toward = float32(surface.Max.X), 1
+	case Right:
+		depth = surface.Min.X - anchor.Max.X
+		centre, lo, hi = (anchor.Min.Y+anchor.Max.Y)/2, surface.Min.Y+radius, surface.Max.Y-radius
+		base, toward = float32(surface.Min.X), -1
+	}
+	if depth <= 0 || hi-lo < run {
+		return
+	}
+	tip = base + toward*float32(depth)
+	half := float32(run) / 2
+	c := float32(min(max(centre, lo+run/2), hi-run/2))
+
+	// The base sits one stroke inside the surface so the fill covers the
+	// outline it interrupts; the stroked sides start on the edge itself, so
+	// the two outlines meet.
+	inner := base - toward*stroke
+	pt := func(along, across float32) f32.Point {
+		if vertical {
+			return f32.Point{X: along, Y: across}
+		}
+		return f32.Point{X: across, Y: along}
+	}
+
+	var body clip.Path
+	body.Begin(gtx.Ops)
+	body.MoveTo(pt(c-half, inner))
+	body.LineTo(pt(c+half, inner))
+	body.LineTo(pt(c, tip))
+	body.Close()
+	paint.FillShape(gtx.Ops, fill, clip.Outline{Path: body.End()}.Op())
+
+	var sides clip.Path
+	sides.Begin(gtx.Ops)
+	sides.MoveTo(pt(c-half, base))
+	sides.LineTo(pt(c, tip))
+	sides.LineTo(pt(c+half, base))
+	paint.FillShape(gtx.Ops, edge, clip.Stroke{Path: sides.End(), Width: stroke}.Op())
 }
 
 // processInput drains the press events for this frame: anchor- and

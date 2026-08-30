@@ -535,3 +535,159 @@ func TestOpenNowWinsOverOpen(t *testing.T) {
 		t.Fatalf("Open won over OpenNow; contentDraws = %d, want 0", contentDraws)
 	}
 }
+
+// ---- Placement tests ----
+
+// roomW is the width of the sub-canvas the placement tests hand the popover
+// inside the wider scene. The scene is wider so an unclamped surface has
+// somewhere to spill to and the capture records it.
+const roomW = 200
+
+// inRoom hands w a canvas roomW wide at the scene's leading edge, full
+// height. Nothing clips it: a surface that ran off the canvas would still be
+// drawn, which is what makes the clamp assertions mean anything.
+func inRoom(w layout.Widget, width int) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints = layout.Exact(image.Pt(width, canvasH))
+		return w(gtx)
+	}
+}
+
+// fillRun reports the leftmost and rightmost x on row y painted in c.
+func fillRun(img *image.RGBA, y int, c color.NRGBA) (lo, hi int, ok bool) {
+	b := img.Bounds()
+	for x := b.Min.X; x < b.Max.X; x++ {
+		r, g, bl, _ := img.At(x, y).RGBA()
+		if uint8(r>>8) != c.R || uint8(g>>8) != c.G || uint8(bl>>8) != c.B {
+			continue
+		}
+		if !ok {
+			lo, ok = x, true
+		}
+		hi = x
+	}
+	return lo, hi, ok
+}
+
+// inkRun reports the leftmost and rightmost x on row y that is not the
+// scene's background, so an anti-aliased tip counts as ink.
+func inkRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
+	b := img.Bounds()
+	for x := b.Min.X; x < b.Max.X; x++ {
+		r, g, bl, _ := img.At(x, y).RGBA()
+		if uint8(r>>8) == bg.R && uint8(g>>8) == bg.G && uint8(bl>>8) == bg.B {
+			continue
+		}
+		if !ok {
+			lo, ok = x, true
+		}
+		hi = x
+	}
+	return lo, hi, ok
+}
+
+// placementScene renders one open popover in a roomW-wide canvas inside the
+// standard scene and returns the capture plus the surface fill to look for.
+func placementScene(t *testing.T, align popover.Alignment, contentW float32, room int) (*image.RGBA, color.NRGBA) {
+	t.Helper()
+	colors := tokens.DefaultLight
+	props := popover.Props{
+		Anchor:    fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
+		Content:   fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, contentW, 36),
+		Placement: popover.Bottom,
+		Align:     align,
+	}
+	w := popover.Render(props, true, colors, tokens.Spacing, sharpRadius)
+	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+	return golden.Capture(t, canvasSize, scene(inRoom(w, room), bg)), colors.SurfaceAt(tokens.Level3)
+}
+
+// TestSurfaceIsNudgedBackInsideTheCanvas is the reflow contract: a surface
+// centred on an anchor standing at the canvas's trailing edge would run off
+// that edge, and the popover moves it back rather than letting it clip.
+//
+// The anchor is 60 wide against a 200-wide canvas, so trailing-aligned it
+// spans [140, 200] with its midline at 170; the surface is 160 + 2*S3 = 184
+// wide, which centred on 170 would run to 262. Clamped it ends on 200.
+func TestSurfaceIsNudgedBackInsideTheCanvas(t *testing.T) {
+	img, fill := placementScene(t, popover.AlignTrailing, 160, roomW)
+	// A row between the surface's top edge and its content: the anchor's
+	// foot is at 134, the gap is S2, so the surface starts at 142.
+	lo, hi, ok := fillRun(img, 148, fill)
+	if !ok {
+		t.Fatal("no surface pixels on the row under the surface's top edge")
+	}
+	if hi >= roomW {
+		t.Errorf("surface runs to x=%d, past the %d-wide canvas it was given", hi, roomW)
+	}
+	if hi < roomW-3 {
+		t.Errorf("surface ends at x=%d; a clamped surface stands on the canvas edge at %d", hi, roomW-1)
+	}
+	if lo < 0 {
+		t.Errorf("surface starts at x=%d, off the canvas's leading edge", lo)
+	}
+}
+
+// TestSurfaceWiderThanItsCanvasIsLeftAlone documents the escape hatch: a
+// caller that cut its canvas to the anchor has said nothing about the room
+// it has, and shoving an over-wide surface against one edge would only move
+// the overflow to the other.
+func TestSurfaceWiderThanItsCanvasIsLeftAlone(t *testing.T) {
+	const room = 60
+	img, fill := placementScene(t, popover.AlignTrailing, 160, room)
+	lo, hi, ok := fillRun(img, 148, fill)
+	if !ok {
+		t.Fatal("no surface pixels on the row under the surface's top edge")
+	}
+	if lo >= 0 && hi < room {
+		t.Errorf("surface at [%d,%d] was squeezed into a %d-wide canvas it cannot fit", lo, hi, room)
+	}
+}
+
+// TestTailPointsAtTheDrawnAnchor is the other half of the seam: the anchor
+// reports the shape it drew and the popover stands it at the canvas's
+// trailing edge, so the tail aims at the drawn control's midline (170 for a
+// 60-wide anchor against a 200-wide canvas) rather than at the canvas's own
+// (100), even after the surface beneath it has been nudged.
+func TestTailPointsAtTheDrawnAnchor(t *testing.T) {
+	img, fill := placementScene(t, popover.AlignTrailing, 160, roomW)
+	// Mid-tail: the anchor's foot is at 134 and the tail bridges the S2 gap
+	// to the surface at 142.
+	lo, hi, ok := fillRun(img, 138, fill)
+	if !ok {
+		t.Fatal("no tail pixels between the anchor's foot and the surface")
+	}
+	const drawnMid = roomW - 30
+	if mid := (lo + hi) / 2; mid < drawnMid-1 || mid > drawnMid+1 {
+		t.Errorf("tail centred on x=%d (run [%d,%d]); the drawn anchor's midline is %d", mid, lo, hi, drawnMid)
+	}
+}
+
+// TestTailMeetsTheAnchorAndTheSurface is the seam at both ends: the tip
+// stands on the anchor's foot rather than floating short of it, and the
+// surface's outline is interrupted at the base rather than drawn across it.
+func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
+	img, fill := placementScene(t, popover.AlignTrailing, 160, roomW)
+	const (
+		foot     = 134 // the anchor is 28 tall centred in a 240 canvas
+		edge     = 142 // and the surface stands S2 below it
+		drawnMid = roomW - 30
+	)
+	lo, hi, ok := inkRun(img, foot, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
+	if !ok {
+		t.Fatalf("the row at the anchor's foot (y=%d) is bare; the tail floats above the anchor", foot)
+	}
+	if mid := (lo + hi) / 2; mid < drawnMid-2 || mid > drawnMid+2 {
+		t.Errorf("the ink at the anchor's foot runs [%d,%d]; the tail's tip belongs on %d", lo, hi, drawnMid)
+	}
+	// On the surface's own top edge the outline gives way to the tail's
+	// fill across the tail's width — the interruption is what makes the two
+	// outlines one contour instead of a border through a triangle.
+	lo, hi, ok = fillRun(img, edge, fill)
+	if !ok {
+		t.Fatalf("the surface's top edge (y=%d) is unbroken outline; the tail's base is drawn through", edge)
+	}
+	if lo > drawnMid-4 || hi < drawnMid+4 {
+		t.Errorf("the outline gives way only over [%d,%d]; the tail's base is %d wide about %d", lo, hi, 12, drawnMid)
+	}
+}
