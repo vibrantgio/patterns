@@ -15,12 +15,12 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// BenchmarkTableLayout is the Measurable for G4.4: it proves the table's
-// per-frame layout cost is O(visible-rows), not O(len(items)). The body
-// height is fixed at 360 px and the row height at 36 dp/px, so the
-// viewport fits ~9 rows. ns/op should stay roughly flat as N grows from
-// 10 to 10000; if the table accidentally iterates rows during header or
-// width computation, this benchmark immediately surfaces O(N) growth.
+// BenchmarkTableLayout proves the table's per-frame layout cost is
+// O(visible-rows), not O(len(items)). The body height is fixed at 360 px
+// and the row height at 36 dp/px, so the viewport fits ~9 rows. ns/op
+// should stay roughly flat as N grows from 10 to 10000; if the table
+// accidentally iterates rows during header or width computation, this
+// benchmark immediately surfaces O(N) growth.
 func BenchmarkTableLayout(b *testing.B) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	cols := []table.Column[row]{

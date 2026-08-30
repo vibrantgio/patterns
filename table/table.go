@@ -7,30 +7,23 @@
 // already-sorted, already-filtered slices; the table renders whatever it
 // receives and surfaces header-click intent via OnSort. Filter UI is the
 // consumer's responsibility (typically a textfield above the table whose
-// changes re-emit a filtered Items slice). This keeps the table dumb and
-// matches the Phase 4 Composition contract: no opaque runtime configuration,
-// source is the spec, copy and modify as needed.
+// changes re-emit a filtered Items slice). This keeps the table dumb: no
+// opaque runtime configuration, source is the spec, copy and modify as
+// needed.
 //
 // # Keyboard reach
 //
-// F4.7 checked this package for the gap it fixed in patterns/sidebar — a
-// virtualised scroll region whose keyboard traversal was built on per-row
-// focus tags, so it could only ever reach the rows currently laid out — and
-// the answer is that the table has the same shape but not the same defect.
-// The body is virtualised through components/list, so the precondition holds; what
-// is missing is the traversal. Body rows are not interactive at all: they
-// register no focus tag, no click and no selection, and the only keyboard
-// reach in the table is Tab onto a sortable header cell. Nothing is
-// unreachable, because nothing is reachable. Props.Current does not change
-// that: it is a fill the consumer asks for over a row it already knows
-// about, drawn only for rows the frame laid out, and the table stores no
-// selection of its own for a keyboard to reach.
+// Body rows are not interactive: they register no focus tag, no click and
+// no selection, and the only keyboard reach in the table is Tab onto a
+// sortable header cell. Props.Current does not change that: it is a fill
+// the consumer asks for over a row it already knows about, drawn only for
+// rows the frame laid out, and the table stores no selection of its own
+// for a keyboard to reach.
 //
-// So this is a latent version of the same problem rather than a live one, and
-// the instruction it leaves is for whoever adds row selection: take it from
-// components/list's LayoutSelectable, which moves an index over every row, and not
-// from a focus tag per row, which cannot exist for a row the frame skipped.
-// The list.State this package already holds is where that selection lives.
+// Row selection must be built on components/list's LayoutSelectable, which
+// moves an index over every row, not on a focus tag per row, which cannot
+// exist for a row the frame skipped. The list.State this package already
+// holds is where that selection lives.
 //
 // Per-row widget state (editors, checkboxes, expanders) is preserved across
 // sort/filter by wiring components/keyed.Defer into a Column's Cell closure: the
@@ -105,10 +98,9 @@ type Props[T any] struct {
 	OnSort func(gtx layout.Context, col int)
 
 	// Ground is the rung the table's own plane fills at — the paper the
-	// grid is printed on. The zero value is Level0, the window ground,
-	// because a table is what a window exists to show rather than something
-	// standing around it: ADR-021 R1 puts a resting content expanse on the
-	// Background pin, and a table that raised itself one rung would leave a
+	// grid is printed on. The zero value is Level0, the window ground: a
+	// table is what a window exists to show rather than something standing
+	// around it, and a table that raised itself one rung would leave a
 	// window's furniture standing level with its content. Set Level1 where
 	// the table genuinely rests on furniture — inside a dialog, on a panel,
 	// or as a specimen lifted off a page — and the walks that read from this
@@ -122,21 +114,18 @@ type Props[T any] struct {
 	// Current marks the row the window is currently showing — the record
 	// open in a detail pane beside the table, the item a reader navigated
 	// to. It is called once per VISIBLE row per frame and its row is filled
-	// from the Primary ramp's tinted end before the cells draw, which is the
-	// ink ADR-021 R5 reserves for what is chosen. Nil (the default) marks
-	// nothing, and the table renders exactly as it did before the prop
-	// existed.
+	// from the Primary ramp's tinted end before the cells draw. Nil (the
+	// default) marks nothing.
 	//
 	// This is a display mark, not selection state: the table stores nothing,
 	// the predicate answers from whatever the consumer already holds, and a
 	// row scrolled out of the viewport costs nothing because it is never
-	// asked. Keyboard traversal over rows is still unbuilt, and the
-	// instruction for whoever builds it is unchanged — take it from
+	// asked. Keyboard traversal over rows is still unbuilt; build it on
 	// components/list's LayoutSelectable, which moves an index over every
-	// row, not from a focus tag per row. When it arrives it wants a SECOND
-	// ink: R5 keeps the neutral state walks for a cursor and this tint for
-	// the current item, so a list can show both at once without either
-	// standing in for the other.
+	// row, not on a focus tag per row. It wants a SECOND ink: the neutral
+	// state walks are reserved for a cursor and this tint for the current
+	// item, so a list can show both at once without either standing in for
+	// the other.
 	Current func(item T) bool
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
@@ -144,9 +133,8 @@ type Props[T any] struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -155,15 +143,13 @@ type Props[T any] struct {
 }
 
 // Layout-affecting constants. Row and header heights come from the
-// density (E1.4): both are exactly Density.ControlHeight — the E1.3 row
-// rule (list.RowHeight) — so the body's vertical extent stays
-// deterministic and the components/list viewport can serve constant-time
-// look-aheads. The header's old fixed 44 dp was the WCAG hit-target
-// floor, not a row height; sortable header cells tile the header band
-// edge to edge (like stacked rows, extending their pointer area would
-// steal a neighbour's slop), so their hit area stays the cell bounds.
-// cellPadDp is the horizontal cell padding — 12 dp, shadcn's px-3 on
-// inputs, which does not follow density (the E1.3 input rule).
+// density: both are exactly Density.ControlHeight (list.RowHeight), so
+// the body's vertical extent stays deterministic and the components/list
+// viewport can serve constant-time look-aheads. Sortable header cells
+// tile the header band edge to edge (like stacked rows, extending their
+// pointer area would steal a neighbour's slop), so their hit area stays
+// the cell bounds. cellPadDp is the horizontal cell padding — 12 dp,
+// shadcn's px-3 on inputs, which does not follow density.
 const (
 	cellPadDp     = 12
 	chevronSizeDp = 10
@@ -175,7 +161,7 @@ type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
 	header  tokens.TextStyle      // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density        // row/header height source (E1.4)
+	density tokens.Density        // row/header height source
 	shaper  *text.Shaper          // the theme's shaper; nil in the Render path
 	ground  tokens.ElevationLevel // the rung the table's plane fills at (Props.Ground)
 }
@@ -195,8 +181,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style for the
-	// header and the theme's cached shaper (ADR-003: the theme owns the
-	// typeface).
+	// header and the theme's cached shaper.
 	tokensObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
@@ -219,8 +204,6 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 		clicks := make([]widget.Clickable, len(props.Columns))
 		return rx.Map(inputs, func(n rx.Tuple3[resolvedTokens, []T, Sort]) layout.Widget {
 			tok, rows, sk := n.First, n.Second, n.Third
-			// Props.Shaper is an explicit override; the theme's shaper is
-			// the default.
 			shaper := props.Shaper
 			if shaper == nil {
 				shaper = tok.shaper
@@ -247,9 +230,8 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // and line height all reach the shaper — and d is the density the grid draws
 // at (header row and body rows are each exactly Density.ControlHeight). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the default
-// desktop look; before F3.4 the static path was pinned to Comfortable with no
-// way to say otherwise. A zero header Weight still falls back to the legacy
-// bold, so a hand-built size-only style renders as it always did.
+// desktop look. A zero header Weight falls back to bold, so a hand-built
+// size-only style still renders with the bold weight.
 func Render[T any](
 	shaper *text.Shaper,
 	columns []Column[T],
@@ -262,8 +244,7 @@ func Render[T any](
 ) layout.Widget {
 	// Level1 rather than the Props default: this path draws a specimen for a
 	// golden or a gallery page, where the table is deliberately lifted off
-	// whatever it is shown on, and its output is pinned by images that
-	// predate the prop.
+	// whatever it is shown on.
 	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, ground: tokens.Level1}
 	state := list.NewState()
 	return func(gtx layout.Context) layout.Dimensions {
@@ -309,8 +290,8 @@ func drawTable[T any](
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.ground), clip.Rect{Max: size}.Op())
 
 	widths := columnWidths(gtx, columns, size.X)
-	// E1.4 row rule: the header is a row in the grid, so its height is
-	// exactly Density.ControlHeight, like the body rows below it.
+	// The header is a row in the grid, so its height is exactly
+	// Density.ControlHeight, like the body rows below it.
 	headerH := gtx.Dp(unit.Dp(tok.density.ControlHeight))
 	if headerH > size.Y {
 		headerH = size.Y
@@ -402,8 +383,8 @@ func drawHeaderRow[T any](
 	size := gtx.Constraints.Max
 	// The header is furniture over the grid's own plane, so its band is one
 	// rung above the rung the plane fills at — walked from that ground and
-	// not named as an absolute step (ADR-021 R4, [tokens.ElevationLevel.Raised]).
-	// An absolute neutral 300 here would read right only while every table
+	// not named as an absolute step ([tokens.ElevationLevel.Raised]). An
+	// absolute neutral 300 here would read right only while every table
 	// happened to rest on Surface, and would put the header two rungs off its
 	// own grid the moment the grid is printed on the window's paper.
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.ground.Raised()), clip.Rect{Max: size}.Op())
@@ -463,8 +444,8 @@ func drawHeaderCell[T any](
 			material := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. A zero Weight (the legacy Render path synthesizes
-			// a size-only style) keeps the header's legacy bold weight.
+			// line height. A zero Weight (a hand-built size-only style)
+			// keeps the header's bold weight.
 			style := tok.header
 			f := typeset.Font(style, font.Bold)
 			wl := typeset.Label(style, 1)
@@ -514,8 +495,8 @@ func drawHeaderCell[T any](
 // drawRow renders one body row by invoking each column's Cell closure
 // inside a fixed-size cell box, then painting the bottom divider line.
 // rowH is the density's row height (list.RowHeight — exactly
-// ControlHeight, the E1.3 row rule), not the cell's intrinsic size, so
-// per-row layout cost stays bounded regardless of cell content. Rows are
+// ControlHeight), not the cell's intrinsic size, so per-row layout cost
+// stays bounded regardless of cell content. Rows are
 // stacked full-width strips: their hit area stays the row bounds (no
 // 44 dp extension — rows would steal each other's slop).
 //

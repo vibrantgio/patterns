@@ -119,7 +119,7 @@ func TestRowFnCalledOnlyForVisibleItems(t *testing.T) {
 // 0. With PxPerDp=1 and viewW=480, the table partitions [0, 480] into
 // three columns: ID (Width=80), Name (flexed, width = 480-80-120 = 280),
 // Value (Width=120). Header row occupies y∈[0, 36] (the Comfortable
-// control height, E1.4).
+// control height).
 //
 // A click at (40, 22) lands on the Sortable ID header.
 // A click at (220, 22) lands on the Sortable Name header (column 1).
@@ -183,8 +183,7 @@ func TestNilItemsObservableRenders(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
-// density tests.
+// for golden determinism, mirroring components' density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
 	th.Density = rx.Of(d)
@@ -192,18 +191,15 @@ func densityTheme(d tokens.Density) theme.Theme {
 	return th
 }
 
-// rowNames is the text the middle column draws, one entry per row index. It
-// and the headers were empty until F4.4b, on the theory that font
-// rasterisation was non-deterministic; F4.2 pinned the faces by configuration
-// and F4.3 moved every golden onto DeterministicShaper, so Latin text in
-// Roboto rasterises identically on every machine. ASCII only, per F4.2 — no
-// symbol reaches a stored image, and the sort chevron is a clip path the
-// package draws itself.
+// rowNames is the text the middle column draws, one entry per row index.
+// Latin text in Roboto rasterises identically on every machine; ASCII
+// only, so no symbol reaches a stored image (the sort chevron is a clip
+// path the package draws itself).
 var rowNames = []string{"Tokens", "Density", "Elevation", "Motion"}
 
 // textCell renders column text through the package's own RenderTextCell, the
-// helper a caller is meant to reach for — so the goldens now exercise the
-// cell's own padding and clamping rather than a flat colour block.
+// helper a caller is meant to reach for, so the goldens exercise the cell's
+// own padding and clamping.
 func textCell(shaper *text.Shaper, f func(int) string) func(int) layout.Widget {
 	return func(item int) layout.Widget {
 		return table.RenderTextCell(shaper, tokens.DefaultLight, tokens.DefaultTypography.BodyMedium, f(item))
@@ -282,11 +278,10 @@ func equalInts(a, b []int) bool {
 }
 
 // TestGroundPicksTheRungThePlaneFillsAt pins what Props.Ground decides: the
-// paper the grid is printed on. The zero value is the window ground, because
-// ADR-021 R1 puts a resting content expanse on the Background pin — a table
-// that raised itself one rung by default would put the biggest thing in a
-// window level with the furniture framing it. Level1 is the opt-in for a
-// table that really is resting on furniture, or is a specimen lifted off a
+// paper the grid is printed on. The zero value is the window ground: a
+// table that raised itself one rung by default would put the biggest thing
+// in a window level with the furniture framing it. Level1 is the opt-in for
+// a table that really is resting on furniture, or is a specimen lifted off a
 // page.
 //
 // The corner sampled is inside the table's rect and outside every cell's
@@ -329,7 +324,7 @@ func TestGroundPicksTheRungThePlaneFillsAt(t *testing.T) {
 	}
 }
 
-// TestCurrentFillsTheChosenRow pins ADR-021 R5's half of the same window: the
+// TestCurrentFillsTheChosenRow pins the other half of the same window: the
 // row the consumer names as current carries the Primary-tinted fill, and a
 // table asked to mark nothing marks nothing. The sample sits in the first
 // body row, past the one column's text, where only a row fill can reach.
@@ -340,7 +335,7 @@ func TestCurrentFillsTheChosenRow(t *testing.T) {
 		{Header: "ID", Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
 	}
 	// Row 0 sits directly under the header band, and both bands are exactly
-	// Density.ControlHeight (the E1.3 row rule); PxPerDp is 1 here.
+	// Density.ControlHeight; PxPerDp is 1 here.
 	rowH := int(tokens.Comfortable.ControlHeight)
 	rowMid := image.Pt(size.X-8, rowH+rowH/2)
 
