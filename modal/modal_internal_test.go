@@ -21,16 +21,16 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// TestTabCyclesFocusAmongModalTags strengthens Measurable (b) — Tab "cycles
-// focus within the modal" — by asserting at least two distinct modal focus
-// tags are visited across a sequence of Tab presses. The companion external
-// trap tests cover the "does not escape" clause; this in-package test
-// covers the "cycles" clause by reading the unexported focus-tag slice.
+// TestTabCyclesFocusAmongModalTags asserts that Tab cycles focus within the
+// modal by checking that at least two distinct modal focus tags are visited
+// across a sequence of Tab presses. The companion external trap tests cover
+// the "does not escape" clause; this in-package test covers the "cycles"
+// clause by reading the unexported focus-tag slice.
 func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 
 	// Two components/button actions, each keyed to its own caller-owned clickable.
-	// Those clickables are the action focus tags (route (a)); the modal owns
+	// Those clickables are the action focus tags; the modal owns
 	// none on their behalf, so they must register themselves — which the live
 	// button does — to be focusable.
 	var clkA, clkB widget.Clickable
@@ -45,8 +45,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 		OnClose:         func(_ layout.Context) {},
 		// This case lays out on the live path, so it has to say which
 		// shaper it wants: a nil Props.Shaper binds to the theme's
-		// fallback, which after F4.2 resolves against the machine's
-		// fonts (F4.4b).
+		// fallback, which resolves against the machine's fonts.
 		Shaper: shaper,
 	}
 	st := newState(props)

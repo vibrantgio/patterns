@@ -80,18 +80,15 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// The header text the goldens carry. It was blank until F4.4b, on the theory
-// that font rasterisation was non-deterministic; F4.2 pinned the faces by
-// configuration and F4.3 moved every golden onto DeterministicShaper, so Latin
-// text in Roboto rasterises identically on every machine. ASCII only, per
-// F4.2 — no symbol reaches a stored image.
+// The header text the goldens carry. Latin text in Roboto rasterises
+// identically on every machine via DeterministicShaper; ASCII only, so no
+// symbol reaches a stored image.
 //
-// There are two of them because G0A.2 split the fixture set by intent, and a
-// fixture's title is half of what makes it that intent legible. "Discard
-// changes?" is a question you must answer; "Preferences" is a place you
-// opened. Before the split every golden carried the question AND a panel's X
-// over a dismissing scrim, which is the wrong screen the goal was called to
-// fix — the images were recording it.
+// There are two of them, one per intent, because a fixture's title is half
+// of what makes it that intent legible. "Discard changes?" is a question you
+// must answer; "Preferences" is a place you opened. A fixture must never
+// pair a decision's title with a panel's X over a dismissing scrim — that
+// combination is not a valid intent.
 const (
 	panelTitle    = "Preferences"
 	decisionTitle = "Discard changes?"
@@ -102,8 +99,8 @@ const (
 
 // ---- Golden tests ----
 
-// TestModalGolden records or diffs the stored goldens, re-cut by G0A.2 to show
-// one fixture of each intent rather than four of one:
+// TestModalGolden records or diffs the stored goldens, one fixture per
+// intent:
 //
 //   - light-open / dark-open / light-closed are PANELS — a title and a quiet
 //     ghost X, the surface you can leave.
@@ -174,8 +171,7 @@ func TestModalOpenAndClosedDiffer(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
-// density tests.
+// for golden determinism.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
 	th.Density = rx.Of(d)
@@ -185,7 +181,7 @@ func densityTheme(d tokens.Density) theme.Theme {
 
 // TestModalCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline. The modal itself is a surface — its inset
-// and gaps stay on the spacing scale (E1.4 verdict) — but its close
+// and gaps stay on the spacing scale — but its close
 // affordance is a live components/button, which densifies to a 28 dp square
 // through its own theme subscription; that shrinking button is what this
 // golden pins down.
@@ -279,7 +275,7 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 	return dims
 }
 
-// TestEscapeInvokesOnClose verifies Measurable (a) — pressing Escape while
+// TestEscapeInvokesOnClose verifies that pressing Escape while
 // the modal holds focus invokes the OnClose callback.
 func TestEscapeInvokesOnClose(t *testing.T) {
 	var closed int
@@ -339,7 +335,7 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 	}
 }
 
-// TestBackdropClickInvokesOnClose verifies Measurable (c) — pressing inside
+// TestBackdropClickInvokesOnClose verifies that pressing inside
 // the scrim region but outside the modal surface invokes OnClose. A press
 // inside the surface must NOT invoke OnClose.
 //
@@ -384,13 +380,13 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 	}
 }
 
-// TestTabTrapsFocusWithinModal verifies Measurable (b) — Tab cycles among
+// TestTabTrapsFocusWithinModal verifies that Tab cycles among
 // modal focus tags and does not advance focus to a background-registered
 // focusable, no matter how many times Tab is pressed.
 func TestTabTrapsFocusWithinModal(t *testing.T) {
 	// Two components/button footer actions plus the implicit close button → three
 	// modal tags. The actions own their clickables; those are the action focus
-	// tags (route (a)), so the modal cycles among all three without wrapping.
+	// tags, so the modal cycles among all three without wrapping.
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	var clk1, clk2 widget.Clickable
 	action1 := liveButtonAction(t, "A", &clk1)
@@ -505,9 +501,9 @@ func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
 	}
 }
 
-// ---- GX.5: footer actions own their own focus tags ----
+// ---- Footer actions own their own focus tags ----
 
-// TestActionOwnsFocusTag confirms route (a): a components/button action joins the
+// TestActionOwnsFocusTag confirms that a components/button action joins the
 // Tab cycle via its own caller-owned clickable. After tabbing off the close
 // button, the action's &clickable — not a modal-interposed tag — holds focus,
 // which is what makes the button draw its own (single) focus ring.
@@ -634,7 +630,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 	}
 }
 
-// ---- G0A.2: the two intents ----
+// ---- The two intents ----
 
 // scrimPress queues a press-and-release near the top-left corner — guaranteed
 // scrim, never surface — and drives one frame.
@@ -695,9 +691,9 @@ func TestBackdropClickOnDecisionIsInert(t *testing.T) {
 }
 
 // TestBackdropClickOnPanelCloses is the panel half stated in the intent's own
-// terms, next to its opposite. TestBackdropClickInvokesOnClose covers the same
-// ground from the older Measurable (c); this one exists so the pair reads as
-// one contract and a future change cannot silence half of it unnoticed.
+// terms, next to its opposite, TestBackdropClickOnDecisionIsInert; the pair
+// reads as one contract so a future change cannot silence half of it
+// unnoticed.
 func TestBackdropClickOnPanelCloses(t *testing.T) {
 	var closed int
 	w := liveModal(t, modal.Props{
@@ -962,11 +958,6 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 // TestHideCloseStillWorksOnAPanel is the deprecation window: the field keeps
 // compiling AND keeps its meaning for the archetype it belongs to, so an
 // existing caller is not silently changed underneath.
-//
-// As of G0B.2 the in-org caller list is EMPTY — this test and its two
-// neighbours above are the field's only remaining users anywhere in the
-// twenty-one repositories. It is kept for callers outside the organization,
-// and it is the thing to delete first when the field goes.
 func TestHideCloseStillWorksOnAPanel(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
@@ -1037,12 +1028,11 @@ func TestIntentIsDerivedFromDecision(t *testing.T) {
 
 // ---- The modal stack ----
 
-// TestACoveredModalIsInertEvenWhileFocused is the exported half of what
-// G0C.2b had to keep exactly, driven through the whole live pipeline. Two
-// panels are open at once in one Arbiter, and the one behind answers neither
-// a key nor a press — even though a widget of its own still holds keyboard
-// focus, which is the case where being covered is the only thing that stops
-// it.
+// TestACoveredModalIsInertEvenWhileFocused drives the modal stack through the
+// whole live pipeline. Two panels are open at once in one Arbiter, and the
+// one behind answers neither a key nor a press — even though a widget of its
+// own still holds keyboard focus, which is the case where being covered is
+// the only thing that stops it.
 //
 // The front panel here is deliberately X-less and action-less, so it declares
 // no focus tags and never asks for focus: that is what leaves focus stranded
@@ -1052,8 +1042,7 @@ func TestIntentIsDerivedFromDecision(t *testing.T) {
 //
 // The modal in front is the one laid out LAST, which is also the one painted
 // last and therefore on top. Push order is layout order, so the stack and the
-// paint agree by construction — before G0C.2b push order was the order the
-// Open observables happened to emit in, which was related to neither.
+// paint agree by construction.
 func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
 	var backClosed, frontClosed int
 	arb := modal.NewArbiter()

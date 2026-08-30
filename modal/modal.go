@@ -2,19 +2,19 @@
 // surface dialog over a full-window scrim backdrop, with a header (title +
 // close affordance), padded body, and optional footer action row.
 //
-// Elevation (goal G-E2): the dialog surface fills at SurfaceAt(Level2)
-// (Neutral step 300), one storey above the standing level-1 content
-// panes it covers, with the 1 dp Neutral step-500 stroke. Level 2 — not
-// the deeper level 3 that unscrimmed overlays (popover, dropdown menu)
-// take — because the modal does not separate by fill alone: the scrim
-// dims everything beneath it and is the modal's isolating cue, so its
-// surface needs only one tonal storey. No shadow: E2.2 reserved cast
-// shadows for surfaces that float and can leave without a scrim.
+// The dialog surface fills at SurfaceAt(Level2), one storey above the
+// standing level-1 content panes it covers, with a 1 dp stroke at the same
+// level. Level 2 rather than the deeper level used by unscrimmed overlays
+// (popover, dropdown menu), because the modal does not separate by fill
+// alone: the scrim dims everything beneath it and is the modal's isolating
+// cue, so its surface needs only one tonal storey. It casts no shadow: a
+// cast shadow is reserved for surfaces that float and can leave without a
+// scrim.
 //
-// The package follows the Phase 4 Composition contract: Modal is a callable
-// Go function consuming a components theme observable, returning a stream of
-// layout.Widget. The source is intentionally short and free of opaque
-// configuration — copy it into your own app and modify as needed.
+// Modal is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. The source is intentionally short and
+// free of opaque configuration — copy it into your own app and modify as
+// needed.
 //
 // # The dialog grammar
 //
@@ -48,8 +48,8 @@
 // 14 dp of ink on each axis — the size of this platform's own window close
 // control — centred in the 20 dp icon box of a ghost components/button,
 // itself a 36 dp square at the comfortable density. See [crossPadDp] for why
-// the mark fills 60% of that box rather than the third it used to. The
-// pointer target under it is 44 dp on each axis: tokens.MinHitTarget, the
+// the mark fills 60% of that box. The pointer target under it is 44 dp on
+// each axis: tokens.MinHitTarget, the
 // floor for a STANDALONE control, which is the one that applies here.
 //
 // Which floor applies is a question about neighbours rather than about how
@@ -73,25 +73,20 @@
 // be live when no modal exists, which is precisely the state a modal is not
 // in. Bind it in app chrome, with Gio's own key.ModShortcut (Cmd on darwin,
 // Ctrl elsewhere) rather than a GOOS test of your own, and land a message
-// that flips the flag [Props.Open] reads. The reference implementation is
-// workbench's feeds app — shortcut.go for the binding, preferences.go for
-// the panel it opens.
+// that flips the flag [Props.Open] reads.
 //
 // Tab and Shift+Tab cycle keyboard focus within the modal's focusable items
 // and do not escape to background content. Only the topmost modal in the
 // [Arbiter] receives input; modals underneath remain painted but inert. The
 // stack is frame state — a plain slice written and read during layout, on the
-// goroutine Gio runs a frame on. Before G0C.2b it was a prism/coordination
-// Subject that nothing in any of the twenty-one repositories subscribed to,
-// beside a mutex-guarded slice this package read synchronously anyway; see
-// ADR-008 and arbitration.go.
+// goroutine Gio runs a frame on; see arbitration.go.
 //
 // Focus ownership: the close affordance and each footer action own their own
 // focus tag and focus ring (the close button is a components/button; actions
 // likewise register their own tags, e.g. a components/button's caller-owned
 // *widget.Clickable). The modal does not wrap an action or draw a ring around
-// it — it only adds the caller-declared Props.ActionFocusTags to its Tab cycle
-// (route (a)), so a focused action shows exactly one ring: its own.
+// it — it only adds the caller-declared Props.ActionFocusTags to its Tab
+// cycle, so a focused action shows exactly one ring: its own.
 //
 // Open/close is instantaneous in this package; entrance/exit transitions
 // are deferred to a later Effects-integration goal.
@@ -141,12 +136,11 @@ import (
 //     give it.
 //
 // Exposing those affordances as independent booleans would permit every
-// wrong combination, including the one this package used to render: a
-// "Discard changes?" dialog wearing a panel's X over a backdrop that
-// dismissed it. So there are no such booleans. The intent is declared once,
-// by supplying [Props.Decision] or leaving it nil, and every affordance is
-// derived from it — which is why a decision dialog with a dismissing
-// backdrop cannot be written down in this API at all.
+// wrong combination — e.g. a "Discard changes?" dialog wearing a panel's X
+// over a backdrop that dismisses it. So there are no such booleans. The
+// intent is declared once, by supplying [Props.Decision] or leaving it nil,
+// and every affordance is derived from it — which is why a decision dialog
+// with a dismissing backdrop cannot be written down in this API at all.
 //
 // Intent is a derived value, not a field: [Props.Intent] reports it. There
 // is nothing to keep in sync and nothing that can contradict the callbacks.
@@ -275,14 +269,6 @@ type Props struct {
 	// is describing a decision dialog. Say so with Decision and get the inert
 	// backdrop and the key bindings that belong with it; the X goes away on
 	// its own. HideClose keeps working for panels that genuinely want no X.
-	//
-	// The deprecation window is EMPTY: as of G0B.2 no caller in any of the
-	// twenty-one vibrantgio repositories sets this field. The last two —
-	// mindchat's settings and rename modals — were both decision dialogs
-	// wearing a panel's clothes and now say Decision instead. Nothing but
-	// this package's own tests, which exist to keep the field honest for
-	// outside callers, references it. Whoever removes it need only delete
-	// the field, showsClose's second term, and those tests.
 	HideClose bool
 
 	// DynamicFocusTags, if non-nil, is called every frame and its tags join
@@ -311,8 +297,8 @@ type Props struct {
 	// shaper (Typography.Shaper()), which is built once for the process and
 	// shared by every component reading that typography — the cache lives
 	// behind the Typography value, so it survives the copy this component's
-	// map function makes of it (spectrum F5.1), and the close button
-	// likewise falls back to the theme shaper. Set it only when this
+	// map function makes of it, and the close button likewise falls back to
+	// the theme shaper. Set it only when this
 	// instance must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
@@ -378,7 +364,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the TitleMedium text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Elevation),
@@ -400,9 +386,8 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 		st := newState(props)
 
 		// The close affordance is a GHOST components/button icon-only variant — a
-		// panel's X is present without being the subject, which is what the
-		// filled square it used to be got wrong: it out-weighed the title
-		// beside it. The modal owns its clickable (&st.closeClick) so the
+		// panel's X is present without being the subject. The modal owns its
+		// clickable (&st.closeClick) so the
 		// focus trap stays keyed to a single tag and no doubled focus ring is
 		// drawn; OnClose is routed through the button's OnClick. Build once
 		// here in the rx.Defer scope and fold the latest emitted widget into
@@ -951,11 +936,6 @@ func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 // counted. That last number is the one it was chosen for: 14 dp is what this
 // platform's own window close control measures, so the mark a dialog is left
 // by is the size the platform leaves a window by.
-//
-// It was 6 dp — an 8 dp cross, 10 dp of ink, under a third of the box. That
-// mark measured the same contrast this one does, since the ink is the same
-// token, and was still the quietest thing on a surface where it is the only
-// control. Contrast was never the shortfall; area was.
 const crossPadDp = 4
 
 // crossIcon paints an "×" shape — two diagonal strokes — into a

@@ -5,7 +5,7 @@ package modal
 // plain value — no mutex, no atomics, no observable — because every write and
 // every read happens during layout, on the single goroutine Gio runs a frame
 // on. The hazard a synchronised bus guards against cannot arise here, so
-// there is nothing for a guard to buy. See ADR-008 in the plan.
+// there is nothing for a guard to buy.
 //
 // # The register is the scope
 //
@@ -16,13 +16,11 @@ package modal
 // root and hand it to every modal in that window's tree.
 //
 // A Props with no Arbiter gets a stack of its own and is therefore always the
-// modal in front of it. Until G0C.4 it joined a package-level default
-// instead, which was indistinguishable from per-window in a single-window
-// process and was a data race in a two-window one; there is now no package
-// state for a second window to reach, so sharing is something a caller does
-// on purpose or not at all. Two modals that both forget an Arbiter both take
-// input — a fault anyone can drive into, which is the trade this makes
-// against a race nobody can.
+// modal in front of it: there is no package-level default a second window
+// could race on, so sharing an Arbiter is something a caller does on purpose
+// or not at all. Two modals that both forget an Arbiter both take input — a
+// fault anyone can drive into, which is the trade this makes against a race
+// nobody can.
 //
 // # A stack, not a register — because modals nest
 //
@@ -30,7 +28,7 @@ package modal
 // the incumbent is simply gone. A modal opened from inside another modal does
 // not evict it; it covers it, and closing the inner one hands the front back
 // to the outer one. That is the whole reason this is an ordered slice and not
-// a pointer, and it is the third shape ADR-008's idiom takes.
+// a pointer.
 //
 // # The register is also the liveness
 //
@@ -45,8 +43,8 @@ package modal
 //
 // A claim guarded by a level rather than an edge re-takes top on every frame,
 // and for popover and tooltip that is a bug: their write is unconditionally
-// "become top", so two participants trade the register every frame (ADR-008,
-// G0C.2). A stack does not have that failure: push is "join if absent", so a
+// "become top", so two participants trade the register every frame. A
+// stack does not have that failure: push is "join if absent", so a
 // modal already on the stack keeps the position it has and cannot climb over
 // the modal that covered it. Callers still push on the edge of Open —
 // modalState.pushed is the latch — because that is what makes the matching pop

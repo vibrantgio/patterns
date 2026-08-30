@@ -92,11 +92,10 @@ func TestArbiterPopFromTheMiddle(t *testing.T) {
 	}
 }
 
-// TestNilArbiterArbitratesAlone pins what replaced the package-level default
-// at G0C.4: a Props with no Arbiter gets one of its own, so two of them
-// stack with nobody rather than sharing process-global state. The scope a
-// lock-free value is safe at is one window, and the only way to reach that
-// scope is to say so.
+// TestNilArbiterArbitratesAlone pins the no-Arbiter default: a Props with no
+// Arbiter gets one of its own, so two of them stack with nobody rather than
+// sharing process-global state. The scope a lock-free value is safe at is
+// one window, and the only way to reach that scope is to say so.
 func TestNilArbiterArbitratesAlone(t *testing.T) {
 	first, second := newState(Props{}), newState(Props{})
 	if first.arb == nil || second.arb == nil {
@@ -149,9 +148,8 @@ func TestTrackPushesAndPopsOnTheEdge(t *testing.T) {
 }
 
 // TestOnlyTheFrontModalTakesPointerInput is isTop's behaviour driven through
-// the real router, and it is the contract G0C.2b had to keep exactly: only
-// the modal in front registers absorbers and answers a backdrop press, and
-// when it leaves the one it was covering answers again.
+// the real router: only the modal in front registers absorbers and answers a
+// backdrop press, and when it leaves the one it was covering answers again.
 //
 // Pointer rather than keyboard, deliberately: a press needs no focus, so the
 // test measures the stack and nothing else.
@@ -234,8 +232,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 		t.Fatal("closing the inner modal did not hand the front back to the outer one")
 	}
 
-	// One more frame before the press, and the reason is the ordering cost
-	// ADR-008 books for frame ownership, seen from the other side. The outer
+	// One more frame before the press: the outer
 	// modal is laid out BEFORE the leaver, so on the frame the pop happens it
 	// has already been laid out inert and registered no absorbers; it
 	// registers them on the frame after. A press in between reaches nothing

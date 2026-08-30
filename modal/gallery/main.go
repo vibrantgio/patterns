@@ -80,7 +80,7 @@ type demo struct {
 }
 
 func run(w *app.Window) error {
-	// The theme's cached Roboto shaper (ADR-003) — the same one the modal
+	// The theme's cached Roboto shaper — the same one the modal
 	// and buttons default to when Props.Shaper is nil.
 	shaper := tokens.DefaultTypography.Shaper()
 	d := &demo{win: w, shaper: shaper}
@@ -88,12 +88,11 @@ func run(w *app.Window) error {
 	// Static theme — emits once synchronously, so .First() returns immediately.
 	th := rx.Of(theme.Default())
 
-	// Open is ADR-008's third destination: a current value several consumers
-	// may watch, carried by mvu/stream.Value rather than a bus. The seed is
-	// the part that matters here — a subscriber sees `false` the moment it
-	// subscribes, so the modal's CombineLatest fires on the first frame
-	// instead of waiting for an emission. components/coordination is deprecated
-	// and this demo was one of its last two users in the organization.
+	// Open is a current value several consumers may watch, carried by
+	// mvu/stream.Value rather than a bus. The seed is the part that matters
+	// here — a subscriber sees `false` the moment it subscribes, so the
+	// modal's CombineLatest fires on the first frame instead of waiting for
+	// an emission.
 	var openObs rx.Observable[bool]
 	d.openObserver, openObs = stream.Value(false)
 
@@ -123,7 +122,7 @@ func run(w *app.Window) error {
 
 	// Footer actions are components/buttons keyed to caller-owned clickables. Each
 	// draws its own focus ring; passing &clickable in ActionFocusTags adds it
-	// to the modal's Tab cycle with no doubled outer ring (GX.5).
+	// to the modal's Tab cycle with no doubled outer ring.
 	cancelBtn, err := button.Button(th, button.Props{
 		Label:     "Cancel",
 		Emphasis:  button.Tonal,
