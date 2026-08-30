@@ -49,11 +49,9 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// linkLabels names the two links in document order. They were blank until
-// F4.4b, on the theory that font rasterisation was non-deterministic; F4.2
-// pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image.
+// linkLabels names the two links in document order. Latin text in Roboto
+// rasterises identically on every machine under DeterministicShaper; ASCII
+// only, so no symbol reaches a stored image.
 var linkLabels = [2]string{"Docs", "Components"}
 
 // links returns the two-link fixture, optionally marking one Active.
@@ -68,8 +66,7 @@ func links(activeIdx int) []navbar.Link {
 
 // TestNavbarGolden records or diffs the three Measurable goldens. Each link
 // cell is its label plus (S3, S2) padding, so the Active link's Primary
-// underline runs the width of the label rather than the width of the bare
-// padding it spanned while the labels were blank.
+// underline runs the width of the label.
 func TestNavbarGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -276,9 +273,6 @@ func TestNavbarTabTraversal(t *testing.T) {
 // "Docs" and "Components" measure 57 and 105 px, so the row is 57+8+105 = 170
 // wide and starts at x = 155; link 0 occupies x in [155, 212], y in [15, 49].
 // A press/release at (180, 32) lands squarely inside it, clear of link 1.
-//
-// Before F4.4b the labels were blank, every cell collapsed to its 24 px of
-// padding, and the coordinate was (224, 32) — which is now inside link 1.
 func TestNavbarLinkClickFiresOnClick(t *testing.T) {
 	var fired0, fired1 int
 	props := navbar.Props{
@@ -314,8 +308,7 @@ func TestNavbarLinkClickFiresOnClick(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
-// density tests.
+// for golden determinism, mirroring components' density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
 	th.Density = rx.Of(d)
@@ -328,17 +321,10 @@ func densityTheme(d tokens.Density) theme.Theme {
 // and below plus the Active underline, and the bar insets that row by the
 // same PaddingY again.
 //
-// It is computed rather than taken from Density.ControlHeight on purpose.
-// The compact golden used to be captured at the shell's navbar pin,
-// ControlHeight + 2·PaddingY = 40 dp, on the theory that a bar wrapping
-// ControlHeight controls is exactly that tall. It never was — a link cell
-// carries a 2 dp underline the pin does not budget for — and F4.4d made the
-// gap visible by giving the label its line box (20 dp) instead of its glyph
-// ink (17 dp): the compact bar became exactly 40 dp of content in a 40 dp
-// window, its bottom padding squeezed to nothing and the underline flush
-// against the last pixel row. One more dp of line height and the golden
-// would have pinned a clipped underline. Compute the row the way the
-// component computes it, and the window cannot go stale that way again.
+// It is computed rather than taken from Density.ControlHeight + 2·PaddingY:
+// that pin does not budget for the link cell's 2 dp Active underline, so a
+// window sized from it alone can squeeze the bottom padding to nothing and
+// leave the underline flush against the last pixel row.
 func barHeight(d tokens.Density, style tokens.TextStyle) int {
 	cell := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
 	return cell + 2*int(d.PaddingY)
@@ -391,12 +377,12 @@ func inkBand(img *image.RGBA, c color.NRGBA) (int, int) {
 // measured: brand, links and actions each drawn so its own middle lands on the
 // bar's middle, at every height the bar is given.
 //
-// The brand fixture is the shape that used to break it. A widget that honours
-// a minimum height it was never meant to fill — a column of text laid out in a
-// vertical Flex is the everyday one — comes back the full height of the row
-// and inks only the top of it, and the bar used to hand every slot exactly
-// that minimum: the brand inked most of a line above the links beside it, on a
-// bar nobody had touched.
+// The brand fixture is the shape that breaks a naive layout: a widget that
+// honours a minimum height it was never meant to fill — a column of text
+// laid out in a vertical Flex is the everyday one — comes back the full
+// height of the row and inks only the top of it, which reads as inked well
+// above the links beside it unless each slot is measured with no cross
+// minimum at all.
 //
 // Rows are compared doubled, so that a middle landing between two pixel rows
 // is one integer rather than a half that has to be tolerated: a slot of even
@@ -460,12 +446,10 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	}
 }
 
-// TestNavbarKeepsItsBottomPadding is the assertion the compact golden's
-// window used to make by accident, and it is why the window is computed
-// rather than assumed. In a canvas of [barHeight] the Active underline —
-// the lowest thing the bar draws — must clear the bottom PaddingY, so the
-// bar keeps the breathing room its own inset asks for and is nowhere near
-// the edge it would be clipped at.
+// TestNavbarKeepsItsBottomPadding asserts that in a canvas of [barHeight]
+// the Active underline — the lowest thing the bar draws — clears the
+// bottom PaddingY, so the bar keeps the breathing room its own inset asks
+// for and is nowhere near the edge it would be clipped at.
 //
 // The navbar fills its constraints, so its reported Dimensions can never
 // report an overflow; only the pixels can. This reads them.

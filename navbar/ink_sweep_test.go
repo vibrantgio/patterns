@@ -24,11 +24,10 @@ import (
 // stated at a dark scheme's tone, and four hundred random colours from a
 // fixed source.
 //
-// The three pastels are the shape that produced the AV1 defect family. A
-// palette published for a dark scheme states its accents high on the tonal
-// axis, and a brand seeded with one of them derives a light scheme whose
-// primary pin sits a whisper off its own ground — which is exactly what
-// the active-link underline used to be coloured with.
+// The three pastels test the shape that risks a sub-floor underline: a
+// palette published for a dark scheme states its accents high on the
+// tonal axis, so a brand seeded with one of them derives a light scheme
+// whose primary pin sits a whisper off its own ground.
 func underlineSweepSeeds() []stdcolor.NRGBA {
 	rng := rand.New(rand.NewSource(20260827))
 	seeds := []stdcolor.NRGBA{
@@ -69,11 +68,11 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed is AV1.2's
-// site-level gate: whatever a caller seeds the palette with, an active
-// link's underline reaches WCAG 1.4.11 against the bar's own floor fill —
-// the only ground the navbar ever draws itself on (drawNavbar fills at
-// tokens.LevelFloor unconditionally; Props carries no Ground field).
+// TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed asserts that
+// whatever a caller seeds the palette with, an active link's underline
+// reaches WCAG 1.4.11 against the bar's own floor fill — the only ground
+// the navbar ever draws itself on (drawNavbar fills at tokens.LevelFloor
+// unconditionally; Props carries no Ground field).
 func TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string
@@ -98,10 +97,10 @@ func TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 		len(underlineSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
-// TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin states what this
-// repair costs every stored image in the design system, which is nothing:
-// on the seed every golden is rendered from, the brand's own colour clears
-// the floor on the bar and is what the underline gets, exactly as before.
+// TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin asserts that on
+// the seed every golden is rendered from, the brand's own colour clears
+// the floor on the bar, so the underline stays the Primary pin and no
+// golden image needs to move.
 func TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin(t *testing.T) {
 	for _, s := range []struct {
 		name string
@@ -117,10 +116,9 @@ func TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin(t *testing.T) {
 	}
 }
 
-// TestAPastelSeedsActiveUnderlineInkLeavesThePin is the regression itself,
-// read on the shape that produced it: a light scheme seeded with a dark
-// scheme's accent. Before the gate this bar's underline was the bare pin
-// at a sub-floor ratio.
+// TestAPastelSeedsActiveUnderlineInkLeavesThePin exercises the shape that
+// risks a sub-floor underline: a light scheme seeded with a dark scheme's
+// accent.
 func TestAPastelSeedsActiveUnderlineInkLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)

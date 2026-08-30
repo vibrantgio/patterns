@@ -3,10 +3,10 @@
 // Links, and trailing Actions. The active link is marked with a
 // Primary-coloured underline.
 //
-// The package follows the Phase 4 Composition contract: Navbar is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. Source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Navbar is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. Source is intentionally short and
+// free of opaque configuration — copy it into your own app and modify as
+// needed.
 //
 // "Centred" is approximate horizontally and exact vertically. The link
 // row is centred in the space that Brand and Actions leave over, not in
@@ -81,9 +81,8 @@ type Props struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -98,7 +97,7 @@ type Props struct {
 func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
@@ -144,8 +143,7 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // size and line height all reach the shaper — and d is the density the
 // bar draws at (its vertical inset and the links' padding). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look; before F3.4 the static path was pinned to
-// Comfortable with no way to say otherwise.
+// default desktop look.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -163,7 +161,7 @@ type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density   // bar inset and link padding source (E1.4)
+	density tokens.Density   // bar inset and link padding source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -173,14 +171,12 @@ const underlineDp = 2
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Max
 	// A navigation bar is chrome furniture, so it fills at the window's
-	// floor: the storey beneath the paper, in both schemes (ADR-022 V2).
-	// colors.Surface, which this used to fill, is a neutral-ramp alias and
-	// not a storey — it coincides with the floor in the light scheme and
-	// with the raised rung in the dark one, so a dark bar was painted
-	// nearer the reader than the content it navigates.
+	// floor: the storey beneath the paper, in both schemes. Do not fill
+	// with colors.Surface: it is a neutral-ramp alias, not a storey — it
+	// coincides with the floor only in the light scheme, not the dark one.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
-	// E1.4: the vertical inset is the density's control padding, so a
+	// The vertical inset is the density's control padding, so a
 	// ControlHeight control in a density-pinned slot (ControlHeight +
 	// 2·PaddingY) fills it exactly; the horizontal inset stays spacing S4.
 	inset := layout.Inset{
@@ -315,24 +311,19 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 // the primary pin while it clears the graphic floor against the bar's own
 // floor fill — the underline's ground, since the bar is chrome filled at
 // tokens.LevelFloor (see drawNavbar) — and otherwise the rung of the
-// primary ramp that does (AV1.2; [tokens.ColorTokens.InkOn]).
-//
-// It used to be the bare Primary pin, which reads only because the
-// canonical seed's own primary clears the bar already; a pastel seed's pin
-// put a sub-floor underline on the bar that no golden ever showed. Nothing
-// moves on the canonical seed.
+// primary ramp that does ([tokens.ColorTokens.InkOn]).
 func activeUnderlineInk(colors tokens.ColorTokens) color.NRGBA {
 	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelFloor), tokens.GraphicFloor)
 }
 
 // linkWidget renders a single link as a label centred inside
 // (S3, Density.PaddingY) padding — the horizontal 12 dp stays on the
-// spacing scale (the E1.3 input rule), the vertical padding follows
-// density. The cell width is at least 2×S3 so the Active underline is
-// visible even when the label rasterises to zero width, which an empty
-// Link.Label does. Links are adjacent cells in
-// a row, so their hit area stays the cell bounds (extension would steal
-// a neighbour's slop). The underline itself is [activeUnderlineInk].
+// spacing scale, the vertical padding follows density. The cell width is
+// at least 2×S3 so the Active underline is visible even when the label
+// rasterises to zero width, which an empty Link.Label does. Links are
+// adjacent cells in a row, so their hit area stays the cell bounds
+// (extension would steal a neighbour's slop). The underline itself is
+// [activeUnderlineInk].
 func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		inner := func(gtx layout.Context) layout.Dimensions {
@@ -352,8 +343,9 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tok
 			textMaterial := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. Zero fields (the legacy Render path synthesizes
-			// a size-only style) fall back to the shaper's defaults.
+			// line height. Zero fields (a caller may pass a size-only
+			// style, as Render's static path does) fall back to the
+			// shaper's defaults.
 			f := typeset.Font(style, font.Normal)
 			wl := typeset.Label(style, 1)
 			mLabel := op.Record(gtx.Ops)

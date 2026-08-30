@@ -2,10 +2,10 @@
 // centered card or a horizontal row of cards quoting a named author,
 // suitable for a marketing or onboarding "social proof" section.
 //
-// The package follows the Phase 4 Composition contract: Testimonial is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. The source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Testimonial is a callable Go function consuming a components theme
+// observable and returning a stream of layout.Widget. The source is
+// intentionally short and free of opaque configuration — copy it into your
+// own app and modify as needed.
 //
 // Layout: each Item renders as a rounded Surface card with a 1 dp strong
 // border and S5 padding on all sides. The card stacks (top to bottom) an
@@ -94,9 +94,9 @@ type Props struct {
 	// text with the theme's shaper (Typography.Shaper()), which is built
 	// once for the process and shared by every component reading that
 	// typography — the cache lives behind the Typography value, so it
-	// survives the copy this component's map function makes of it (spectrum
-	// F5.1). Set it only when this instance must shape with a different
-	// shaper than the theme provides.
+	// survives the copy this component's map function makes of it. Set it
+	// only when this instance must shape with a different shaper than the
+	// theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -120,8 +120,7 @@ type resolvedTokens struct {
 func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies the BodyLarge/BodyMedium/BodySmall text
-	// styles and the theme's cached shaper (ADR-003: the theme owns the
-	// typeface).
+	// styles and the theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Typography),
@@ -141,8 +140,6 @@ func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layou
 	})
 
 	return rx.Map(resolved, func(tok resolvedTokens) layout.Widget {
-		// Props.Shaper is an explicit override; the theme's shaper is the
-		// default.
 		shaper := props.Shaper
 		if shaper == nil {
 			shaper = tok.shaper
@@ -247,10 +244,9 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 
 	// The card fills at the level-1 storey and its edge is derived against
 	// that fill, rather than named at a rung that means two different
-	// contrasts in the two schemes. The fill used to name tok.color.Surface,
-	// which is a neutral-ramp alias and stopped being the level-1 storey
-	// when ADR-022 re-founded the ladder — leaving the edge derived against
-	// a fill that was not there.
+	// contrasts in the two schemes. The fill must name the storey, not the
+	// neutral-ramp alias colors.Surface, or the edge is derived against a
+	// fill that is not there.
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
 	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
@@ -410,8 +406,7 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 // style, through theme/typeset so the role's line height is the height
 // of the line box. Empty labels collapse to zero dimensions so adjacent
 // section gaps are the only vertical contribution. A zero style weight
-// (the legacy Render path synthesizes size-only styles) falls back to
-// fallbackWeight, the pre-Typography hard-coded weight for the site.
+// falls back to fallbackWeight.
 func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		if label == "" {

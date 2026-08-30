@@ -34,8 +34,7 @@ var (
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
 // same on every machine. A golden test pins its faces with
-// DeterministicShaper; application code takes the fallback Shaper. See
-// AGENTS.md.
+// DeterministicShaper; application code takes the fallback Shaper.
 func defaultShaper(t *testing.T) *text.Shaper {
 	t.Helper()
 	return tokens.DefaultTypography.DeterministicShaper()
@@ -51,16 +50,13 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 }
 
 // testimonials are the three items in document order, so a grid reads as
-// three distinct cards rather than three copies. Every field was blank until
-// F4.4b, on the theory that font rasterisation was non-deterministic; F4.2
-// pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image, and the
-// decorative opening quote is a clip path the package draws itself.
+// three distinct cards rather than three copies. ASCII only: no symbol may
+// reach a stored image, and the decorative opening quote is a clip path the
+// package draws itself.
 //
-// Filling AuthorName also lights up the avatar placeholder, which renders the
-// name's first letter when AuthorAvatar is nil: with a blank name that circle
-// held nothing, so the branch drew but never showed what it draws.
+// AuthorName must be non-empty, because it is what lights up the avatar
+// placeholder: the placeholder renders the name's first letter when
+// AuthorAvatar is nil, and a blank name leaves that circle empty.
 var testimonials = [3]testimonial.Item{
 	{
 		Quote:      "The tokens finally agree across every app we ship.",
@@ -84,7 +80,7 @@ func items(n int) []testimonial.Item {
 	return append([]testimonial.Item(nil), testimonials[:n]...)
 }
 
-// TestTestimonialGolden records or diffs the four Measurable goldens.
+// TestTestimonialGolden records or diffs the four goldens.
 func TestTestimonialGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
