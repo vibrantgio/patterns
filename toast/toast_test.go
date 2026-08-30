@@ -29,8 +29,7 @@ var (
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
 // same on every machine. A golden test pins its faces with
-// DeterministicShaper; application code takes the fallback Shaper. See
-// AGENTS.md.
+// DeterministicShaper; application code takes the fallback Shaper.
 func defaultShaper(t *testing.T) *text.Shaper {
 	t.Helper()
 	return tokens.DefaultTypography.DeterministicShaper()
@@ -44,11 +43,9 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// toastText is the message each level carries. Toast.Text was left empty
-// until F4.4b, on the theory that font rasterisation was non-deterministic;
-// F4.2 pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image.
+// toastText is the message each level carries. ASCII only: Latin text in
+// Roboto rasterises identically on every machine, and no symbol reaches a
+// stored image.
 func toastText(l toast.Level) string {
 	switch l {
 	case toast.Success:
@@ -71,13 +68,9 @@ func item(id int64, l toast.Level) toast.Toast {
 // stack ordering are the load-bearing visual signal and the text carries
 // the LabelMedium role; one scene stands the column on the bottom edge's
 // midpoint, where the design language puts a transient confirmation. The
-// scenes composite over the window's furniture floor — the storey app panes
-// are painted with since ADR-022 — so a toast fill that stops separating
-// from real app backgrounds fails the diff instead of hiding behind an
-// arbitrary grey (the regression that shipped the ~1.2:1 Surface-on-Surface
-// toast). The scenes used to name the theme's Surface for that ground, which
-// is a neutral-ramp alias and only coincidentally a pane's colour: it is the
-// floor in the light scheme and the raised rung in the dark one.
+// scenes composite over a real pane background (SurfaceAt(LevelFloor)), so
+// a toast fill that stops separating from real app backgrounds fails the
+// diff instead of hiding behind an arbitrary grey.
 func TestStackGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := tokens.DefaultLight.SurfaceAt(tokens.LevelFloor)

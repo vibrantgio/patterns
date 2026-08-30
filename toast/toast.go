@@ -26,19 +26,12 @@
 // assertable through Update without a frame, and visible in any model dump.
 // What stays on the frame goroutine is the alpha: the fade is derived from
 // Toast.At and gtx.Now during layout and belongs to nobody but the frame,
-// while the *disappearance* is the model's (ADR-008 destinations 1 and 2 in
-// one component).
+// while the *disappearance* is the model's.
 //
-// Until G0C.3 the entry point was a package-scoped Notify(level, text)
-// publishing to a process-global Subject that every Stack subscribed. That
-// signature is gone rather than deprecated: a message needs the frame's
-// *op.Ops and the old one had no way to reach it, so the only shim that
-// could have delivered anything was another process-global. See Notify.
-//
-// The package follows the Phase 4 Composition contract: Stack is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. The source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Stack is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. The source is intentionally short
+// and free of opaque configuration — copy it into your own app and modify
+// as needed.
 //
 // Colour: each toast is an inverse chip. Its base fills at the token set's
 // InverseSurface and its message reads in OnInverseSurface — the pair built
@@ -47,16 +40,6 @@
 // by construction rather than by out-elevating them. Its level shows as a
 // leading edge in that level's ramp, and the Level3 cast shadow stays: the
 // chip floats and can leave, and the shadow is what says so.
-//
-// That supersedes the elevation reading this pattern was built on, where
-// the base filled at SurfaceAt(Level2) tinted 20% with the level accent and
-// ringed by a 1 dp accent outline. Storeys are a way for a surface to
-// separate from the one ground beneath it; a toast has no such ground — it
-// can appear over a pane at any storey — so no storey is far enough from
-// all of them, and the ring was doing the separating the fill could not.
-// An inverse fill is one step away from every surface in the scheme, so
-// the ring is gone and the accent moved to the edge, where it says which
-// level this is instead of drawing the chip's shape.
 package toast
 
 import (
@@ -120,10 +103,9 @@ const DefaultLifetime = 4 * time.Second
 
 // The trailing slice of Lifetime during which a toast tweens its alpha
 // from 1.0 to 0.0 resolves from the theme's motion scale: Theme.Motion's
-// DurSlow stop (MD3 medium4, 400 ms — E3.1's mapping of the local 400 ms
-// constant it replaced). Short enough that the dismiss feels snappy but
-// long enough that the fade is perceptible at 60 fps. It reaches the
-// frame path as resolvedTokens.fade.
+// DurSlow stop (MD3 medium4, 400 ms). Short enough that the dismiss feels
+// snappy but long enough that the fade is perceptible at 60 fps. It
+// reaches the frame path as resolvedTokens.fade.
 
 // Toast is one queued notification. It is model state: Queue.Add builds it
 // from a Requested and nothing mutates it afterwards.
@@ -164,12 +146,6 @@ type Expired struct{ ID int64 }
 // exact buffer the frame is being recorded into: a call made from a widget
 // recording somewhere else — inside a components/cache.FrameCache body, most of
 // all — is dropped silently. Emit from the widget that owns gtx.Ops.
-//
-// This replaces the pre-G0C.3 Notify(level, text), which published to a
-// process-global Subject. The signature change is deliberate and is not a
-// deprecation: the new path needs gtx and the old signature cannot supply
-// it, so every call site has to be visited. Callers see "not enough
-// arguments in call to toast.Notify", which names the fix.
 func Notify(gtx layout.Context, level Level, text string) {
 	mvu.MessageOp{Message: Requested{Level: level, Text: text, At: gtx.Now}}.Add(gtx.Ops)
 }
@@ -257,12 +233,7 @@ type Props struct {
 	// Toasts is the queue to render, normally derived from the model:
 	// rx.Map(modelObs, func(m Model) []toast.Toast { return m.toasts.Items() }).
 	//
-	// A Stack with no Toasts renders an empty column forever. That is the
-	// one place this component is not additive across G0C.3: a caller that
-	// kept passing only Position used to receive every toast in the process
-	// through the package Subject and now receives none, with nothing to
-	// fail at compile time. It is the reason cadence's next tag is a minor
-	// bump rather than a patch.
+	// A Stack with no Toasts renders an empty column forever.
 	Toasts rx.Observable[[]Toast]
 
 	// Lifetime is the fallback auto-dismiss duration for toasts that carry
@@ -276,9 +247,8 @@ type Props struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -310,9 +280,8 @@ type resolvedTokens struct {
 func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelMedium text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface); the
-	// motion emission supplies the fade window (rx tops out at
-	// CombineLatest5, hence the nested CombineLatest2).
+	// theme's cached shaper; the motion emission supplies the fade window
+	// (rx tops out at CombineLatest5, hence the nested CombineLatest2).
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest2(
@@ -361,7 +330,7 @@ func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // size and line height all reach the shaper, exactly as they do on the
 // live path. Pass tokens.DefaultTypography.LabelMedium for the default
 // desktop look. There is no density parameter: a toast's height is a
-// legibility floor around its message, not a control height (E1.4).
+// legibility floor around its message, not a control height.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -458,9 +427,7 @@ func lifetimeOf(t Toast, props Props) time.Duration {
 
 // Toast surface metrics. The toast is a transient notification surface,
 // not a control: its height hugs the label plus spacing-scale padding,
-// and toastMinHDp is a legibility floor, so none of it follows density
-// (E1.4 verdict — the 36 dp floor coinciding with the Comfortable control
-// height is incidental).
+// and toastMinHDp is a legibility floor, so none of it follows density.
 const (
 	toastWidthDp = 240
 	toastMinHDp  = 36
@@ -565,44 +532,16 @@ func paintStack(
 // level's own ramp. The fade alpha is applied to the shadow (via its
 // opacity argument), the fill, the edge and the text colour.
 //
-// Two judgements were re-made over the new fill rather than carried over
-// from the tinted level-2 one. The shadow stays: the inverse fill already
-// separates the chip from everything under it, but separation is not the
-// only thing a shadow says — this surface is temporary and floating, and
-// nothing else in the frame says that. The outline goes: a ring in the
-// accent was what made the old fill read as a shape at all, and the fill
-// now measures 13.0:1 against the Surface panes in both schemes and no
-// worse than 7.6:1 against the deepest surface storey, so the ring is
-// decoration — and decoration that cost the level its one strong signal,
-// which the leading edge now carries.
+// The shadow marks the chip as a temporary, floating surface — a role the
+// flat inverse fill does not carry on its own, since the fill's job is
+// separation, not transience.
 //
-// The edge's width is a third judgement, re-made once the edge was
-// carrying that signal alone. It was one spacing stop, 4 dp, and at one
-// pixel per dp that is the width the desktop reserves for the furniture it
-// does not want looked at: a title bar's separator, a floating pane's
-// stroke, the divider between two panes and the inset around a scroll
-// thumb all measure one to three pixels there, while the marks that same
-// platform asks you to identify by colour alone measure eleven to fourteen
-// across — the scroll thumb eleven, a window button fourteen. A
-// level edge is the second kind of thing wearing the first kind's width,
-// which is the whole of why it got lost. It is two stops now, 8 dp: as
-// wide as the air above and below the message, two thirds of the air
-// between it and the message's first letter.
-//
-// That gap is also the ceiling. An edge as wide as the space it holds the
-// text off by stops reading as an edge and starts reading as a panel the
-// message sits beside; on this chip's padding it reaches that at 12 dp and
-// is unmistakably a tab at 14, which is why the widening stops two thirds
-// of the way there.
-//
-// What the extra width buys is the level rather than the edge — the edge
-// clears its floor against the chip at either width (see edgeFloor). Read
-// off the rendered chips as the weakest separation between two levels'
-// leading 16 px, which is about what one glance resolves of a mark this
-// size, the light chip goes from 21.8 to 36.7 and the dark chip from 10.2
-// to 21.6. The dark number is the one that mattered: a dark scheme's chip
-// is light, its edges are dark, and at 4 dp its weakest pair sat on the
-// threshold where two colours stop being two.
+// The leading edge is the only place on the chip that identifies the
+// level, so its width has to clear the desktop's furniture band (the one
+// to three px reserved for hairlines, separators and insets that are not
+// meant to be looked at) while staying inside the horizontal air that
+// holds the message off from it, or it stops reading as an edge and starts
+// reading as a panel. See TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir.
 func paintToast(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -722,36 +661,21 @@ const edgeFloor = 4.5
 // light/dark and follows whatever seed, palette or high-contrast variant
 // the theme is emitting.
 //
-// It reads a ramp rather than the pinned base the fill used to be tinted
-// with. The pins are tuned to be filled and written on — their depth is
-// chosen against the scheme's own grounds — and against the inverse ground
-// they are on the wrong side: a dark scheme's pins sit at L* 82, which is
-// most of the way to that scheme's own light chip.
+// It reads a ramp rather than a pinned base: the pins are tuned to be
+// filled and written on, chosen against the scheme's own grounds, and are
+// on the wrong side of an inverse ground — a dark scheme's pins sit at
+// L* 82, most of the way to that scheme's own light chip.
 //
-// It also asks for a rung rather than naming one. The edge used to be
-// step 400 in both schemes, that being the deepest rung to read over the
-// inverse ground in either, and one rung for two schemes and four hues cost
-// the light scheme its reds: over a light scheme's dark chip step 400 sits
-// at L* 74, where sRGB holds a third less chroma at the error hue than it
-// does two rungs deeper, and the error edge came out the pale salmon a red
-// turns into when it is asked to be that light. Asked for a rung instead,
-// a light scheme takes step 500 at all four levels — the rung where each
-// role holds its anchor's full chroma — and a dark scheme takes step 400 at
-// all four. The dark answer is forced rather than chosen: a dark scheme's
-// ramps turn light at step 500, which measures 2.2:1 over the light chip a
-// dark scheme's toast is, so 400 is the nearest rung to the middle that
-// reads over that chip at all, and it is as chromatic as an edge on a dark
-// scheme's toast can be.
+// It asks for a rung near the ramp's middle rather than naming a fixed
+// one, because a single rung cannot read over both schemes' chips at
+// every hue without losing chroma: a light scheme lands on step 500 at
+// all four levels — the rung where each role holds its anchor's full
+// chroma — and a dark scheme is forced to step 400, the nearest-to-middle
+// rung that still reads over its own light chip at all.
 //
-// Until F4.6 Success and Warning were Tailwind green and amber literals,
-// duplicated byte-for-byte between this file and alert/alert.go; theme's
-// hue-anchored success and warning ramps replaced both copies.
-//
-// Info reads the info ramp rather than the accent one. A level is a
-// statement about what happened, and an informational chip that wore the
-// brand made that statement in whatever colour the brand happened to be —
-// under a red-heavy brand it said "error" more loudly than the error level
-// did. The info role is anchored on a blue of its own, so the four levels
+// Info reads the info ramp rather than the accent one, so an
+// informational chip's colour says "info" regardless of the brand's own
+// hue; the info role is anchored on a blue of its own, so the four levels
 // stay four whatever the seed.
 func edgeColor(l Level, c tokens.ColorTokens) color.NRGBA {
 	var role tokens.Role

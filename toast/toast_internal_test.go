@@ -46,13 +46,10 @@ func driveFrameAt(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.P
 	r.Frame(ops)
 }
 
-// TestRequestAddsAndExpiredRetires discharges the Measurable interaction on
-// the model rather than on a hidden queue: a request grows the queue by one
-// and the Expired that names the toast returns it to its prior length. Before
-// G0C.3 this was a white-box test against a mutex-guarded stackState inside
-// the widget, deliberately bypassing the process-global Subject so the state
-// did not leak across tests. There is no such state now — the queue is a
-// value — so the test is the reducer's, not the renderer's.
+// TestRequestAddsAndExpiredRetires pins the queue's core invariant on the
+// model rather than on a hidden queue: a request grows the queue by one
+// and the Expired that names the toast returns it to its prior length. The
+// queue is a value, so this is the reducer's behavior, not the renderer's.
 func TestRequestAddsAndExpiredRetires(t *testing.T) {
 	var q Queue
 	if q.Len() != 0 {
@@ -156,16 +153,14 @@ func TestExpireEmitsExpiredAfterTheLifetime(t *testing.T) {
 }
 
 // TestStackRendersTheModelQueue confirms the render path is driven by
-// Props.Toasts and nothing else: a new queue re-emits the widget. This
-// replaces TestNotifyReachesStackSubscription, which asserted the same thing
-// about the package-scoped Subject that G0C.3 deleted.
+// Props.Toasts and nothing else: a new queue re-emits the widget.
 func TestStackRendersTheModelQueue(t *testing.T) {
 	send, toasts := rx.Subject[[]Toast](0, 1)
 	send.Next(nil)
 
 	// Explicit shaper: this subscribes to the live path, and a nil
-	// Props.Shaper binds to the theme's fallback, which after F4.2 resolves
-	// against the machine's fonts (F4.4b).
+	// Props.Shaper binds to the theme's fallback, which resolves against
+	// the machine's fonts.
 	obs := Stack(rx.Of(theme.Default()), Props{
 		Position: TopRight,
 		Toasts:   toasts,
@@ -200,10 +195,8 @@ func TestStackRendersTheModelQueue(t *testing.T) {
 	}
 }
 
-// TestStackWithNoToastsRendersEmpty pins the honest cost of the conversion:
-// a Props that names no queue is legal, compiles, and shows nothing. It is
-// the one non-additive step in G0C.3 and the reason cadence's next tag is a
-// minor bump.
+// TestStackWithNoToastsRendersEmpty pins that a Props naming no queue is
+// legal, compiles, and shows nothing.
 func TestStackWithNoToastsRendersEmpty(t *testing.T) {
 	obs := Stack(rx.Of(theme.Default()), Props{
 		Position: TopRight,
@@ -466,10 +459,10 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 //
 // The floor is that a mark identified by its colour cannot be drawn at the
 // width the desktop keeps for hairlines, separators and insets — one to
-// three pixels — which is where this edge used to sit at one spacing stop.
-// The ceiling is the chip's own air: the message stands one horizontal pad
-// clear of the edge, and an edge as wide as that gap reads as a panel the
-// message sits beside rather than as the chip's leading edge. So the
+// three pixels. The ceiling is the chip's own air: the message stands one
+// horizontal pad clear of the edge, and an edge as wide as that gap reads
+// as a panel the message sits beside rather than as the chip's leading
+// edge. So the
 // assertion is not "8 px" for its own sake — it is that the mark is at
 // least twice the platform's furniture band and still narrower than the air
 // it holds the text off by, with the pixel value logged so a later change
