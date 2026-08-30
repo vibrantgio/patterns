@@ -49,8 +49,7 @@ func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
 // same on every machine. A golden test pins its faces with
-// DeterministicShaper; application code takes the fallback Shaper. See
-// AGENTS.md.
+// DeterministicShaper; application code takes the fallback Shaper.
 func defaultShaper(t *testing.T) *text.Shaper {
 	t.Helper()
 	return tokens.DefaultTypography.DeterministicShaper()
@@ -69,8 +68,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 //
 // Text here must draw through theme/typeset rather than
 // gioui.org/widget.Label: a role's LineHeight is the CSS line box, and
-// Label does not produce that box. See the repository AGENTS.md and
-// llms.txt "LINE HEIGHT NEEDS theme/typeset".
+// Label does not produce that box.
 func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLines int, s string) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		m := op.Record(gtx.Ops)
