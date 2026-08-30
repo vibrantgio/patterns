@@ -58,11 +58,9 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// tabLabels names the three tabs in document order. They were blank until
-// F4.4b, on the theory that font rasterisation was non-deterministic; F4.2
-// pinned the faces by configuration and F4.3 moved every golden onto
-// DeterministicShaper, so Latin text in Roboto rasterises identically on every
-// machine. ASCII only, per F4.2 — no symbol reaches a stored image.
+// tabLabels names the three tabs in document order. Latin text in Roboto
+// rasterises identically on every machine with DeterministicShaper, so this
+// stays ASCII — no symbol reaches a stored image.
 //
 // They are short on purpose. A tab cell is Rigid and sized to its label plus
 // 2×S3 of padding, so three long labels would run off the 240 px canvas; these
@@ -132,11 +130,9 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	}
 }
 
-// TestTheStripStandsOneRungOverThePanel is AK6.4's guard on the pattern's
-// two areas. The panel is content and fills at Props.Ground; the strip is
-// furniture and fills exactly one rung above it (ADR-021 R1, R2, R4). Before
-// this, one Surface fill covered both, so a tab panel could never be the
-// window's own paper without the application painting over the pattern.
+// TestTheStripStandsOneRungOverThePanel guards the pattern's two areas.
+// The panel is content and fills at Props.Ground; the strip is furniture
+// and fills exactly one rung above it.
 //
 // The claim is read off sampled pixels and never off token arithmetic: the
 // strip over a level-0 panel and the panel of a level-1 instance are the same
@@ -215,10 +211,9 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 // TestTabsArrowAndHomeEndWrapAndFocus drives the WAI-ARIA tab pattern
 // end-to-end. A tab cell is its label plus 2×S3 = 24 px of horizontal
 // padding, never narrower than that padding alone, and stripH = 36 px (the
-// Comfortable control height, E1.4; PxPerDp = 1). Tab 0 is "Preview", so it
+// Comfortable control height; PxPerDp = 1). Tab 0 is "Preview", so it
 // is wider than the 24 px minimum and starts at x = 0 — a pointer click at
-// (12, 20) lands squarely inside it whatever the label, which is why this
-// coordinate survived F4.4b filling the labels in.
+// (12, 20) lands squarely inside it whatever the label.
 //
 // Focus-follows-selection is verified using the "Enter trick": each
 // arrow / Home / End press is followed by a Press+Release of NameReturn
@@ -300,7 +295,7 @@ func equalInts(a, b []int) bool {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
+// for golden determinism — the injection idiom, mirroring components'
 // density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()

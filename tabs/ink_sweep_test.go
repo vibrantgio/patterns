@@ -24,11 +24,10 @@ import (
 // stated at a dark scheme's tone, and four hundred random colours from a
 // fixed source.
 //
-// The three pastels are the shape that produced the AV1 defect family. A
-// palette published for a dark scheme states its accents high on the tonal
-// axis, and a brand seeded with one of them derives a light scheme whose
-// primary pin sits a whisper off its own ground — which is exactly what
-// the selected-tab underline used to be coloured with.
+// A palette published for a dark scheme states its accents high on the
+// tonal axis, so a brand seeded with one of them can derive a light scheme
+// whose primary pin sits a whisper off its own ground — the three pastels
+// exercise exactly that shape.
 func underlineSweepSeeds() []stdcolor.NRGBA {
 	rng := rand.New(rand.NewSource(20260827))
 	seeds := []stdcolor.NRGBA{
@@ -76,7 +75,7 @@ var underlineGrounds = []tokens.ElevationLevel{
 	tokens.Level0.Raised(), tokens.Level1.Raised(), tokens.Level2.Raised(), tokens.Level3.Raised(),
 }
 
-// TestUnderlineInkClearsTheGraphicFloorForEverySeed is AV1.2's site-level
+// TestUnderlineInkClearsTheGraphicFloorForEverySeed is the site-level
 // gate: whatever a caller seeds the palette with, and whatever storey the
 // tab panel stands on, the selected tab's underline reaches WCAG 1.4.11
 // against the strip band it is actually drawn on.
@@ -106,11 +105,9 @@ func TestUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 		len(underlineSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
-// TestTheCanonicalSeedsUnderlineInkIsThePrimaryPin states what this repair
-// costs every stored image in the design system, which is nothing: on the
-// seed every golden is rendered from, the brand's own colour clears the
-// floor on every strip band and is what the underline gets, exactly as
-// before.
+// TestTheCanonicalSeedsUnderlineInkIsThePrimaryPin guards the canonical
+// seed's golden images: the brand's own colour clears the floor on every
+// strip band, so the underline is exactly the Primary pin.
 func TestTheCanonicalSeedsUnderlineInkIsThePrimaryPin(t *testing.T) {
 	for _, s := range []struct {
 		name string
@@ -128,10 +125,10 @@ func TestTheCanonicalSeedsUnderlineInkIsThePrimaryPin(t *testing.T) {
 	}
 }
 
-// TestAPastelSeedsUnderlineInkLeavesThePin is the regression itself, read on
-// the shape that produced it: a light scheme seeded with a dark scheme's
-// accent. Before the gate this strip's underline was the bare pin at a
-// sub-floor ratio.
+// TestAPastelSeedsUnderlineInkLeavesThePin covers a light scheme seeded
+// with a dark scheme's accent: the bare pin is sub-floor on the strip
+// band, so the underline must walk off it, while a dark scheme whose own
+// pin clears the band keeps the pin.
 func TestAPastelSeedsUnderlineInkLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)

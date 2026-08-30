@@ -7,17 +7,10 @@
 // ground; the strip is furniture and fills exactly one rung above it. See
 // Props.Ground for why the ground is the caller's to say.
 //
-// The package follows the Phase 4 Composition contract: Tabs is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. Source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
-//
-// Note on components/button: the implementation plan suggested reusing
-// components/button for tab labels, but a Button renders with a Primary
-// background fill, 6 dp corner radius, and a control-height minimum —
-// none of which fit a tab strip. The labels here use the same
-// widget.Clickable + custom label rendering pattern as patterns/navbar,
-// which faced the same mismatch.
+// Tabs is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. Source is intentionally short and
+// free of opaque configuration — copy it into your own app and modify as
+// needed.
 package tabs
 
 import (
@@ -61,14 +54,13 @@ type Props struct {
 	// Ground is the rung the content panel fills at — the surface the
 	// selected tab's content is read on. The zero value is Level0, the window
 	// ground, because a tab panel holds what the window exists to show rather
-	// than something standing around it: ADR-021 R1 puts a resting content
-	// expanse on the Background pin. Set Level1 where the panel genuinely
+	// than something standing around it. Set Level1 where the panel genuinely
 	// rests on furniture — inside a dialog, on a pane, or as a specimen
 	// lifted off a page — and the strip above it moves with it.
 	//
 	// The strip is NOT this rung. It is chrome furniture — a row of handles
 	// on the panel — so it fills exactly one rung above Ground, walked from
-	// the panel rather than named as an absolute step (ADR-021 R4). At the
+	// the panel rather than named as an absolute step. At the
 	// default that is the semantic Surface over the Background pin, which is
 	// what a desktop tab strip looks like; on a Level1 panel it is neutral
 	// 300 over neutral 200, the same one-step separation.
@@ -89,7 +81,7 @@ type Props struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
+	// component's map function makes of it. Set it only when
 	// this instance must shape with a different shaper than the theme
 	// provides.
 	//
@@ -100,7 +92,7 @@ type Props struct {
 }
 
 // Strip dimensions. The strip height is exactly Density.ControlHeight
-// (E1.4) — 36 dp Comfortable, 28 dp Compact — and the tab cells fill it;
+// — 36 dp Comfortable, 28 dp Compact — and the tab cells fill it;
 // a density-fixed value keeps the layout deterministic across goldens
 // regardless of label content. Tab cells tile the strip edge to edge, so
 // each cell's hit area stays the cell bounds (extending it to the 44 dp
@@ -111,7 +103,7 @@ type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density   // strip height source (E1.4)
+	density tokens.Density   // strip height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -126,7 +118,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper; the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
@@ -171,8 +163,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // strip draws at (the strip is exactly Density.ControlHeight tall, with
 // Density.PaddingY around each tab label). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look; before F3.4 the static path was pinned to
-// Comfortable with no way to say otherwise.
+// default desktop look.
 //
 // [Props.Ground] is read here exactly as the observable path reads it: this
 // function is handed the whole Props, so a specimen that is deliberately
@@ -265,10 +256,7 @@ func drawTabs(
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
 	// The panel plane first, at the caller's ground, then the strip band one
-	// rung over it. Before AK6.4 this was one Surface fill across both, which
-	// left every tab panel in the system standing on furniture: the two apps
-	// that read a document in a tab panel each painted level 0 back over the
-	// panel rect from inside their own content closures to undo it.
+	// rung over it.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(props.Ground), clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
@@ -277,7 +265,7 @@ func drawTabs(
 	}
 	// The strip is furniture over the panel it caps, so its band is one rung
 	// above the panel's own rung — walked from that ground and not named as an
-	// absolute step (ADR-021 R4, [tokens.ElevationLevel.Raised]). An absolute
+	// absolute step ([tokens.ElevationLevel.Raised]). An absolute
 	// Surface here would leave the strip level with its own panel the moment
 	// the panel is printed on the window's paper.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(props.Ground.Raised()),
@@ -336,12 +324,7 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 // underlineInk is the colour a selected tab's underline is drawn in: the
 // primary pin while it clears the graphic floor against ground — the strip
 // band the underline actually sits on — and otherwise the rung of the
-// primary ramp that does (AV1.2; [tokens.ColorTokens.InkOn]).
-//
-// It used to be the bare Primary pin. That reads only because the
-// canonical seed's own primary clears the strip already; a pastel seed's
-// pin put a sub-floor underline on the band that no golden ever showed.
-// Nothing moves on the canonical seed.
+// primary ramp that does ([tokens.ColorTokens.InkOn]).
 func underlineInk(colors tokens.ColorTokens, ground tokens.ElevationLevel) color.NRGBA {
 	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(ground), tokens.GraphicFloor)
 }
