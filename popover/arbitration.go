@@ -6,8 +6,7 @@ import "gioui.org/layout"
 // of popovers. It is a plain value — no mutex, no atomics, no observable —
 // because every write and every read happens during layout, on the single
 // goroutine Gio runs a frame on. The hazard a synchronised bus guards
-// against cannot arise here, so there is nothing for a guard to buy. See
-// ADR-008 in the plan.
+// against cannot arise here, so there is nothing for a guard to buy.
 //
 // # The register is the scope
 //
@@ -18,13 +17,10 @@ import "gioui.org/layout"
 // composition root and hand it to every popover in that window's tree.
 //
 // A Props with no Arbiter gets one of its own and therefore arbitrates with
-// nobody. Until G0C.4 it joined a package-level default instead, which was
-// indistinguishable from per-window in a single-window process and was a
-// data race in a two-window one; there is now no package state for a second
-// window to reach, so sharing is something a caller does on purpose or not
-// at all. Two popovers that both forget an Arbiter stay open together — a
-// cosmetic fault anyone can see, which is the trade this makes against a
-// race nobody can.
+// nobody: there is no package-level state for a second window to reach, so
+// sharing is something a caller does on purpose or not at all. Two popovers
+// that both forget an Arbiter stay open together — a cosmetic fault anyone
+// can see, which is the trade this makes against a race nobody can.
 //
 // # Arbitration is an event, not a poll
 //
@@ -41,8 +37,7 @@ import "gioui.org/layout"
 type Arbiter struct {
 	// top is the popover currently holding arbitration top, or nil. The
 	// state pointer is the identity: it is unique per subscription for as
-	// long as anything can reference it, which is exactly the lifetime an id
-	// counter used to synthesise.
+	// long as anything can reference it.
 	top *popoverState
 }
 

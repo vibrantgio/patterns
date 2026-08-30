@@ -50,8 +50,7 @@ func fixedRect(c color.NRGBA, widthDp, heightDp float32) layout.Widget {
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
 // same on every machine. A golden test pins its faces with
-// DeterministicShaper; application code takes the fallback Shaper. See
-// AGENTS.md.
+// DeterministicShaper; application code takes the fallback Shaper.
 func defaultShaper(t *testing.T) *text.Shaper {
 	t.Helper()
 	return tokens.DefaultTypography.DeterministicShaper()
@@ -63,10 +62,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // Popover, like card, carries no Shaper in its Props because it draws no text
 // of its own — Anchor and Content are both caller-supplied widgets, so the
 // typeface inside a popover is settled by whoever builds them. This is that
-// caller. Before F4.4b the content was a flat 80×36 block, which pinned the
-// surface's geometry but said nothing about how it wraps around content that
-// has a text baseline in it. ASCII only, per F4.2 — no symbol reaches a stored
-// image.
+// caller. ASCII only — no symbol reaches a stored image.
 //
 // The string length is load-bearing, and deliberately near the limit: the
 // surface grows to fit it, and Left placement puts that surface between the
@@ -77,14 +73,10 @@ func defaultShaper(t *testing.T) *text.Shaper {
 //
 // It draws through theme/typeset, like every other text site in this
 // organization: a role's LineHeight is the CSS line box, and handing it to
-// gioui.org/widget.Label does not produce that box. This helper built the label
-// by hand until F5.6, which made the goldens record a layout no correct caller
-// produces — the one thing a golden must never do. See the repository
-// AGENTS.md and llms.txt "LINE HEIGHT NEEDS theme/typeset". A MaxLines:1
-// label is exactly the case widget.Label measures identically at every line
-// height, so this is where the difference is largest: the content is BodyMedium
-// and now stands in its declared 20 dp box rather than its 17 px of ink, and
-// the surface grew with it.
+// gioui.org/widget.Label does not produce that box. A MaxLines:1 label is
+// exactly the case widget.Label measures identically at every line height,
+// so the content is BodyMedium and stands in its declared 20 dp box rather
+// than its 17 px of ink, and the surface grows with it.
 func textContent(t *testing.T, fg color.NRGBA) layout.Widget {
 	t.Helper()
 	shaper := defaultShaper(t)
@@ -317,11 +309,10 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 	}
 }
 
-// TestArbitrationDismissesPriorPopover verifies the Specific contract that
-// opening a second popover dismisses the first, and pins the two properties
-// G0C.1 bought by making arbitration frame state rather than a Subject.
+// TestArbitrationDismissesPriorPopover verifies that opening a second
+// popover dismisses the first, because arbitration is frame state.
 //
-// The claim is now a layout-time event — a popover takes top on the first
+// The claim is a layout-time event — a popover takes top on the first
 // frame it is drawn open — so entering B into the tree is what "opening B"
 // means here. Both widgets are laid out against one gtx, the way mvu lays
 // out its layers, and the assertions are that:
@@ -331,7 +322,7 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 //     the incumbent does not have to be reached later in the tree, or on a
 //     later frame, to find out that it lost.
 //   - the dismissal fires exactly once. It is an event, not a per-frame poll
-//     of "am I still top", which is what the Subject-era code did.
+//     of "am I still top".
 func TestArbitrationDismissesPriorPopover(t *testing.T) {
 	anchor := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
 	content := fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 80, 36)
@@ -405,9 +396,9 @@ func TestArbitrationDismissesPriorPopover(t *testing.T) {
 	}
 }
 
-// TestOpenNowIsReadEveryFrame pins ADR-008 destination 2's spelling of
-// open-ness: the caller owns a plain bool, the widget reads it during layout,
-// and no emission stands between the flip and the frame that shows it. It is
+// TestOpenNowIsReadEveryFrame pins the OpenNow spelling of open-ness: the
+// caller owns a plain bool, the widget reads it during layout, and no
+// emission stands between the flip and the frame that shows it. It is
 // the SAME widget value on all four frames — the one the stream emitted for
 // the theme — which is the whole point: with Props.Open the flag can only
 // change by re-emitting, and the emission arrives on another goroutine, a
@@ -455,8 +446,8 @@ func TestOpenNowIsReadEveryFrame(t *testing.T) {
 	}
 }
 
-// TestOpenNowArbitratesOnTheEdge is G0C.2's rule applied to the new spelling:
-// the claim must be an edge, not a level. OpenNow is read every frame and
+// TestOpenNowArbitratesOnTheEdge pins the rule that the claim must be an
+// edge, not a level. OpenNow is read every frame and
 // stays true for as long as the caller's flag does, so a popover that has
 // been overtaken must not take top back on its next layout. st.holds is the
 // latch that makes it an edge, and it does not care where the flag came from.

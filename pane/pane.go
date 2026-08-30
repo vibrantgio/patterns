@@ -35,15 +35,10 @@
 // content treatment the window's control buttons are measured from the
 // window's own glass and from nothing drawn beneath them; a pane that
 // floats under them must be cut deep enough to hold them with the same air
-// below as above. [StripDp] is that arithmetic and not a taste: the
-// buttons' inset is taken from the glass and the strip from the pane's own
-// edge, so the strip owes the margin back on both sides. What falls out of
-// it is that the buttons' centre line IS the strip's middle line, which is
-// where a control standing in the strip centres — so the strip's own
-// controls and the window's read as one row of furniture. [Strip] lays that
-// band out: the buttons' span skipped rather than claimed (a move action
-// declared over them would fight them for the press), then a stretch that
-// moves the window, then the caller's controls at the trailing corner.
+// below as above. [StripDp] is that arithmetic and not a taste, and it puts
+// the buttons' centre line on the strip's middle line, where a control
+// standing in the strip centres — so the strip's own controls and the
+// window's read as one row of furniture. [Strip] lays that band out.
 //
 // THE RECALL CONVENTION. A control that travels with the pane cannot be the
 // one that recalls it. The pane's own dismiss control rides the strip; the

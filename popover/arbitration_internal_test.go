@@ -11,7 +11,7 @@ import (
 // it only hands the context to an OnDismiss callback.
 func frameCtx() layout.Context { return layout.Context{Ops: new(op.Ops)} }
 
-// TestArbiterClaimDismissesIncumbent pins the core of ADR-008's idiom: the
+// TestArbiterClaimDismissesIncumbent pins the core arbitration idiom: the
 // claim is the event, and it acts on the incumbent directly.
 func TestArbiterClaimDismissesIncumbent(t *testing.T) {
 	var a, b popoverState
@@ -78,11 +78,10 @@ func TestArbiterReleaseFromDismissKeepsNewTop(t *testing.T) {
 	}
 }
 
-// TestNilArbiterArbitratesAlone pins what replaced the package-level default
-// at G0C.4: a Props with no Arbiter gets one of its own, so two of them
-// arbitrate with nobody rather than sharing process-global state. The scope a
-// lock-free value is safe at is one window, and the only way to reach that
-// scope is to say so.
+// TestNilArbiterArbitratesAlone pins that a Props with no Arbiter gets one
+// of its own, so two of them arbitrate with nobody rather than sharing
+// process-global state. The scope a lock-free value is safe at is one
+// window, and the only way to reach that scope is to say so.
 func TestNilArbiterArbitratesAlone(t *testing.T) {
 	first, second := newState(Props{}), newState(Props{})
 	if first.arb == nil || second.arb == nil {

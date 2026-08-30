@@ -15,10 +15,10 @@
 // deepest tonal step. components/input's dropdown menu, the
 // same overlay class, sits at the same level.
 //
-// The package follows the Phase 4 Composition contract: Popover is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. The source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Popover is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. The source is
+// intentionally short and free of opaque configuration — copy it into
+// your own app and modify as needed.
 //
 // THE CANVAS IS THE ROOM. The popover stands its anchor in the canvas its
 // caller hands it — at [Alignment]'s edge of it — and keeps the surface inside
@@ -113,16 +113,15 @@ type Props struct {
 	// Open emits true to show the popover and false to hide it. A nil
 	// Open is treated as a constant false (popover never opens).
 	//
-	// This is the spelling for a popover whose open-ness is model state
-	// carried on a stream — ADR-008 destination 1. Use OpenNow instead when
-	// it is frame-scoped UI state the caller owns.
+	// Use this when open-ness is model state carried on a stream. Use
+	// OpenNow instead when it is frame-scoped UI state the caller owns.
 	Open rx.Observable[bool]
 
 	// OpenNow reports whether the popover is open, read during layout on the
-	// frame goroutine, once per frame. It is the spelling for ADR-008
-	// destination 2: a per-row confirm, a context menu — open-ness that
-	// nothing outside the frame ever asks about, held by the caller as a
-	// plain bool rather than pushed onto a bus and mirrored back.
+	// frame goroutine, once per frame. Use this for open-ness that nothing
+	// outside the frame ever asks about — a per-row confirm, a context menu
+	// — held by the caller as a plain bool rather than pushed onto a bus and
+	// mirrored back.
 	//
 	// A non-nil OpenNow is the whole answer and Open is ignored. Popover then
 	// re-emits only when the theme changes, because the flag no longer needs
