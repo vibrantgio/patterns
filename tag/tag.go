@@ -1,76 +1,49 @@
-// Package tag provides the Patterns Tag pattern: the Full-radius pill chip
-// the patterns draw — a label, optionally with one affordance on it. It is
-// the shared home of the chip that patterns/pricing ("Popular") and
-// patterns/hero (the eyebrow) each used to draw locally, and it is where the
-// chip's status vocabulary lives: real screens need status chips, and a
-// vocabulary without one gets status invented for it (goal G-I2 — if the web
-// surface wants it, the Gio vocabulary grows it first).
+// Package tag provides the Patterns Tag pattern: a Full-radius pill chip
+// carrying a label and, optionally, one dismiss affordance. It is also
+// where the chip's status vocabulary lives.
 //
 // Five variants:
 //
-//   - Filled (the default): the Primary pin under its on-colour —
-//     pricing's "Popular" chip.
-//   - Tonal: the primary-200 tinted fill under Primary text — hero's
-//     eyebrow (ADR-007: ramp steps 100–300 are tinted fills).
+//   - Filled (the default): the Primary pin under its on-colour.
+//   - Tonal: the primary-200 tinted fill under Primary text, ringed in
+//     the Primary pin.
 //   - Success, Warning, Error: the status treatments. Each is its role's
 //     tonal container — the role's own hue realized at one measured chroma
 //     and depth by the theme, never mixed here — under the Text pin. The
-//     container is resolved against the Surface pin because a chip rests on
-//     the pane it labels; it does not float (ADR-005), which is what
-//     separates its resolution from a transient surface's.
+//     container is resolved against the Surface pin because a chip rests
+//     on the pane it labels; it does not float.
 //
 // # A tinted pill states its own edge
 //
-// Filled needs no outline: a pinned fill separates from the ground on its
-// own, at 5.24:1 over the light Surface and 9.87:1 over the dark one. A
-// tinted fill never can. A tint and the surface it rests on are the same
-// lightness by construction, so every tinted fill in this system measures
-// within 1.37:1 of its ground — the tonal chip's primary-200 came out at
-// exactly 1.00:1 in the light scheme and 1.01:1 in the dark, which is a pill
-// with no pill in it: the label floated on the pane with nothing around it.
+// A pinned fill separates from its ground on its own contrast. A tinted
+// fill cannot: a tint and the surface it rests on are the same lightness by
+// construction, so a tinted fill alone cannot carry WCAG 1.4.11's 3:1
+// boundary contrast. A tinted chip therefore draws a 1 dp ring in the
+// variant's pinned base colour, which is what carries that 3:1.
 //
-// So a tinted chip draws a 1 dp ring, and the ring is what carries WCAG
-// 1.4.11's 3:1 for the shape. It is drawn inside the pill, as nested fills
-// rather than as a stroke on the pill's path — see draw for the two defects
-// a centred stroke caused. The ring is the variant's role pinned base — the
-// same colour the tonal chip's own label wears, and for a status chip the
-// level pin it already rang itself with. Measured on the default seed, ring
-// against the pill's own fill and against the Surface it rests on:
-//
-//	scheme  variant  ring/fill   ring/Surface
-//	------  -------  ---------   ------------
-//	light   tonal      5.24:1       5.24:1
-//	light   success    4.54:1       5.48:1
-//	light   warning    4.54:1       5.48:1
-//	light   error      4.54:1       5.48:1
-//	dark    tonal      9.92:1       9.87:1
-//	dark    success    8.48:1       9.94:1
-//	dark    warning    8.43:1       9.88:1
-//	dark    error      8.40:1       9.86:1
+// The ring is drawn inside the pill, as nested fills — the pill in the
+// ring's colour, then the fill inset by the ring's width — rather than as a
+// stroke on the pill's path: a stroke is centred on its path, so a 1 dp
+// stroke on the pill's own edge would spend half its width outside the box
+// the chip reports.
 //
 // # Geometry
 //
 // One chip for all five: S2 horizontal padding, the S1 stop as the whole
 // vertical padding split between the two edges, Full corner radius, sized to
 // its label-small label, the SemiBold request resolving to the nearest
-// registered face exactly as the pricing and hero call sites always requested
-// it.
+// registered face.
 //
 // The vertical padding is stated as a total rather than a per-edge inset
 // because the pill is a box on the 4-pt grid and its two edges are not: the
-// label-small line box is 16 dp, so the pill measures 16 + S1 = 20 dp. It
-// used to spend S1 on each edge and measure 24, which is a third of the
-// pill's height given to air above and below a 14 dp ink box that already
-// carries 1 dp of leading on each side. Nothing about the type changed: the
-// label is the same 11 sp in the same 16 dp line box it always was.
+// label-small line box is 16 dp, so the pill measures 16 + S1 = 20 dp.
 //
 // # Dismissal
 //
 // A tag with a non-nil [Props.OnDismiss] draws a small close mark after its
 // label and reports the click; one with a nil OnDismiss draws none and takes
-// no input at all, which is the same nil-means-inert rule the navbar's links
-// and the sidebar's items follow. The tag never removes itself: it has no
-// idea what it labels, and the caller owns the collection it came from.
+// no input at all. The tag never removes itself: it has no idea what it
+// labels, and the caller owns the collection it came from.
 //
 // Dismissal is not a sixth variant. It is orthogonal to the five, so every
 // treatment above can carry the mark and the mark takes its colour from
@@ -84,10 +57,10 @@
 // rather than out past the pill's edge — so a row of chips has one target
 // per chip however tightly it is set.
 //
-// The package follows the Phase 4 Composition contract: Tag is a callable
-// Go function consuming a components theme observable, returning a stream of
-// layout.Widget. The source is intentionally short and free of opaque
-// configuration — copy it into your own app and modify as needed.
+// Tag is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. The source is intentionally short
+// and free of opaque configuration — copy it into your own app and modify
+// as needed.
 package tag
 
 import (
@@ -115,15 +88,13 @@ import (
 type Variant int
 
 const (
-	// Filled is the default: the Primary pin under OnPrimary — the
-	// pricing card's "Popular" chip.
+	// Filled is the default: the Primary pin under OnPrimary.
 	Filled Variant = iota
 	// Tonal is the primary-200 tinted fill under Primary text, ringed in
-	// the Primary pin — the hero's eyebrow.
+	// the Primary pin.
 	Tonal
 	// Success, Warning and Error are the status treatments: the level's
-	// tonal container under the Text pin, ringed by the 1 dp level pin —
-	// the alert's level resolution at chip scale.
+	// tonal container under the Text pin, ringed by the 1 dp level pin.
 	Success
 	Warning
 	Error
@@ -135,38 +106,30 @@ const (
 	// label's line box on purpose: the mark is an affordance on a chip,
 	// not a second word in it.
 	//
-	// It is even, and that is the whole of why it is 8 and not 9. The
-	// pill's height is its line box plus S1, and both are even, so an
-	// odd-sided mark cannot be centred in it: at 9 the mark sat five rows
-	// below the pill's top edge and six above its bottom, next to a label
-	// centred six and six. On a word the half-pixel would be invisible; an
-	// x is symmetric about both axes, so it showed as a mark floating high
-	// beside type that did not.
+	// It must be even: the pill's height (line box plus S1) is always even
+	// on both axes, and only an even-sided mark centres in it without a
+	// half-pixel offset.
 	closeMarkDp = 8
 	// closeStrokeDp is the width of each of the x's two strokes, in dp. It
 	// is a quarter wider than the pill's own 1 dp ring because a diagonal
 	// spends part of its width on anti-aliasing while the ring's
-	// axis-aligned edges do not; see drawClose for why it is not rounded to
-	// whole pixels.
+	// axis-aligned edges do not.
 	closeStrokeDp = 1.25
 	// CloseHitDp is the side of the pointer target the close mark
 	// registers, in dp, centred on the mark and free to overhang the pill.
 	//
 	// It is WCAG 2.5.8 Target Size (Minimum), the AA criterion, and not
-	// the 44 dp of tokens.MinHitTarget. 44 is this system's floor for a
-	// *standalone* control — one with space around it — and extending a
-	// chip's trailing mark to it would reach across the whole of a short
-	// chip and into the next chip in the row, which is the neighbour's
-	// slop tokens.MinHitTarget's own documentation refuses to steal for
-	// stacked rows. 24 is what a target that cannot take the 44 owes, and
-	// it is the number every row in this system already meets.
+	// the 44 dp of tokens.MinHitTarget: 44 is this system's floor for a
+	// *standalone* control with space around it, and extending a chip's
+	// trailing mark to it would reach into the next chip in a tightly set
+	// row. 24 is what a target without that space owes.
 	CloseHitDp = 24
 )
 
 // Props configures a Tag.
 type Props struct {
 	// Label is the chip's text. An empty label still draws the pill at
-	// its padding minimum, matching the historical eyebrow behaviour.
+	// its padding minimum.
 	Label string
 
 	// Variant selects the treatment; the zero value is Filled.
@@ -187,8 +150,8 @@ type Props struct {
 	// shaper (Typography.Shaper()), which is built once for the process and
 	// shared by every component reading that typography — the cache lives
 	// behind the Typography value, so it survives the copy this component's
-	// map function makes of it (spectrum F5.1). Set it only when this
-	// instance must shape with a different shaper than the theme provides.
+	// map function makes of it. Set it only when this instance must shape
+	// with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -215,10 +178,9 @@ type resolvedTokens struct {
 func Tag(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies the LabelSmall text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface). There
-	// is no density: a tag is not a control (E1.4), and its one affordance
-	// takes its target from the pointer floor rather than from a control
-	// height.
+	// theme's cached shaper. There is no density: a tag is not a control,
+	// and its one affordance takes its target from the pointer floor rather
+	// than from a control height.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Typography),
@@ -266,10 +228,9 @@ func Tag(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget
 }
 
 // Render produces a layout.Widget for a tag with pre-resolved tokens.
-// Intended for golden-image testing, static demonstrations, and the other
-// patterns' own chips (pricing's "Popular", hero's eyebrow both draw
-// through it); production code composing a screen should use Tag, which
-// reads the parameters below off the theme.
+// Intended for golden-image testing, static demonstrations, and other
+// callers that already hold resolved tokens; production code composing a
+// screen should use Tag, which reads the parameters below off the theme.
 //
 // style is the LabelSmall role's whole text style — typeface, weight, size
 // and line height all reach the shaper, exactly as they do on the live
@@ -318,10 +279,9 @@ func RenderDismissible(
 // draw paints one pill chip sized to its label: S2 horizontal padding, the
 // S1 stop split between the two vertical edges, Full corner radius, the
 // variant's fill under the variant's text colour, and — for the tinted
-// variants — the 1 dp role ring stroked on the pill's edge. The padding
+// variants — the 1 dp role ring drawn inside the pill's edge. The padding
 // minimums keep the pill visible when the label rasterises to zero width
-// (e.g., in deterministic empty-label golden tests), matching the historical
-// eyebrow behaviour.
+// (e.g., in deterministic empty-label golden tests).
 //
 // dismissible widens the pill by the close mark and draws it; dismiss is the
 // clickable the mark's pointer area is registered against, and a nil one
@@ -344,9 +304,9 @@ func draw(
 
 	fg, bg, ring, ringed := colors(v, tok.color)
 
-	// Both historical call sites request SemiBold, which the pinned shaper
-	// resolves to the Medium face (the nearest registered weight); a zero
-	// style weight (a legacy size-only style) falls back the same way.
+	// SemiBold resolves through the pinned shaper to the Medium face, the
+	// nearest registered weight; a zero style weight falls back the same
+	// way.
 	mColor := op.Record(gtx.Ops)
 	paint.ColorOp{Color: fg}.Add(gtx.Ops)
 	material := mColor.Stop()
@@ -363,9 +323,7 @@ func draw(
 		mark = gtx.Dp(unit.Dp(closeMarkDp))
 		// S2 rather than S1, so the mark sits in the same 8 dp of air on
 		// both sides — the chip's trailing padding on one, this gap on the
-		// other — instead of being glued to the last letter. At S1 the mark
-		// read as the end of the word rather than as something of its own,
-		// which for the chip's only affordance is the wrong reading.
+		// other — instead of being glued to the last letter.
 		gap = gtx.Dp(unit.Dp(tok.spacing.S2))
 	}
 
@@ -390,21 +348,11 @@ func draw(
 		paint.FillShape(gtx.Ops, bg, rrect.Op(gtx.Ops))
 	} else {
 		// The ring as nested fills — the pill in the ring's colour, then the
-		// fill inset by the ring's width — which is how components/input
-		// draws a field's border, and not as a stroke on the pill's path.
-		//
-		// A stroke is centred on the path it follows, so a 1 dp stroke on
-		// the pill's own edge spends half its width outside the box the chip
-		// reports. Two things came of that, and both were visible in a row
-		// of chips: a ringed chip painted two pixels taller than a filled one
-		// beside it and ate a pixel of the gap on each side, so the row had a
-		// notch in it wherever the treatment changed; and the half-pixel
-		// either side of the boundary meant the ring never rendered at its
-		// own colour — a two-row, half-strength smear, which measured 1.64:1
-		// against the light success fill where the colour it was drawn in
-		// measures 4.54:1. Inset, the ring lands on whole pixels, reads at
-		// the ratio it was chosen for, and every variant measures the same
-		// box.
+		// fill inset by the ring's width — rather than as a stroke on the
+		// pill's path: a stroke is centred on the path it follows, so a 1 dp
+		// stroke on the pill's own edge would spend half its width outside
+		// the box the chip reports and straddle a pixel boundary instead of
+		// landing on the colour it was chosen in.
 		band := gtx.Dp(unit.Dp(1))
 		if band < 1 {
 			band = 1
@@ -445,14 +393,11 @@ func draw(
 // against the fill by the pairing the label already cleared, and a chip can
 // never grow a mark its own ground hides.
 func drawClose(gtx layout.Context, origin image.Point, mark int, c color.NRGBA) {
-	// The width is scaled rather than rounded to whole pixels, which is the
-	// opposite of what the pill's ring wants and right for the same reason.
-	// A ring is axis-aligned, so a whole-pixel width lands on whole pixels
-	// and reads at exactly its weight; an x is two diagonals, which are
-	// anti-aliased at any width at all. Rounding 1.25 dp up to 2 px made the
-	// mark a weight heavier than the label beside it, and down to 1 px a
-	// weight lighter — measured on the label-small specimen at 1x, where the
-	// Medium face's stems land between the two.
+	// The width is scaled rather than rounded to whole pixels: a ring is
+	// axis-aligned, so a whole-pixel width lands on whole pixels and reads
+	// at exactly its weight, but an x is two diagonals, anti-aliased at any
+	// width. Measured on the label-small specimen at 1x, 1.25 dp lands the
+	// Medium face's stems between a whole pixel's over- and under-weight.
 	stroke := closeStrokeDp * gtx.Metric.PxPerDp
 	if stroke < 1 {
 		// A zero or unset metric would erase the mark; a sub-pixel width
@@ -510,10 +455,9 @@ func registerCloseTarget(gtx layout.Context, label string, origin image.Point, m
 // variants — the ring that states the pill's edge. The status levels take
 // their role's tonal container, realized at a tone by the theme rather than
 // mixed here: compositing a pinned base over the neutral Surface in
-// non-linear sRGB is neither hue- nor chroma-preserving, and the four
-// grounds it used to give this chip came out at chroma 0.0196–0.0433, near
-// enough to the grey they were mixed into that no two of them could be told
-// apart. The realized containers hold one chroma and four hues.
+// non-linear sRGB is neither hue- nor chroma-preserving, so each status
+// container instead holds its role's hue at one consistent, theme-chosen
+// chroma.
 //
 // All of it reads roles off the token set, so every variant flips with
 // light/dark and follows whatever seed, palette or high-contrast variant the

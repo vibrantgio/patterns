@@ -40,8 +40,7 @@ var (
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
 // same on every machine. A golden test pins its faces with
-// DeterministicShaper; application code takes the fallback Shaper. See
-// AGENTS.md.
+// DeterministicShaper; application code takes the fallback Shaper.
 func defaultShaper(t *testing.T) *text.Shaper {
 	t.Helper()
 	return tokens.DefaultTypography.DeterministicShaper()
@@ -69,9 +68,8 @@ const (
 	labelDismiss = "Dismissible"
 )
 
-// TestTagGolden records or diffs one golden per variant per scheme: the two
-// historical chips (pricing's Filled "Popular", hero's Tonal eyebrow) and
-// the three status treatments, each over the scheme's Surface ground.
+// TestTagGolden records or diffs one golden per variant per scheme: the five
+// variants, each over the scheme's Surface ground.
 func TestTagGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 
@@ -178,16 +176,12 @@ const wcagGraphic = 3.0
 // TestTagContrast measures every pairing a chip makes, in both schemes, and
 // records the numbers in the test log.
 //
-// Three pairings per variant, and the third is the one that was failing.
-// The label over the fill is a text pairing and the two grounds are
-// obviously different colours, so nothing there was ever in doubt. The
-// *pill* against the pane it rests on is the pairing a chip can lose
-// without anything looking broken: a tint and a surface are the same
-// lightness by construction, so the tonal chip's primary-200 fill measured
-// 1.00:1 against the light Surface and 1.01:1 against the dark one — a pill
-// nobody could see, with a perfectly legible label inside it. A tinted chip
-// now rings itself and the ring carries the boundary; a filled chip's own
-// fill does.
+// The third pairing per variant — the pill against the pane it rests on —
+// is the one a chip can lose without anything looking broken: a tint and a
+// surface are the same lightness by construction, so an unringed tinted
+// fill can sit near 1:1 against its ground while its label stays perfectly
+// legible. A tinted chip therefore rings itself, and the ring carries this
+// boundary; a filled chip's own fill does.
 func TestTagContrast(t *testing.T) {
 	for _, sc := range []struct {
 		name   string
@@ -254,12 +248,11 @@ func TestTagContrast(t *testing.T) {
 	}
 }
 
-// TestStatusFillsAreRealizedNotMixed is the standing guard on the
-// reconciliation: a status chip's ground is its role's container, which
-// holds the role's hue at the theme's own chroma, and not a composite of
-// the pin over the neutral Surface. Mixing in non-linear sRGB is neither
-// hue- nor chroma-preserving, and the four grounds it gave this chip came
-// out too close to grey — and to each other — to be told apart.
+// TestStatusFillsAreRealizedNotMixed guards the status containers' colour:
+// each holds its role's hue at the theme's own chroma, not a composite of
+// the pin over the neutral Surface. Compositing in non-linear sRGB is
+// neither hue- nor chroma-preserving, which would pull every role's
+// container toward the same low-chroma grey.
 func TestStatusFillsAreRealizedNotMixed(t *testing.T) {
 	for _, sc := range []struct {
 		name   string
@@ -276,9 +269,9 @@ func TestStatusFillsAreRealizedNotMixed(t *testing.T) {
 		} {
 			_, chroma, _ := themecolor.OKLChFromNRGBA(c.StatusContainer(r.role))
 			t.Logf("%s %s container %s chroma %.4f", sc.name, r.name, hexOf(c.StatusContainer(r.role)), chroma)
-			// The mixed grounds measured 0.0196–0.0433; the realized ones
-			// hold one dial for every role. Anything back down at the old
-			// numbers is a chip that has started mixing again.
+			// 0.05 sits above the compositing artifact's ceiling
+			// (0.0196–0.0433 chroma) and below every realized role's own
+			// chroma: below it, the container has drifted toward grey.
 			if chroma < 0.05 {
 				t.Errorf("%s %s container chroma = %.4f, want the realized dial, not a mix toward grey", sc.name, r.name, chroma)
 			}
@@ -295,11 +288,6 @@ func hexOf(c color.NRGBA) string {
 
 // TestPillHeight pins the compressed pill: the label-small line box plus the
 // S1 stop, spent once across both edges rather than once on each.
-//
-// The chip measured 24 px before — 16 + 2×S1 — which spent a third of its
-// height on air around a 14 px ink box that already carries a pixel of
-// leading on each side. Nothing about the type moved: the same 11 sp label
-// in the same 16 dp line box.
 func TestPillHeight(t *testing.T) {
 	shaper := defaultShaper(t)
 	style := tokens.DefaultTypography.LabelSmall
@@ -328,13 +316,12 @@ func TestPillHeight(t *testing.T) {
 	}
 }
 
-// TestPillFollowsItsLabelsBox is the answer to what the compression cost:
-// nothing, because 20 dp is not a fixed height. The pill is whatever box the
-// label reports plus the S1 stop, so a role with a taller line — or a script
-// whose glyphs need more than Roboto's ascent and descent, which is what
-// makes a label taller than its role's leading — makes a taller pill rather
-// than a clipped one. Four of the five specimen labels have no descender at
-// all, so this is the case a golden could never show.
+// TestPillFollowsItsLabelsBox confirms the pill height is not a fixed
+// number: it is whatever box the label reports plus the S1 stop, so a role
+// with a taller line — or a script whose glyphs need more ascent and
+// descent than the default face — makes a taller pill rather than a clipped
+// one. Four of the five specimen labels have no descender at all, so this
+// is the case a golden could never show.
 func TestPillFollowsItsLabelsBox(t *testing.T) {
 	shaper := defaultShaper(t)
 	style := tokens.DefaultTypography.LabelSmall
@@ -547,17 +534,12 @@ func TestNilOnDismissTakesNoInput(t *testing.T) {
 	}
 }
 
-// TestPaintedBoundsMatchReportedBounds is the guard on the ring's placement,
-// and it is a pixel test because the defect it catches is invisible to a
-// size assertion: every variant reported the same box already, and the
-// ringed ones painted two pixels taller than it.
-//
-// A stroke is centred on the path it follows, so a 1 dp ring stroked on the
-// pill's own edge spent half its width outside the chip. In a row of chips
-// the filled one then sat two pixels shorter than its neighbours and the gap
-// beside it lost a pixel at each end, and the ring itself — split across a
-// pixel boundary — never rendered at the colour it was chosen for. The ring
-// is nested fills now, and this measures what actually reaches the canvas.
+// TestPaintedBoundsMatchReportedBounds guards the ring's placement: the
+// pixels a chip actually paints must fall entirely inside the box it
+// reports, for every variant and both the plain and dismissible layouts.
+// This is a pixel test rather than a size assertion because the ring is
+// drawn as nested fills against the reported rect, and a placement bug
+// there does not change the reported size — only what falls outside it.
 func TestPaintedBoundsMatchReportedBounds(t *testing.T) {
 	shaper := defaultShaper(t)
 	// A ground the chip cannot be confused with: neither scheme's fills,
@@ -616,17 +598,10 @@ func paintedBounds(img *image.RGBA, ground color.NRGBA) image.Rectangle {
 	return out
 }
 
-// TestRingRendersAtItsOwnColour measures the ring off the canvas rather than
-// off the token, because those were two different colours until the ring
-// moved inside the pill.
-//
-// Stroked on the pill's own path, the 1 dp ring straddled a pixel boundary
-// and came out as two rows at half strength: over the light success fill the
-// pixels measured 1.64:1 where the colour they were drawn in measures
-// 4.54:1, so the ratio this component was designed to and the ratio it
-// shipped were not the same number. A ring that reads at the ratio it was
-// chosen for has to land on whole pixels, and the only way to prove it did
-// is to read the pixels.
+// TestRingRendersAtItsOwnColour measures the ring's rendered colour off the
+// canvas rather than off the token. A ring that reads at the contrast ratio
+// it was chosen for has to land on whole pixels with no anti-aliasing blend
+// at the boundary, and the only way to confirm that is to read the pixels.
 func TestRingRendersAtItsOwnColour(t *testing.T) {
 	shaper := defaultShaper(t)
 	for _, sc := range []struct {
