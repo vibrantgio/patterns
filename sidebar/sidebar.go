@@ -1,35 +1,30 @@
 // Package sidebar provides the Patterns Sidebar pattern: a collapsible
 // vertical Surface column that swaps between an expanded width
 // (label+icon) and a collapsed width (icon-only) on demand. The active
-// Item is rendered on the Primary ramp's selected step (ADR-007's
-// two-step walk past the Surface ground).
+// Item is rendered on the Primary ramp's selected step, two steps past
+// the Surface ground.
 //
-// The package follows the Phase 4 Composition contract: Sidebar is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. Source is intentionally short — copy it into
-// your own app and modify as needed.
+// Sidebar is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. Source is
+// intentionally short — copy it into your own app and modify as needed.
 //
 // The column's width is not negotiable: 192 dp expanded and 48 dp
-// collapsed, both fixed constants in this file that ignore the horizontal
-// constraint entirely. Height is whatever it is handed. FX.6 considered
-// making the widths respond — to density, or to the horizontal
-// constraint — and kept them fixed: E1.4 scopes density to vertical
-// rhythm (control heights), and clamping to the constraint would
-// introduce a third, unpredictable width where the expanded↔collapsed
-// swap between two known numbers is the pattern's contract. Vertical
-// overflow was irrecoverable (content unreachable, hence the scroll
-// region below); horizontal space is the caller's explicit allocation,
-// and a caller wanting a different rail width copies the file, per the
-// Composition contract above. Collapsed is an
-// rx.Observable[bool] the caller owns — the sidebar renders that state
-// and does not hold it — and OnToggleCollapse is the request to change
-// it, so wiring the affordance to nothing leaves a sidebar that cannot
-// collapse.
+// collapsed, both fixed constants in this file that ignore the
+// horizontal constraint entirely. Height is whatever it is handed.
+// Clamping the width to the constraint would introduce a third,
+// unpredictable width where the expanded↔collapsed swap between two
+// known numbers is the pattern's contract; a caller wanting a different
+// rail width copies the file. Vertical overflow is handled by the
+// scroll region below; horizontal space is the caller's explicit
+// allocation. Collapsed is an rx.Observable[bool] the caller owns — the
+// sidebar renders that state and does not hold it — and
+// OnToggleCollapse is the request to change it, so wiring the
+// affordance to nothing leaves a sidebar that cannot collapse.
 //
 // Items are stacked at the density's row pitch — exactly
-// Density.ControlHeight (E1.4; 36 dp Comfortable, 28 dp Compact) — in a
-// components/list scroll region filling the column below the toggle (FX.6):
-// a list longer than the column is tall scrolls by wheel or touch
+// Density.ControlHeight (36 dp Comfortable, 28 dp Compact) — in a
+// components/list scroll region filling the column below the toggle: a
+// list longer than the column is tall scrolls by wheel or touch
 // instead of painting past the bottom edge. No scrollbar is drawn — the
 // bare list.Layout, the same idiom patterns/table's body uses. Items are
 // stacked full-width rows, so each row's hit area stays the row bounds
@@ -44,22 +39,20 @@
 // OnClick are still selectable — they are rows in the same list — and
 // activating one does nothing.
 //
-// F4.7 moved this off the per-row focus tags it used through FX.6. Those
-// could not work once the items sat in a scroll region: a virtualised row
-// is laid out only while it is in view, so it has a focus tag only while
-// it is in view, and Arrow traversal reached the visible rows and stopped
-// dead at the viewport edge with the rest of the list unreachable. One
-// tag for the list survives virtualisation; per-row tags cannot. Rows are
-// consequently pointer targets only, and Tab now passes the rail in a
-// single step, which is also what a list of navigation choices should do.
+// Per-row focus tags cannot work once items sit in a scroll region: a
+// virtualised row is laid out only while it is in view, so it has a
+// focus tag only while it is in view, and Arrow traversal would reach
+// the visible rows and stop dead at the viewport edge with the rest of
+// the list unreachable. One tag for the list survives virtualisation;
+// per-row tags cannot. Rows are consequently pointer targets only, and
+// Tab passes the rail in a single step, which is also what a list of
+// navigation choices should do.
 //
 // The collapse affordance registers no focus tag either — it answers
 // pointer clicks only — so the rail's single stop stays the item list.
 // Its glyph is the icon set's sidebar mark (components/icons) — the
 // control that shows and hides a window's sidebar — drawn at the icon
-// rule's size for the density (components/icon.Size). Until the set
-// landed it was a bare filled square, which read as debug furniture
-// rather than as a control.
+// rule's size for the density (components/icon.Size).
 //
 // Item.Active seeds the selection rather than competing with it: the
 // highlighted row is always the list's selection, which starts at the
@@ -138,7 +131,7 @@ type Props struct {
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
+	// component's map function makes of it. Set it only when
 	// this instance must shape with a different shaper than the theme
 	// provides.
 	//
@@ -149,12 +142,11 @@ type Props struct {
 }
 
 // Width constants.
-// SpacingScale tops out at S24 = 96 dp, so the "~S48" expanded width
-// cited in PLAN G4.3b is materialised as a local 192 dp constant
-// (≈ 4 × S12) rather than a new spacing-token field. Widths do not
-// follow density (the column contract is fixed; FX.6 revisited and kept
-// this — see the package comment); the item and toggle heights do —
-// both are exactly Density.ControlHeight (E1.4 row rule).
+// SpacingScale tops out at S24 = 96 dp, so the 192 dp expanded width
+// (≈ 4 × S12) is a local constant rather than a new spacing-token field.
+// Widths do not follow density (the column contract is fixed — see the
+// package comment); the item and toggle heights do — both are exactly
+// Density.ControlHeight.
 const (
 	expandedDp  = 192
 	collapsedDp = 48
@@ -165,7 +157,7 @@ type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density   // item/toggle height source (E1.4)
+	density tokens.Density   // item/toggle height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -183,7 +175,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
@@ -250,8 +242,7 @@ type liveState struct {
 // size and line height all reach the shaper — and d is the density the
 // column draws at (item rows and the collapse toggle are each exactly
 // Density.ControlHeight). Pass tokens.DefaultTypography.LabelLarge and
-// tokens.Comfortable for the default desktop look; before F3.4 the
-// static path was pinned to Comfortable with no way to say otherwise.
+// tokens.Comfortable for the default desktop look.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -287,9 +278,9 @@ func processInput(gtx layout.Context, props Props, st *liveState) {
 	}
 
 	// Row clicks. gesture.Click is deliberately not widget.Clickable: a
-	// Clickable registers a focus tag, and a per-row focus tag on a
-	// virtualised row is exactly the thing F4.7 removed. The rail's only
-	// focus tag is the list's, so a click hands the keyboard there.
+	// Clickable registers a focus tag, and a per-row focus tag cannot
+	// survive virtualisation. The rail's only focus tag is the list's, so
+	// a click hands the keyboard there.
 	for i := range st.clicks {
 		for {
 			e, ok := st.clicks[i].Update(gtx.Source)
@@ -375,12 +366,11 @@ func drawSidebar(
 	size := image.Pt(w, h)
 
 	// The sidebar is chrome furniture, so it fills at the window's floor —
-	// the storey beneath the paper, in both schemes (ADR-022 V2). It used
-	// to fill colors.Surface, which is a neutral-ramp alias rather than a
-	// storey: in the light scheme that rung IS the floor, so light sidebars
-	// keep their pixels to the byte, and in the dark scheme it was the
-	// raised rung, which painted the desk a storey above the document
-	// lying on it.
+	// the storey beneath the paper, in both schemes. Filling colors.Surface
+	// instead would be wrong: that neutral-ramp alias is a pairing rather
+	// than a storey, and it is the floor in the light scheme but the raised
+	// rung in the dark scheme, painting the desk a storey above the
+	// document lying on it.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// Toggle affordance at the top: a row like the items, so it shares
@@ -393,11 +383,10 @@ func drawSidebar(
 	drawToggle(gtx, tt, image.Pt(w, toggleH), colors, d)
 
 	// Items below the toggle, in a components/list scroll region filling the
-	// rest of the column (FX.6) — no scrollbar, like table's body:
-	// wheel/touch scrolling plus, since F4.7, the list's own keyboard
-	// traversal. Each row is a full-width row at the density's pitch (E1.4
-	// row rule: exactly ControlHeight, which is what list.RowHeight
-	// resolves to).
+	// rest of the column — no scrollbar, like table's body: wheel/touch
+	// scrolling plus the list's own keyboard traversal. Each row is a
+	// full-width row at the density's pitch: exactly ControlHeight, which
+	// is what list.RowHeight resolves to.
 	listH := h - toggleH
 	if listH <= 0 {
 		return layout.Dimensions{Size: size}
@@ -433,8 +422,7 @@ func clickFor(st *liveState, i int) *gesture.Click {
 // The glyph is the icon set's sidebar mark — the control that shows and
 // hides a window's sidebar, resolved to the host platform's drawing —
 // at the icon rule's size for the density (icon.Size: the control's
-// inner content box), in the same secondary neutral the affordance has
-// always worn.
+// inner content box), in the icon set's secondary neutral.
 func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.ColorTokens, d tokens.Density) {
 	g := gtx.Dp(icon.Size(d))
 	gx := (size.X - g) / 2
@@ -468,10 +456,9 @@ func drawItem(
 ) layout.Dimensions {
 	inner := func(gtx layout.Context) layout.Dimensions {
 		if selected {
-			// Selected background per ADR-007: a two-step walk past the
-			// sidebar's Surface ground (200 → 400) on the Primary ramp,
-			// keeping the highlight's primary hue as a real, addressable
-			// colour instead of the old 20%-alpha Primary tint.
+			// Selected background is a step past the sidebar's Surface
+			// ground on the Primary ramp, keeping the highlight's primary
+			// hue as a real, addressable colour.
 			active := colors.StateColor(tokens.RolePrimary, 200, tokens.StateSelected)
 			paint.FillShape(gtx.Ops, active, clip.Rect{Max: size}.Op())
 		}
@@ -521,8 +508,8 @@ func drawItem(
 				labelGtx.Constraints.Max.Y = size.Y
 
 				// Shape with the LabelLarge role's typeface, weight, size
-				// and line height. Zero fields (the legacy Render path
-				// synthesizes a size-only style) fall back to the shaper's
+				// and line height. Zero fields (the Render path can
+				// synthesize a size-only style) fall back to the shaper's
 				// defaults.
 				f := typeset.Font(style, font.Normal)
 				wl := typeset.Label(style, 1)

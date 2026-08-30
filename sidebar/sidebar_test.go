@@ -58,11 +58,8 @@ func testIcon() layout.Widget {
 
 // itemLabels names the navigation items in document order, twelve deep so the
 // overflow goldens read as twelve distinct rows rather than twelve copies.
-// They were blank until F4.4b, on the theory that font rasterisation was
-// non-deterministic; F4.2 pinned the faces by configuration and F4.3 moved
-// every golden onto DeterministicShaper, so Latin text in Roboto rasterises
-// identically on every machine. ASCII only, per F4.2 — no symbol reaches a
-// stored image.
+// Latin text in Roboto rasterises identically on every machine via
+// DeterministicShaper; ASCII only — no symbol reaches a stored image.
 //
 // They are short because the expanded rail is 192 px wide and a row is the
 // icon, a gap and a MaxLines:1 label: a longer name is ellipsized, not
@@ -132,12 +129,10 @@ func TestSidebarActiveTintIsVisible(t *testing.T) {
 	// render takes the *testing.T it is called with rather than closing over
 	// the outer one, and that parameter is the whole point of it. golden.Capture
 	// skips — via t.Skipf, which is runtime.Goexit — on any machine without a
-	// headless GPU, which is every CI runner this organization has. Handed the
-	// parent's t from inside a subtest, that Goexit unwinds the subtest's
-	// goroutine while marking the parent skipped, and the testing package reports
-	// it as "subtest may have called FailNow on a parent test" — a failure, not a
-	// skip. That is precisely why cadence was red on all sixteen CI runs while
-	// green on every developer machine: locally Capture never reaches the skip.
+	// headless GPU. Handed the parent's t from inside a subtest, that Goexit
+	// unwinds the subtest's goroutine while marking the parent skipped, and the
+	// testing package reports it as "subtest may have called FailNow on a
+	// parent test" — a failure, not a skip.
 	render := func(t *testing.T, activeIdx int, colors tokens.ColorTokens) *image.RGBA {
 		t.Helper()
 		props := sidebar.Props{Items: navItems(2, activeIdx), Shaper: shaper}
@@ -202,9 +197,9 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 //   - Arrow-Up from item 1 moves it back to item 0,
 //   - Enter activates the selected item via its OnClick.
 //
-// Since F4.7 the selection lives in the components/list scroll region and the
-// rail has one focus tag rather than one per row, so what the click at
-// the start seeds is the list's focus, not the row's.
+// The selection lives in the components/list scroll region and the rail has
+// one focus tag rather than one per row, so what the click at the start
+// seeds is the list's focus, not the row's.
 //
 // With PxPerDp=1 and an expanded sidebar (192 wide), the toggle
 // occupies y∈[0,48] and item i occupies y∈[48+48i, 48+48(i+1)]. A
@@ -228,7 +223,7 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 	driveFrame(w, ops, r, expandedSize)
 	driveFrame(w, ops, r, expandedSize)
 
-	// Click item 0 → fires item 0 and gives it focus. With the E1.4
+	// Click item 0 → fires item 0 and gives it focus. With the
 	// density pitch (Comfortable ControlHeight = 36) the toggle occupies
 	// y∈[0,36) and item 0 y∈[36,72); (96, 54) lands mid-item-0.
 	hit := f32.Pt(96, 54)
@@ -267,15 +262,15 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 	}
 }
 
-// TestSidebarKeyboardReachesAnItemNeverLaidOut is the FX.6 gap, closed.
+// TestSidebarKeyboardReachesAnItemNeverLaidOut verifies that keyboard
+// traversal reaches an item the scroll region has never laid out.
 //
 // Twelve items in a 256 px rail at Comfortable: the toggle takes the
 // first 36 px and each item 36 more, so the last row a frame could
 // possibly lay out starts at y=36+36×6=252 and item 11 would start at
 // y=432 — 176 px past the bottom of the canvas. It is not merely
 // offscreen, it has never existed: no clip area, no focus tag, nothing
-// for Tab to find. Before F4.7 the keyboard therefore stopped at the
-// viewport edge and items 7..11 were unreachable without a mouse.
+// for Tab to find.
 //
 // End must select item 11 anyway, and Enter must fire its OnClick.
 func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
@@ -347,11 +342,11 @@ func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	}
 }
 
-// TestSidebarActiveSeedsTheSelection pins the reconciliation F4.7 chose
-// between the caller's Item.Active and the list's own selection: Active
-// is a seed, not a competitor. The rail starts highlighting the Active
-// row, and the keyboard then moves the highlight off it — which is only
-// observable because both render through the same code path.
+// TestSidebarActiveSeedsTheSelection pins the relationship between the
+// caller's Item.Active and the list's own selection: Active is a seed,
+// not a competitor. The rail starts highlighting the Active row, and the
+// keyboard then moves the highlight off it — which is only observable
+// because both render through the same code path.
 func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
@@ -376,9 +371,9 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 		}
 	}
 
-	// Tab into the rail. It is a single keyboard stop since F4.7 — the
-	// scroll region — so one FocusForward is all it takes, and there is
-	// nothing else in this widget for the router to land on.
+	// Tab into the rail. It is a single keyboard stop — the scroll
+	// region — so one FocusForward is all it takes, and there is nothing
+	// else in this widget for the router to land on.
 	r.MoveFocus(key.FocusForward)
 	driveFrame(w, ops, r, expandedSize)
 
@@ -396,7 +391,7 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 // TestSidebarToggleDispatchesOnToggleCollapse verifies that clicking
 // the toggle affordance invokes OnToggleCollapse exactly once. With
 // PxPerDp=1, an expanded sidebar (192 wide) renders its toggle as a
-// 192×36 hit area (the Comfortable control height, E1.4) at the top of
+// 192×36 hit area (the Comfortable control height) at the top of
 // the canvas; (96, 24) lands squarely inside.
 func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 	var toggleCount int
@@ -430,8 +425,7 @@ func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
-// density tests.
+// for golden determinism, mirroring components' density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
 	th.Density = rx.Of(d)
@@ -461,7 +455,7 @@ func indexIcon(i int) layout.Widget {
 	}
 }
 
-// TestSidebarOverflowGolden records or diffs the FX.6 scroll-region
+// TestSidebarOverflowGolden records or diffs the scroll-region overflow
 // goldens: 12 items overflow the 256 px canvas at every combination of
 // width and density (comfortable fits ~6 rows under the toggle, compact
 // ~8). Each case scrolls to the bottom through the live pipeline's
