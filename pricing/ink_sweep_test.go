@@ -24,12 +24,10 @@ import (
 // axis, three pastels stated at a dark scheme's tone, and four hundred
 // random colours from a fixed source.
 //
-// The three pastels are the shape that produced the AV1 defect family. A
-// palette published for a dark scheme states its accents high on the tonal
-// axis, and a brand seeded with one of them derives a light scheme whose
-// primary pin sits a whisper off its own ground — which is exactly what
-// the highlighted tier's ring and every tier's checkmarks used to be
-// coloured with.
+// A palette published for a dark scheme states its accents high on the
+// tonal axis, and a brand seeded with one of them derives a light scheme
+// whose primary pin can sit a whisper off its own ground — the shape the
+// three pastels exercise.
 func tierInkSweepSeeds() []stdcolor.NRGBA {
 	rng := rand.New(rand.NewSource(20260827))
 	seeds := []stdcolor.NRGBA{
@@ -70,10 +68,10 @@ func tierInkSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// TestTierPrimaryInkClearsTheGraphicFloorForEverySeed is AV1.2's
-// site-level gate: whatever a caller seeds the palette with, the ink drawn
-// directly on a tier card — the highlighted ring, the feature checkmarks —
-// reaches WCAG 1.4.11 against the card's own level-1 fill.
+// TestTierPrimaryInkClearsTheGraphicFloorForEverySeed holds the invariant
+// that whatever a caller seeds the palette with, the ink drawn directly on
+// a tier card — the highlighted ring, the feature checkmarks — reaches
+// WCAG 1.4.11 against the card's own level-1 fill.
 func TestTierPrimaryInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string
@@ -98,11 +96,9 @@ func TestTierPrimaryInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 		len(tierInkSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
-// TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin states what this
-// repair costs every stored image in the design system, which is nothing:
-// on the seed every golden is rendered from, the brand's own colour clears
-// the floor on the card and is what the ring and checkmarks get, exactly
-// as before.
+// TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin holds the invariant
+// that on the seed every golden is rendered from, the brand's own colour
+// clears the floor on the card and is what the ring and checkmarks get.
 func TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin(t *testing.T) {
 	for _, s := range []struct {
 		name string
@@ -118,10 +114,10 @@ func TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin(t *testing.T) {
 	}
 }
 
-// TestAPastelSeedsTierPrimaryInkLeavesThePin is the regression itself,
-// read on the shape that produced it: a light scheme seeded with a dark
-// scheme's accent. Before the gate this card's ring and checkmarks were
-// the bare pin at a sub-floor ratio.
+// TestAPastelSeedsTierPrimaryInkLeavesThePin holds the invariant on a
+// light scheme seeded with a dark scheme's accent: the bare pin sits under
+// the graphic floor on this card, so the ring and checkmarks must not be
+// the bare pin.
 func TestAPastelSeedsTierPrimaryInkLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)

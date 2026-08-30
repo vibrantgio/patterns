@@ -65,8 +65,7 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // on its navbar, and d is the density both the navbar and the navbar
 // slot's pinned height derive from. Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look; before F3.4 the static path was pinned to
-// Comfortable with no way to say otherwise.
+// default desktop look.
 func RenderStackedPage(
 	shaper *text.Shaper,
 	props Props,

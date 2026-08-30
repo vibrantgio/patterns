@@ -18,10 +18,9 @@ import (
 )
 
 const (
-	// The canvas grew from 720×280 in F4.4b and 720×340 after F4.4b's
-	// filled-in copy. AE7.1 stretches every card to the tallest — the
-	// highlighted Team with four feature lines plus the Popular chip —
-	// so 340 clips the shared CTA row. 400 clears it.
+	// The canvas must be tall enough that the shared CTA row is not clipped
+	// when every card stretches to the tallest tier — the highlighted Team
+	// with four feature lines plus the Popular chip.
 	canvasW, canvasH = 720, 400
 	// scene leaves an S5-equivalent margin around the pricing row so
 	// the row's outer cards retain breathing room from the canvas edge.
@@ -55,12 +54,10 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// tierSpec is one tier's text. The fields were all blank until F4.4b, on the
-// theory that font rasterisation was non-deterministic; F4.2 pinned the faces
-// by configuration and F4.3 moved every golden onto DeterministicShaper, so
-// Latin text in Roboto rasterises identically on every machine. ASCII only,
-// per F4.2 — no symbol reaches a stored image, and the leading checkmark on
-// each feature is a clip path the package draws itself, not a glyph.
+// tierSpec is one tier's text. Latin text in Roboto rasterises identically
+// on every machine with the faces pinned and DeterministicShaper in use.
+// ASCII only — no symbol reaches a stored image, and the leading checkmark
+// on each feature is a clip path the package draws itself, not a glyph.
 type tierSpec struct {
 	name     string
 	price    string
@@ -162,9 +159,10 @@ func TestPricingLightDarkDiffer(t *testing.T) {
 	}
 }
 
-// TestPricingUnevenFeaturesMatchTallest pins AE7.1: a row whose tiers
-// have 1, 4 and 2 feature lines is as tall as a row of three copies of
-// the 4-line tier. The short cards stretch; they do not set the height.
+// TestPricingUnevenFeaturesMatchTallest holds the invariant that a row
+// whose tiers have 1, 4 and 2 feature lines is as tall as a row of three
+// copies of the 4-line tier. The short cards stretch; they do not set the
+// height.
 func TestPricingUnevenFeaturesMatchTallest(t *testing.T) {
 	shaper := defaultShaper(t)
 	cta := &pricing.CTA{Label: "Go"}

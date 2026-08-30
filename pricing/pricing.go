@@ -2,9 +2,8 @@
 // of tier cards with an optional emphasised tier, suitable for a
 // marketing landing or onboarding screen.
 //
-// The package follows the Phase 4 Composition contract: Pricing is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. The source is intentionally short and free of
+// Pricing is a callable Go function consuming a components theme observable,
+// returning a stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
 // Layout: each Tier renders as a rounded Surface card with an S5 inset.
@@ -92,9 +91,8 @@ type Props struct {
 	// the theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -111,7 +109,7 @@ type resolvedTokens struct {
 	price   tokens.TextStyle // the DisplaySmall role (price)
 	body    tokens.TextStyle // the BodyMedium role (cadence suffix, features)
 	label   tokens.TextStyle // the LabelLarge role (CTA label)
-	density tokens.Density   // CTA control height and inner padding (E1.4)
+	density tokens.Density   // CTA control height and inner padding
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -122,8 +120,8 @@ type resolvedTokens struct {
 func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies the LabelSmall/TitleLarge/DisplaySmall/
-	// BodyMedium/LabelLarge text styles and the theme's cached shaper
-	// (ADR-003: the theme owns the typeface); the density sizes the CTA.
+	// BodyMedium/LabelLarge text styles and the theme's cached shaper — the
+	// theme owns the typeface; the density sizes the CTA.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
@@ -275,14 +273,9 @@ func layoutTiers(
 
 // tierPrimaryInk is the primary ink a tier card draws directly on its own
 // level-1 fill — the highlighted tier's ring and every tier's feature
-// checkmarks: the primary pin while it clears the graphic floor against
-// that fill, and otherwise the rung of the primary ramp that does (AV1.2;
-// [tokens.ColorTokens.InkOn]).
-//
-// Both used to be the bare Primary pin, which reads only because the
-// canonical seed's own primary clears the level-1 fill already; a pastel
-// seed's pin put a sub-floor ring and checkmarks on the card that no
-// golden ever showed. Nothing moves on the canonical seed.
+// checkmarks: the primary pin when it clears the graphic floor against
+// that fill, and otherwise the rung of the primary ramp that does
+// ([tokens.ColorTokens.InkOn]).
 func tierPrimaryInk(c tokens.ColorTokens) color.NRGBA {
 	return c.InkOn(tokens.RolePrimary, c.SurfaceAt(tokens.Level1), tokens.GraphicFloor)
 }
@@ -327,9 +320,7 @@ func drawTier(
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
 
 	// A tier fills at the level-1 storey and its edge is derived against
-	// that fill — the fill named the tok.color.Surface ramp alias until
-	// ADR-022 re-founded the ladder — so the card reads as an object in
-	// either scheme. The
+	// that fill, so the card reads as an object in either scheme. The
 	// highlighted tier trades that edge for the accent, which is its own
 	// pairing and says which tier is being pushed: [tierPrimaryInk].
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
@@ -432,8 +423,7 @@ func popularChipWidget(shaper *text.Shaper, tok resolvedTokens) layout.Widget {
 
 // tierNameWidget renders the tier name in the TitleLarge role in
 // Text. A zero style weight (the legacy Render path synthesizes
-// size-only styles) falls back to SemiBold, matching the pre-Typography
-// rendering.
+// size-only styles) falls back to SemiBold.
 func tierNameWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, label, tok.color.Text, tok.name, font.SemiBold)
 }
@@ -515,7 +505,7 @@ func ctaWidget(shaper *text.Shaper, cta *CTA, tok resolvedTokens, click *widget.
 // of the line box. Empty labels collapse to zero dimensions so adjacent
 // section gaps are the only vertical contribution. A zero style weight
 // (the legacy Render path synthesizes size-only styles) falls back to
-// fallbackWeight, the pre-Typography hard-coded weight for the site.
+// fallbackWeight.
 func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		if label == "" {

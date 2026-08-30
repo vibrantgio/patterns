@@ -103,8 +103,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // spends on its navbar, and d is the density both the navbar and the
 // navbar slot's pinned height derive from. Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look; before F3.4 the static path was pinned to
-// Comfortable with no way to say otherwise.
+// default desktop look.
 func RenderThreeColumn(
 	shaper *text.Shaper,
 	props Props,
@@ -197,9 +196,7 @@ func drawThreeColumn(
 
 	// Backstop so the divider and the empty slots read against something.
 	// It is the window's floor — the storey beneath the paper in both
-	// schemes (ADR-022 V2), which is what a three-column frame's uncovered
-	// ground is. It used to fill colors.Surface, a neutral-ramp alias that
-	// coincides with the floor in the light scheme only.
+	// schemes, which is what a three-column frame's uncovered ground is.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// Navbar spans the full width — unlike SidebarHeaderMain, where the

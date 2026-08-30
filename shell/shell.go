@@ -8,10 +8,9 @@
 // pinned full-width navbar over a shell-owned vertical scroll of page
 // sections — the marketing-page shell.
 //
-// Shell follows the Phase 4 Composition contract: it is a callable
-// Go function consuming a components theme observable, returning a stream
-// of layout.Widget. Source is intentionally short — copy it into
-// your own app and modify as needed.
+// Shell is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. Source is
+// intentionally short — copy it into your own app and modify as needed.
 //
 // The Sidebar slot accepts any rx.Observable[layout.Widget], so callers
 // can supply a patterns/sidebar instance, a patterns/accordion-based
@@ -166,8 +165,7 @@ type Props struct {
 // navbar slot a density-derived one (see NavbarHeight), so the main area
 // is deterministic. The aside column tracks an absolute dp width clamped
 // to [minAsideDp, maxAsideDp]. The footer is a status strip — a surface,
-// not a control — so its height deliberately does not follow density
-// (E1.4 verdict).
+// not a control — so its height deliberately does not follow density.
 const (
 	footerHDp = 48
 
@@ -209,10 +207,8 @@ const (
 // NavbarHeight returns the pinned height of the navbar band the shell draws
 // for a density: ControlHeight + 2·PaddingY — a bar wrapping ControlHeight
 // controls with the density's vertical control padding as breathing room (52
-// dp Comfortable, 40 dp Compact; E1.4). patterns/navbar insets its content by
-// the same PaddingY, so a components/button action fills the slot exactly. The
-// pre-density 64 dp pin was sized around the 44 dp hit-target-era navbar
-// content, not a bar rule.
+// dp Comfortable, 40 dp Compact). patterns/navbar insets its content by
+// the same PaddingY, so a components/button action fills the slot exactly.
 //
 // This is the number an app needs when it caps a shell window's top edge at
 // the depth of the navbar band.
@@ -252,8 +248,7 @@ func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // spends on its navbar, and d is the density both the navbar and the
 // navbar slot's pinned height derive from. Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look; before F3.4 the static path was pinned to
-// Comfortable with no way to say otherwise.
+// default desktop look.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -491,10 +486,9 @@ func drawSplitPane(
 
 	// Backstop so the seam is visible even if Left/Right are nil. It is the
 	// window's floor: whatever a split pane does not cover is the desk the
-	// panes lie on, and since ADR-022 the desk is the storey beneath the
-	// paper in both schemes rather than the colors.Surface ramp alias this
-	// used to fill — a rung that is the floor in the light scheme and the
-	// raised storey in the dark one.
+	// panes lie on, and the desk must be the storey beneath the paper in
+	// both schemes — the colors.Surface ramp alias is a rung that is the
+	// floor only in the light scheme and the raised storey in the dark one.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
 
 	// Leading pane.
@@ -549,10 +543,9 @@ func drawSplitPane(
 	return layout.Dimensions{Size: size}
 }
 
-// dividerColor is the semantic Divider token — ADR-007's "subtle border,
-// separator" step (neutral 300), one step past the Surface ground, so it
-// still registers a pixel delta against Surface on both light and dark
-// schemes.
+// dividerColor is the semantic Divider token: one step past the Surface
+// ground, so it still registers a pixel delta against Surface on both
+// light and dark schemes.
 func dividerColor(c tokens.ColorTokens) color.NRGBA {
 	return c.Divider
 }

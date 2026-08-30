@@ -7,25 +7,21 @@
 // and the two kinds of cell read at one weight (light 4.54 against the
 // neutrals' 4.51, dark 8.40 against 8.46).
 //
-// Page cells are drawn natively (E1.4). They previously bridged through
-// components/button.Render, but that static bridge's frozen signature renders
-// at tokens.Comfortable — inside a density-sized ControlHeight square its
-// Comfortable PaddingX (16 dp) truncated the page digit to a sliver, and
-// nothing was gained: the bridge only ever drew the normal state (no
-// hover/press/focus visuals reached it). Drawing the cell here — a tinted
-// fill, radius.Md corners, centred digit — keeps the visuals aligned with
-// components/button while letting every metric follow the density. The
-// trade-off, accepted deliberately: future components/button styling changes
-// must be mirrored here by hand.
+// Page cells are drawn natively rather than through components/button:
+// inside a density-sized ControlHeight square, components/button's
+// Comfortable padding would truncate the page digit to a sliver. Drawing the
+// cell here — a tinted fill, radius.Md corners, centred digit — keeps the
+// visuals aligned with components/button while letting every metric follow
+// the density; future components/button styling changes must be mirrored
+// here by hand.
 //
-// The package follows the Phase 4 Composition contract: Pagination is a
-// callable Go function consuming a components theme observable, returning a
-// stream of layout.Widget. Source is intentionally short and free of
-// opaque configuration — copy it into your own app and modify as needed.
+// Pagination is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. Source is intentionally
+// short and free of opaque configuration — copy it into your own app and
+// modify as needed.
 //
 // No virtualisation, no ellipsis collapse — every page in [1, PageCount]
-// renders. Large page counts are deferred to G4.4 (table + pagination at
-// scale).
+// renders.
 package pagination
 
 import (
@@ -66,9 +62,8 @@ type Props struct {
 	// the theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
-	// component's map function makes of it (spectrum F5.1). Set it only when
-	// this instance must shape with a different shaper than the theme
-	// provides.
+	// component's map function makes of it. Set it only when this instance
+	// must shape with a different shaper than the theme provides.
 	//
 	// A shaper is not safe to use from two goroutines; Gio lays the widget
 	// forest out on the one goroutine that runs the event loop, which is
@@ -84,7 +79,7 @@ type Props struct {
 func Pagination(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelLarge text style and the
-	// theme's cached shaper (ADR-003: the theme owns the typeface).
+	// theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
@@ -111,8 +106,6 @@ func Pagination(th rx.Observable[theme.Theme], props Props) rx.Observable[layout
 		pageClicks := make([]widget.Clickable, n)
 
 		return rx.Map(resolved, func(tok resolvedTokens) layout.Widget {
-			// Props.Shaper is an explicit override; the theme's shaper is
-			// the default.
 			shaper := props.Shaper
 			if shaper == nil {
 				shaper = tok.shaper
@@ -147,8 +140,7 @@ func Pagination(th rx.Observable[theme.Theme], props Props) rx.Observable[layout
 // row draws at (every cell is a Density.ControlHeight square, and the
 // chevron glyph scales with it). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look; before F3.4 the static path was pinned to
-// Comfortable with no way to say otherwise.
+// default desktop look.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -169,26 +161,23 @@ type resolvedTokens struct {
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density   // cell square and chevron glyph source (E1.4)
+	density tokens.Density   // cell square and chevron glyph source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Cell metrics (E1.4): every pagination control is a Density.ControlHeight
-// square (36 dp Comfortable, 28 dp Compact — the old 40×44 cell was built
-// around the 44 dp pointer floor, which is a hit metric, not a control
-// height; the digit centres in the square like an icon-button glyph). The
-// chevron glyph takes the icon rule, icon.Size(d) = ControlHeight −
-// 2·PaddingY (20/16 dp), matching components icon buttons. Cells are adjacent
-// controls separated by S2 gaps, so their hit area stays the cell bounds
-// (extending to the 44 dp pointer floor would overlap the neighbouring
-// cell's slop — the E1.3 stacked/tiled-controls precedent).
+// Cell metrics: every pagination control is a Density.ControlHeight square
+// (36 dp Comfortable, 28 dp Compact); the digit centres in the square like
+// an icon-button glyph. The chevron glyph takes the icon rule, icon.Size(d)
+// = ControlHeight − 2·PaddingY (20/16 dp), matching components icon
+// buttons. Cells are adjacent controls separated by S2 gaps, so their hit
+// area stays the cell bounds.
 
 // The tinted-fill pair every page cell is drawn from, stated once because the
 // current cell and the resting ones differ only in which ramp they read it
-// off. Step 300 is the tinted end ADR-021 R5 names as a window's chosen-item
-// fill — the step the sidebar pill and the selected table row already wear —
-// and step 700 is the rung four along from it, which is where a ramp's own
-// colour clears WCAG AA body text over its own 300 in both schemes.
+// off. Step 300 is the tinted end used as a window's chosen-item fill — the
+// step the sidebar pill and the selected table row already wear — and step
+// 700 is the rung four along from it, which is where a ramp's own colour
+// clears WCAG AA body text over its own 300 in both schemes.
 const (
 	cellFillStep  = 300
 	cellLabelStep = 700
@@ -229,31 +218,13 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 }
 
 // pageCellWidget returns a clickable ControlHeight-square cell rendering
-// page n natively (see the package doc for why the components/button.Render
-// bridge was dropped in E1.4). Both kinds of cell take one recipe — the
-// ramp's step 300 as fill, its step 700 as label — and the current page is
-// the cell that takes it off the Primary ramp rather than the neutral one.
+// page n natively. Both kinds of cell take one recipe — the ramp's step 300
+// as fill, its step 700 as label — and the current page is the cell that
+// takes it off the Primary ramp rather than the neutral one.
 //
-// The current page used to fill with the Primary PIN and label with
-// OnPrimary, which is components/button's normal state and the wrong answer
-// for a mark that says "this is the one you are on". ADR-021 R5 gives that
-// answer one fill across a window, the Primary ramp's tinted step 300, and
-// the pin is not it: the pin runs saturated in the light scheme (#723AD4)
-// and pale in the dark one (#D0C4FF) while the step runs the other way
-// (#D8CEFF / #3F0085), so a window that marked its sidebar and its table
-// with the step and its pager with the pin said the same thing in two
-// opposite tones at once and swapped which was which with the scheme. Moving
-// the fill to the step inverts the chip rather than repainting it — what was
-// the fill is now very nearly the ink, the pin's own colour, in both schemes.
-//
-// OnPrimary cannot come along: it is derived against the pin and measures
-// 1.48:1 light and 1.32:1 dark over the step, which is no text at all. The
-// label is re-derived over the new fill instead, off the fill's own ramp at
-// the same offset the neutral cells use, and lands at 4.54:1 light and
-// 8.40:1 dark — clear of WCAG AA body text either way, and within a
-// twentieth of a point of what the resting cells beside it measure (4.51 and
-// 8.46), so the current page is the coloured cell rather than the louder or
-// the fainter one.
+// The label is derived from the fill's own ramp rather than the theme's
+// OnPrimary token: OnPrimary is derived against the ramp's pin and does not
+// clear WCAG AA body text over the tinted step used here.
 func pageCellWidget(shaper *text.Shaper, n int, current bool, click *widget.Clickable, tok resolvedTokens) layout.Widget {
 	ramp := tok.color.Ramps.Neutral
 	if current {
@@ -300,8 +271,8 @@ func drawPageCell(gtx layout.Context, shaper *text.Shaper, label string, bg, fg 
 	labelGtx.Constraints.Max = image.Pt(side, side)
 
 	// Shape with the LabelLarge role's typeface, weight, size and line
-	// height. Zero fields (the legacy Render path synthesizes a size-only
-	// style) fall back to the shaper's defaults.
+	// height. Zero fields (the Render path may pass a size-only style) fall
+	// back to the shaper's defaults.
 	style := tok.label
 	f := typeset.Font(style, font.Normal)
 	wl := typeset.Label(style, 1)

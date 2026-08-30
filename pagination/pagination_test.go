@@ -45,12 +45,6 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 
 // TestPaginationGolden records or diffs the three Measurable goldens.
 //
-// Pagination is the one component here that F4.4b had nothing to fill in: it
-// has no caller-supplied label at all, and every cell already draws its own
-// page number in the LabelLarge role, so these goldens have carried real
-// glyphs since they were first recorded. What they take from F4.3 is the
-// pinned face — before it, the digits shaped with whatever the machine had.
-//
 // A zero radius scale (sharp corners) keeps the cell edges deterministic. The
 // distinguishing signal across goldens is which cell carries the Primary fill:
 // page-1-of-5 highlights the first cell, page-3-of-5 the third, and the light
@@ -120,20 +114,14 @@ func TestPaginationLightDarkDiffer(t *testing.T) {
 	}
 }
 
-// TestTheCurrentPageWearsTheChosenItemStep is ADR-021 R5 read off the
-// rendered row rather than off the source: the cell for the page the reader
-// is on fills from the Primary ramp's tinted end — step 300, the same fill a
-// sidebar's open row and a table's selected row take — and its digit is
-// re-derived over that fill instead of carrying OnPrimary along, which is
-// derived against the PIN and cannot read on the step.
-//
-// The pin is what this cell used to fill with, and the reason it is wrong is
-// visible only across the pair of schemes: the pin runs saturated in light
-// and pale in dark while the step runs the other way, so a window marking its
-// other chosen items with the step and its pager with the pin inverted
-// against itself when the scheme changed. Both schemes are therefore checked,
-// and the resting cell beside the current one is checked too — a mark says
-// nothing if every cell wears it.
+// TestTheCurrentPageWearsTheChosenItemStep confirms the cell for the page
+// the reader is on fills from the Primary ramp's tinted step 300 — the same
+// fill a sidebar's open row and a table's selected row take — and its digit
+// is derived from that ramp's own step 700 rather than the theme's OnPrimary
+// token, which is derived against the ramp's pin and does not clear WCAG AA
+// over the tinted step. Both schemes are checked, and the resting cell
+// beside the current one is checked too, since a mark says nothing if every
+// cell wears it.
 func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 	shaper := defaultShaper(t)
 	sharpRadius := tokens.RadiusScale{}
@@ -181,9 +169,9 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 				t.Errorf("resting page cell = %v, want the neutral fill %v", got, want)
 			}
 
-			// The digit over the new fill. OnPrimary is the ink that used to
-			// ride with the pin and is the one thing that may not follow the
-			// fill down: it measures 1.48:1 light and 1.32:1 dark here.
+			// The digit's ink comes from the fill's own ramp; OnPrimary is
+			// derived against the ramp's pin and does not clear WCAG AA over
+			// the tinted step used here.
 			ink := tc.c.Ramps.Primary.Step(700)
 			if got := tcolor.ContrastRatio(ink, tint); got < aaBodyText {
 				t.Errorf("current page digit %v over %v = %.2f:1, below WCAG AA body text %.1f:1", ink, tint, got, aaBodyText)
@@ -226,8 +214,7 @@ func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
-// density tests.
+// for golden determinism, mirroring components' density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
 	th.Density = rx.Of(d)

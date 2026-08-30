@@ -58,15 +58,10 @@ func defaultShaper(t *testing.T) *text.Shaper {
 }
 
 // Shell draws no text of its own: everything legible in these goldens comes
-// through the composed navbar and sidebar. Both were given empty labels, on
-// the theory that font rasterisation was non-deterministic; F4.2 pinned the
-// faces by configuration and F4.3 moved every golden onto DeterministicShaper,
-// so Latin text in Roboto rasterises identically on every machine. ASCII only,
-// per F4.2 — no symbol reaches a stored image.
-//
-// With both blank the header strip drew as bare Surface and the sidebar as two
-// loose icons, so no shell golden showed where its own chrome ended and a
-// child's began. These labels are what make the slot boundaries legible.
+// through the composed navbar and sidebar. These labels are what make the
+// slot boundaries legible. Labels must stay ASCII — Latin text in Roboto
+// rasterises identically on every machine via DeterministicShaper, but a
+// symbol may not.
 var (
 	navLinkLabels     = []string{"Docs", "Components"}
 	sidebarItemLabels = []string{"Overview", "Tokens"}
@@ -171,8 +166,7 @@ func TestShellGolden(t *testing.T) {
 }
 
 // densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism — the E1.4 injection idiom, mirroring components'
-// density tests.
+// for golden determinism, mirroring components' density tests.
 func densityTheme(d tokens.Density) theme.Theme {
 	th := theme.Default()
 	th.Density = rx.Of(d)
@@ -364,8 +358,8 @@ func TestShellSplitPaneSeamIsAHairline(t *testing.T) {
 		return start, width
 	}
 
-	// Every row, not a sample of them: the defect this pins was a seam
-	// that behaved differently where a title band crossed it.
+	// Every row, not a sample of them: the seam must be the same
+	// hairline at every row, top edge included.
 	wantStart, wantWidth := runAt(splitH / 2)
 	if wantWidth != 1 {
 		t.Errorf("seam width at mid-height = %d px; want 1 (a hairline)", wantWidth)
