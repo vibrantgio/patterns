@@ -21,12 +21,6 @@ type exception struct {
 }
 
 // exceptions lists the deliberate literal-colour sites in this repo.
-//
-// alert/alert.go and toast/toast.go were listed here until F4.6, each
-// carrying a byte-identical copy of the same four Tailwind values for the
-// success and warning accents. theme/tokens now derives both roles —
-// hue-anchored ramps and pins, like error — so both entries are gone and the
-// only exception left is a deliberate alpha composite.
 var exceptions = []exception{
 	{
 		path: "modal/modal.go",
@@ -39,8 +33,8 @@ var exceptions = []exception{
 
 // TestNoLiteralColors enforces the design-token rule: library source must
 // not hard-code colour values. Every colour a component paints comes from
-// theme/tokens (and, once D1.1 lands, theme/color) — a hex literal in
-// component code silently forks the palette.
+// the theme packages — a hex literal in component code silently forks the
+// palette.
 //
 // Like TestNoGofontImports, the check walks the entire repository from the
 // module root, including nested modules, skipping only .git/, testdata/,
@@ -67,10 +61,8 @@ var exceptions = []exception{
 // Any remaining hard-coded colour in library source must be allow-listed
 // in exceptions below with a reason, or migrated to a token.
 //
-// theme is exempt by not carrying this test: theme/tokens (and
-// theme/color once D1.1 creates it) is where literal colours
-// legitimately live. If this lint ever lands in theme, those two
-// packages are its allow-list.
+// The theme repository is exempt by not carrying this test: its token and
+// colour packages are where literal colours legitimately live.
 func TestNoLiteralColors(t *testing.T) {
 	root, err := repoRoot()
 	if err != nil {

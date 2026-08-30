@@ -15,10 +15,8 @@ import (
 
 func hex(c color.NRGBA) string { return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B) }
 
-// storeys is the whole elevation ladder — the whole set of grounds any
-// outline in this repository is drawn against. The outlined card and the
-// hero's outlined CTA circle level 1, a dialog level 2, a popover level 3,
-// and the ladder has no fourth rung to reach for.
+// storeys is the whole elevation ladder, and therefore the whole set of
+// grounds any outline can be drawn against.
 var storeys = []struct {
 	name  string
 	level tokens.ElevationLevel
@@ -29,14 +27,6 @@ var storeys = []struct {
 	{"level-3", tokens.Level3},
 }
 
-// TestOutlineInkClearsTheGraphicFloor is the defect the derivation replaced,
-// written down. Every outline named neutral step 500 in both schemes, and the
-// neutral ramps are paired — light and dark are realized at the same
-// perceptual depths from opposite ends — so that one rung measured 2.35:1
-// around a card, 1.95:1 around a dialog and 1.42:1 around a popover in the
-// light scheme, against 5.94 / 5.07 / 3.47:1 for the identical line in the
-// dark. Nothing in those six lines of code looked scheme-dependent.
-//
 // Two grounds are measured per storey, because a line has two sides. Inside
 // is the fill the pattern paints and therefore always knows; outside is the
 // plane it stands on, which it does not — so the sweep holds the ink against
@@ -90,9 +80,9 @@ var seeds = []color.NRGBA{
 }
 
 // TestOutlineInkClearsTheFloorForEverySeed walks the same pairings over a
-// spread of seeds and both contrast variants. The neutral ramps carry the
-// seed's tint, so the measurements move a little from seed to seed; what may
-// not move is the verdict.
+// spread of seeds and both contrast variants: the neutral ramps carry the
+// seed's tint, so the measurements move from seed to seed but the verdict
+// may not.
 func TestOutlineInkClearsTheFloorForEverySeed(t *testing.T) {
 	worst := 99.0
 	for _, seed := range seeds {
