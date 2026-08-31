@@ -397,6 +397,13 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 // nameRowWidget is the card's first row: the tier name leading. When
 // Highlighted, the Popular badge sits on the same line, trailing at the
 // inset's right edge.
+//
+// Aligned on the baseline rather than the middle. The two are set in
+// different roles — TitleLarge and the badge's label role — so their boxes
+// are different heights around different faces, and centring the boxes puts
+// the two runs of type on two lines that are three pixels apart. Baseline
+// alignment is what "on the same line" means for text, and the badge reports
+// its label's baseline so that it can be asked.
 func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
 	name := tierNameWidget(shaper, tier.Name, tok)
 	if !tier.Highlighted {
@@ -404,7 +411,7 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 	}
 	mark := popularBadgeWidget(shaper, tok)
 	return func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline}.Layout(gtx,
 			layout.Rigid(name),
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
@@ -416,14 +423,16 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 }
 
 // popularBadgeWidget renders "Popular" as a Neutral badge: the system's own
-// word about the tier, not a control and not a status. It carries no fill —
-// the highlighted card's own treatment is what says the tier is the one
-// being recommended, and a filled pill on top of it said it twice.
+// word about the tier, not a control and not a status. Neutral rather than a
+// role, because the highlighted card's own treatment is what recommends the
+// tier — a badge shouting Success on top of it would say it twice, in a
+// register that means something else.
 func popularBadgeWidget(shaper *text.Shaper, tok resolvedTokens) layout.Widget {
-	// A tier card is a level-1 surface, and a badge with no fill of its own
-	// is derived against the storey it stands on rather than against the page.
+	// A tier card is a level-1 surface, and the badge's fill is derived
+	// against the storey it stands on rather than against the page: a fill
+	// resolved for the page would be the card's own colour here.
 	return badge.Render(shaper, "Popular", nil, badge.Neutral, tok.color, tok.spacing,
-		tok.popular, badge.RenderState{Ground: tokens.Level1})
+		tok.radius, tok.popular, badge.RenderState{Ground: tokens.Level1})
 }
 
 // tierNameWidget renders the tier name in the TitleLarge role in
