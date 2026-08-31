@@ -30,7 +30,7 @@ const (
 var (
 	canvasSize = image.Pt(canvasW, canvasH)
 	// Sharp corner radius keeps the goldens deterministic — anti-aliased
-	// rounded corners and the "Popular" chip's Full radius both vary
+	// rounded corners and the card radii both vary
 	// slightly between GPU contexts, breaking pixel-exact diffs.
 	sharpRadius = tokens.RadiusScale{}
 )
@@ -89,7 +89,7 @@ func tier(i int, highlighted bool) pricing.Tier {
 }
 
 // threeTiers returns the full row, with the middle tier highlighted when
-// asked. Highlighting adds the package's own "Popular" chip on the name row.
+// asked. Highlighting adds the "Popular" badge on the name row.
 func threeTiers(highlightMiddle bool) []pricing.Tier {
 	return []pricing.Tier{tier(0, false), tier(1, highlightMiddle), tier(2, false)}
 }

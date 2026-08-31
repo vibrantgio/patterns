@@ -49,7 +49,7 @@ Every package has the same two entry points, and the split is deliberate:
   only where the pattern sizes a control: `navbar`, `sidebar`, `tabs`,
   `table`, `pagination`, `shell`, `hero`, `pricing` and `modal` take one;
   `alert`, `accordion`, `breadcrumb`, `tooltip`, `toast`, `feature`,
-  `testimonial`, `tag` and `table.RenderTextCell` do not, because nothing in
+  `testimonial` and `table.RenderTextCell` do not, because nothing in
   them has a control height. Until v0.3.0 these signatures took a
   `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
 
@@ -114,15 +114,14 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `tooltip` | A hover/focus annotation next to a trigger after a delay. `DefaultDelay` resolves from the token motion scale's `DurXSlow` stop (500 ms), and the live form re-times from the theme's `Motion` observable. Arbitration keeps exactly one tooltip visible, and is frame state rather than a bus: `Props.Arbiter` names the set — one per window — and a tooltip is visible exactly while it holds that set's top, so the claim a finished dwell makes *is* the previous tooltip's dismissal. A nil `Arbiter` gets the tooltip one of its own, so sharing one is the explicit act. |
 | `toast` | A position-anchored column of transient notifications, each an inverse chip — the token set's `InverseSurface` under its `OnInverseSurface`, so the message is dark on a light scheme and light on a dark one and separates from every surface it can appear over — with a `effects/depth` cast shadow, because a toast floats and can leave, which is exactly what ADR-005 reserves shadows for, and a leading edge in the level's own ramp. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `toast.Queue` in the model, `Props.Toasts` carries that queue back to the `Stack`, and `Expire` brings the removal back as `Expired` at the end of the toast's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
 | `alert` | A tonal banner with a leading variant icon, a title and an arbitrary body widget. Info, Success, Warning, Error — each the status role's own container under the role's own mark, so the four grounds differ in hue and in nothing else, and info wears the info role rather than the brand. |
-| `tag` | The pill chip, and the shared home of the one pill `pricing` ("Popular") and `hero` (the eyebrow) used to each draw locally: a Full-radius label-small label — the line box plus one `S1` tall, the stop spent once across both edges rather than once on each — filled (Primary under OnPrimary) or tonal (primary-200 under Primary), plus the status variants — Success, Warning, Error — each the level's tonal container under the Text pin. Every variant but Filled rings itself in its role's pin, because a tinted fill and the pane it rests on are the same lightness by construction and the pill's edge would otherwise measure around 1:1; the Filled pin separates on its own and takes no ring. `Props.OnDismiss` grows a close mark on the chip and reports the click — the tag never removes itself, and the mark's pointer target is 24 dp on a 9 dp drawing. Otherwise a label, not a control: no interaction states, no density. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
 
 | Package | |
 | --- | --- |
-| `hero` | The landing block: optional eyebrow tag, display title, subtitle, optional visual slot, and a primary/secondary CTA pair. With no visual it is one centred column; with one it splits into two equal columns. |
+| `hero` | The landing block: optional eyebrow kicker (pure typography — a small quiet line, not a component), display title, subtitle, optional visual slot, and a primary/secondary CTA pair. With no visual it is one centred column; with one it splits into two equal columns. |
 | `feature` | An icon–title–body grid laid out `Columns × N`. The icon slot is opaque — any `layout.Widget`. |
-| `pricing` | A row of tier cards — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally highlighted, which swaps the 1 dp outline for a 2 dp Primary border and adds a "Popular" chip. |
+| `pricing` | A row of tier cards — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally highlighted, which swaps the 1 dp outline for a 2 dp Primary border and adds a "Popular" badge. |
 | `testimonial` | Quote cards with an author block and an avatar (or an initial in a circular placeholder), as a single centred card or a row of them. |
 
 `modal/gallery` is a `main` inside this module, not a twentieth pattern: it
@@ -248,7 +247,7 @@ reach one, so there is no shim — every call site takes a `gtx` now.
 ## For coding assistants
 
 Read the canonical guide before writing code against this module — the module
-inventory with current tags, the application skeleton, MVU and rx semantics,
+inventory with current versions, the application skeleton, MVU and rx semantics,
 typography, and the pitfalls that are not guessable:
 
 <https://raw.githubusercontent.com/vibrantgio/workbench/master/llms.txt>

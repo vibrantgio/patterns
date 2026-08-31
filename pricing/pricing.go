@@ -12,7 +12,7 @@
 // stretches every card to that height. Name, price and bullets stay at
 // the top; the CTA sits on the bottom inset, not flush under the last
 // bullet. Each card contains — top to bottom — the tier name in title
-// typography (Highlighted cards put a "Popular" chip on that same
+// typography (Highlighted cards put a "Popular" badge on that same
 // row, trailing), a price / cadence pair in display typography with
 // the cadence muted, a vertical feature list with a leading checkmark
 // glyph rendered from a clip.Path, and a footer CTA button reusing
@@ -41,10 +41,10 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/badge"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/patterns/internal/outline"
-	"github.com/vibrantgio/patterns/tag"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -76,7 +76,7 @@ type Tier struct {
 	CTA *CTA
 
 	// Highlighted selects the emphasised tier: a 2 dp Primary border and
-	// a small "Popular" chip on the name row, trailing.
+	// a "Popular" badge on the name row, trailing.
 	Highlighted bool
 }
 
@@ -104,7 +104,7 @@ type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	chip    tokens.TextStyle // the LabelSmall role: typeface, weight, size, line height
+	popular tokens.TextStyle // the badge role the "Popular" label is set in, at the density
 	name    tokens.TextStyle // the TitleLarge role (tier name)
 	price   tokens.TextStyle // the DisplaySmall role (price)
 	body    tokens.TextStyle // the BodyMedium role (cadence suffix, features)
@@ -119,9 +119,10 @@ type resolvedTokens struct {
 // once per subscription inside the rx.Defer scope.
 func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies the LabelSmall/TitleLarge/DisplaySmall/
+	// typography emission supplies the badge/TitleLarge/DisplaySmall/
 	// BodyMedium/LabelLarge text styles and the theme's cached shaper — the
-	// theme owns the typeface; the density sizes the CTA.
+	// theme owns the typeface; the density sizes the CTA and picks the
+	// badge's own role.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
@@ -131,7 +132,7 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 					color:   n.First,
 					spacing: n.Second,
 					radius:  n.Third,
-					chip:    typ.LabelSmall,
+					popular: badge.Style(typ, n.Fifth),
 					name:    typ.TitleLarge,
 					price:   typ.DisplaySmall,
 					body:    typ.BodyMedium,
@@ -172,8 +173,8 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 // below off the theme. No event work is performed: the CTAs render as
 // inert visuals.
 //
-// typo supplies the five roles the row draws — LabelSmall for the
-// highlight chip, TitleLarge for the tier name, DisplaySmall for the
+// typo supplies the five roles the row draws — the badge role at d for the
+// "Popular" mark, TitleLarge for the tier name, DisplaySmall for the
 // price, BodyMedium for the cadence suffix and feature lines, LabelLarge
 // for the CTA label — whole, so typeface, weight and line height reach
 // the shaper exactly as they do on the live path. A pattern that spends
@@ -195,7 +196,7 @@ func Render(
 		color:   colors,
 		spacing: sp,
 		radius:  rad,
-		chip:    typo.LabelSmall,
+		popular: badge.Style(typo, d),
 		name:    typo.TitleLarge,
 		price:   typo.DisplaySmall,
 		body:    typo.BodyMedium,
@@ -394,14 +395,14 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 }
 
 // nameRowWidget is the card's first row: the tier name leading. When
-// Highlighted, the Popular chip sits on the same line, trailing at the
-// inset's right edge. The chip is patterns/tag Filled.
+// Highlighted, the Popular badge sits on the same line, trailing at the
+// inset's right edge.
 func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
 	name := tierNameWidget(shaper, tier.Name, tok)
 	if !tier.Highlighted {
 		return name
 	}
-	chip := popularChipWidget(shaper, tok)
+	mark := popularBadgeWidget(shaper, tok)
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(name),
@@ -409,16 +410,20 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
 			}),
 			layout.Rigid(pllayout.HSpacer(tok.spacing.S2)),
-			layout.Rigid(chip),
+			layout.Rigid(mark),
 		)
 	}
 }
 
-// popularChipWidget renders a Primary-filled pill containing "Popular"
-// in OnPrimary — patterns/tag's Filled variant, drawn through the shared
-// chip so every pill in the vocabulary is one drawing.
-func popularChipWidget(shaper *text.Shaper, tok resolvedTokens) layout.Widget {
-	return tag.Render(shaper, "Popular", tag.Filled, tok.color, tok.spacing, tok.radius, tok.chip)
+// popularBadgeWidget renders "Popular" as a Neutral badge: the system's own
+// word about the tier, not a control and not a status. It carries no fill —
+// the highlighted card's own treatment is what says the tier is the one
+// being recommended, and a filled pill on top of it said it twice.
+func popularBadgeWidget(shaper *text.Shaper, tok resolvedTokens) layout.Widget {
+	// A tier card is a level-1 surface, and a badge with no fill of its own
+	// is derived against the storey it stands on rather than against the page.
+	return badge.Render(shaper, "Popular", nil, badge.Neutral, tok.color, tok.spacing,
+		tok.popular, badge.RenderState{Ground: tokens.Level1})
 }
 
 // tierNameWidget renders the tier name in the TitleLarge role in

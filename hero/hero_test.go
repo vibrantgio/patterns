@@ -23,7 +23,7 @@ const (
 var (
 	canvasSize = image.Pt(canvasW, canvasH)
 	// Sharp corner radius keeps the goldens deterministic — anti-aliased
-	// rounded corners and the eyebrow pill's Full radius both vary slightly
+	// rounded corners and the CTA radii both vary slightly
 	// between GPU contexts, breaking pixel-exact diffs.
 	sharpRadius = tokens.RadiusScale{}
 )
@@ -72,7 +72,7 @@ func withVisual(p hero.Props, visual layout.Widget) hero.Props {
 	return p
 }
 
-// withEyebrowAndCTAs adds the eyebrow pill and both call-to-action buttons.
+// withEyebrowAndCTAs adds the eyebrow kicker and both call-to-action buttons.
 func withEyebrowAndCTAs(p hero.Props) hero.Props {
 	p.Eyebrow = heroEyebrow
 	p.PrimaryCTA = &hero.CTA{Label: primaryCTA}
@@ -101,7 +101,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 }
 
 // TestHeroGolden records or diffs the four Measurable goldens. The structural
-// variations — Visual slot presence, eyebrow pill, dual CTA backgrounds —
+// variations — Visual slot presence, eyebrow kicker, dual CTA backgrounds —
 // distinguish the cases; the four text roles (DisplaySmall title, BodyLarge
 // subtitle, LabelSmall eyebrow, LabelLarge CTA labels) carry the typography.
 func TestHeroGolden(t *testing.T) {

@@ -1,5 +1,5 @@
 // Package hero provides the Patterns Hero pattern: a marketing landing
-// block with an optional eyebrow tag, a display Title, a Subtitle, an
+// block with an optional eyebrow kicker, a display Title, a Subtitle, an
 // optional Visual slot, and an optional dual call-to-action pair.
 //
 // Hero is a callable Go function consuming a components theme observable
@@ -38,7 +38,6 @@ import (
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/patterns/internal/outline"
-	"github.com/vibrantgio/patterns/tag"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -62,8 +61,9 @@ type CTA struct {
 // Props configures a Hero. Any field may be its zero value; the layout
 // adapts to the presence of each slot.
 type Props struct {
-	// Eyebrow is the optional small tag rendered above the Title. An empty
-	// string omits the eyebrow row entirely.
+	// Eyebrow is the optional kicker rendered above the Title — the small
+	// quiet line a marketing block leads with, and typography rather than a
+	// component. An empty string omits the eyebrow row entirely.
 	Eyebrow string
 
 	Title    string
@@ -98,7 +98,7 @@ type resolvedTokens struct {
 	color    tokens.ColorTokens
 	spacing  tokens.SpacingScale
 	radius   tokens.RadiusScale
-	eyebrow  tokens.TextStyle // the LabelSmall role: typeface, weight, size, line height
+	eyebrow  tokens.TextStyle // the LabelSmall role the kicker is set in
 	title    tokens.TextStyle // the DisplaySmall role
 	subtitle tokens.TextStyle // the BodyLarge role
 	label    tokens.TextStyle // the LabelLarge role (CTA labels)
@@ -248,14 +248,17 @@ func textColumn(
 	}
 }
 
-// eyebrowWidget renders a Primary-tinted pill containing the eyebrow label
-// in Primary color — patterns/tag's Tonal variant (ramp steps 100–300 are
-// tinted fills), drawn through the shared chip so every pill in the
-// vocabulary is one drawing. The pill background keeps the eyebrow visible
-// even when the label rasterises to zero width (e.g., in deterministic
-// empty-label golden tests).
+// eyebrowWidget renders the eyebrow: the kicker over the title, and pure
+// typography rather than a component. It is a run of LabelSmall text on the
+// hero's own ground, quiet by its size and by its ink, and the S3 gap under
+// it is the whole of what separates it from the title.
+//
+// The ink is the neutral ramp's own measured answer for that ground at the
+// text floor, not a named rung: the kicker is the smallest type on the block
+// and a rung that reads at BodyLarge need not read at LabelSmall.
 func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return tag.Render(shaper, label, tag.Tonal, tok.color, tok.spacing, tok.radius, tok.eyebrow)
+	ink := tok.color.MarkOn(tokens.RoleNeutral, tok.color.SurfaceAt(tokens.Level0), tokens.TextFloor)
+	return textWidget(shaper, label, ink, tok.eyebrow, font.Normal)
 }
 
 // titleWidget renders the DisplaySmall-role title in Text. A zero style
