@@ -25,8 +25,8 @@ github.com/vibrantgio/mvu/desktop v1.0.1 h1:SFflXq53UFW9x9nhie+el9Za84vlEhKPDJrk
 github.com/vibrantgio/mvu/desktop v1.0.1/go.mod h1:K0TrJ4+WamGDtRr8UWdACHQmOcTpL4Q7bnTJui5D/7U=
 github.com/vibrantgio/svg v0.0.9 h1:0OCCmVFz13IIDR3oDZeyw0IMy2RKWKWReQIlsRRz9zw=
 github.com/vibrantgio/svg v0.0.9/go.mod h1:H867wFCLH1Lfz+uoklXwtvOTAQgg/7DC0KoZm6nRHUA=
-github.com/vibrantgio/theme v1.3.1 h1:TGSNQMREu1aorXgbsyxNE4RovwjWxYgRl/jAWB9IFmA=
-github.com/vibrantgio/theme v1.3.1/go.mod h1:ucJaSwmdAOmVi0KESjRZ/XX7oY4jwyimAcD54v4zHRQ=
+github.com/vibrantgio/theme v1.3.2 h1:NMRT/BHOok6xAeP4QZHVYVXrCLxHlmPxOvckzY0CVkM=
+github.com/vibrantgio/theme v1.3.2/go.mod h1:ucJaSwmdAOmVi0KESjRZ/XX7oY4jwyimAcD54v4zHRQ=
 golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 h1:ex206bKw+v3K0dm3andkrIF+ijyQKJG1pLgwQ2PYdQM=
 golang.org/x/exp v0.0.0-20260727155853-b88d891fe743/go.mod h1:EdfpwwqSu+0Li0mzskwHU6FWDV3t9Q+RZDo3QMUtL3Q=
 golang.org/x/exp/shiny v0.0.0-20260727155853-b88d891fe743 h1:rQLtGtwpYzQUyxCqrT3i4lGgvC1Q4G72JTHYncg6AvY=

@@ -9,7 +9,7 @@ require (
 	github.com/vibrantgio/effects v0.2.4
 	github.com/vibrantgio/mvu v1.0.1
 	github.com/vibrantgio/mvu/desktop v1.0.1
-	github.com/vibrantgio/theme v1.3.1
+	github.com/vibrantgio/theme v1.3.2
 )
 
 require (
