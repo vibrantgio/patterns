@@ -401,10 +401,10 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 				Emphasis:    button.Ghost,
 				// The dialog is a level-2 surface (drawModal fills
 				// SurfaceAt(Level2)), and a ghost's wash is its host
-				// surface's own one-rung walk — so the close X names the
-				// storey it sits on, and its hover reads against the
+				// surface's own one-step walk — so the close X names the
+				// level it sits on, and its hover reads against the
 				// raised fill instead of dissolving into it.
-				Ground:    tokens.Level2,
+				Level:     tokens.Level2,
 				Clickable: &st.closeClick,
 				OnClick:   props.OnClose,
 				// Pass the override through untouched: a nil Shaper lets
@@ -470,7 +470,7 @@ func Render(
 	// through (callers pass a sharp radius for golden determinism).
 	var closeW layout.Widget
 	if props.showsClose() {
-		closeW = button.RenderIcon(crossIcon, colors, sp, rad, d, button.RenderState{Emphasis: button.Ghost, Ground: tokens.Level2})
+		closeW = button.RenderIcon(crossIcon, colors, sp, rad, d, button.RenderState{Emphasis: button.Ghost, Level: tokens.Level2})
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		if !open {

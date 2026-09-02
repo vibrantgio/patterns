@@ -429,10 +429,10 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 // register that means something else.
 func popularBadgeWidget(shaper *text.Shaper, tok resolvedTokens) layout.Widget {
 	// A tier card is a level-1 surface, and the badge's fill is derived
-	// against the storey it stands on rather than against the page: a fill
+	// against the surface it stands on rather than against the page: a fill
 	// resolved for the page would be the card's own colour here.
 	return badge.Render(shaper, "Popular", nil, badge.Neutral, tok.color, tok.spacing,
-		tok.radius, tok.popular, badge.RenderState{Ground: tokens.Level1})
+		tok.radius, tok.popular, badge.RenderState{Level: tokens.Level1})
 }
 
 // tierNameWidget renders the tier name in the TitleLarge role in
