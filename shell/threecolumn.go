@@ -195,8 +195,8 @@ func drawThreeColumn(
 	}
 
 	// Backstop so the divider and the empty slots read against something.
-	// It is the window's floor — the level beneath the paper in both
-	// schemes, which is what a three-column frame's uncovered ground is.
+	// It is the BACKDROP — the bare window plane, which is what a
+	// three-column frame shows wherever nothing stands.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
 
 	// Navbar spans the full width — unlike SidebarHeaderMain, where the
@@ -240,7 +240,13 @@ func drawThreeColumn(
 		mainW = 0
 	}
 
-	// Main.
+	// Main. The frame states where the document stands even when the slot
+	// is empty: the content region is level 0, not the bare window plane
+	// the backstop paints.
+	if rowH > 0 && mainW > 0 {
+		mainRect := image.Rect(sbW, navH, sbW+mainW, navH+rowH)
+		paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.Level0), clip.Rect(mainRect).Op())
+	}
 	if main != nil && rowH > 0 {
 		st := op.Offset(image.Pt(sbW, navH)).Push(gtx.Ops)
 		mgtx := gtx
@@ -272,7 +278,13 @@ func drawThreeColumn(
 		}
 	}
 
-	// Footer.
+	// Footer. A footer strip is a status bar, which is the window's
+	// furniture, so the frame fills it at the chrome level under whatever
+	// the caller draws there.
+	if footH > 0 {
+		footRect := image.Rect(0, navH+rowH, size.X, navH+rowH+footH)
+		paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect(footRect).Op())
+	}
 	if footer != nil && footH > 0 {
 		st := op.Offset(image.Pt(0, navH+rowH)).Push(gtx.Ops)
 		fgtx := gtx

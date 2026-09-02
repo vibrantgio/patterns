@@ -170,11 +170,12 @@ const underlineDp = 2
 
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// A navigation bar is chrome furniture, so it fills at the window's
-	// floor: the level beneath the paper, in both schemes. Do not fill
+	// A navigation bar is the window's furniture, so it fills at the chrome
+	// level: the level beneath the content, in both schemes. Do not fill
 	// with colors.Surface: it is a neutral-ramp alias, not a level — it
-	// coincides with the floor only in the light scheme, not the dark one.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
+	// coincides with the chrome level only in the light scheme, not the
+	// dark one.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect{Max: size}.Op())
 
 	// The vertical inset is the density's control padding, so a
 	// ControlHeight control in a density-pinned slot (ControlHeight +
@@ -309,11 +310,11 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 
 // activeUnderlineInk is the colour an active link's underline is drawn in:
 // the primary pin while it clears the graphic floor against the bar's own
-// floor fill — the underline's ground, since the bar is chrome filled at
-// tokens.LevelBackdrop (see drawNavbar) — and otherwise the rung of the
-// primary ramp that does ([tokens.ColorTokens.InkOn]).
+// fill — the surface the underline stands on, since the bar is furniture
+// filled at tokens.LevelChrome (see drawNavbar) — and otherwise the step of
+// the primary ramp that does ([tokens.ColorTokens.InkOn]).
 func activeUnderlineInk(colors tokens.ColorTokens) color.NRGBA {
-	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelBackdrop), tokens.GraphicFloor)
+	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelChrome), tokens.GraphicFloor)
 }
 
 // linkWidget renders a single link as a label centred inside

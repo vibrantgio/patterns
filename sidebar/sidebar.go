@@ -365,13 +365,13 @@ func drawSidebar(
 	h := gtx.Constraints.Max.Y
 	size := image.Pt(w, h)
 
-	// The sidebar is chrome furniture, so it fills at the window's floor —
-	// the level beneath the paper, in both schemes. Filling colors.Surface
-	// instead would be wrong: that neutral-ramp alias is a pairing rather
-	// than a level, and it is the floor in the light scheme but the raised
-	// rung in the dark scheme, painting the desk a level above the
-	// document lying on it.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
+	// A sidebar is the window's furniture, so it fills at the chrome
+	// level — the level beneath the content, in both schemes. Filling
+	// colors.Surface instead would be wrong: that neutral-ramp alias is a
+	// pairing rather than a level, and it coincides with the chrome level
+	// in the light scheme but with a raised one in the dark scheme, putting
+	// the furniture above the document lying on it.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect{Max: size}.Op())
 
 	// Toggle affordance at the top: a row like the items, so it shares
 	// the density's control height.

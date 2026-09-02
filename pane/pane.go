@@ -13,14 +13,14 @@
 // corner radius and the internal hairline are the three things that say so
 // together. This package is the second kind and only the second kind.
 //
-// ELEVATION IS READ THROUGH THE EDGE, NOT THROUGH LIGHTNESS. The pane's
-// level is the FLOOR — the surface the document's paper lies on, one
-// measured step toward the scheme's dark extreme in both schemes — so the
-// pane is DARKER than the document beside it and stays darker for being
+// ELEVATION IS READ THROUGH THE EDGE, NOT THROUGH LIGHTNESS. A pane is the
+// window's furniture, so its level is the CHROME level — one measured step
+// toward the scheme's dark extreme in both schemes — and the pane is
+// DARKER than the document beside it and stays darker for being
 // dismissible. A pane does not climb the levels by leaving the wall, and
-// the floor's elevation is zero dp: the desk is behind everything and has
-// nothing to cast onto, so there is no shadow here and the edge does the
-// whole of the work. [Surface] is the fill and [SeamInk] the edge, both
+// the chrome level's elevation is zero dp: chrome lies flat on the
+// backdrop and has nothing to cast onto, so there is no shadow here and the
+// edge does the whole of the work. [Surface] is the fill and [SeamInk] the edge, both
 // derived from the palette rather than named as rungs.
 //
 // The edge is drawn INSIDE the pane's own rounded rectangle, never on the
@@ -141,12 +141,12 @@ const (
 // because a pane the reader dismissed used to be behind it.
 var Buttons = desktop.ButtonRunAt(ButtonInsetDp)
 
-// Surface is the fill the pane wears: the BACKDROP, one step under
-// the paper toward the scheme's dark extreme in both schemes. It is a
+// Surface is the fill the pane wears: the CHROME level, one step under the
+// content toward the scheme's dark extreme in both schemes. It is a
 // function of the palette rather than a field, so that code holding a whole
 // palette and code holding a frame-time snapshot can name the same fill.
 func Surface(c tokens.ColorTokens) color.NRGBA {
-	return c.SurfaceAt(tokens.LevelBackdrop)
+	return c.SurfaceAt(tokens.LevelChrome)
 }
 
 // SeamInk is the ink of the pane's own edge, resolved against the fill it

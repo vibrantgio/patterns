@@ -58,9 +58,9 @@ type Props struct {
 	// rests on furniture — inside a dialog, on a pane, or as a specimen
 	// lifted off a page — and the strip above it moves with it.
 	//
-	// The strip is NOT this rung. It is chrome furniture — a row of handles
-	// on the panel — so it fills exactly one rung above Ground, walked from
-	// the panel rather than named as an absolute step. At the
+	// The strip is NOT this level. It is a row of handles on the panel, so
+	// it fills exactly one step above Ground, walked from the panel rather
+	// than named as an absolute step. At the
 	// default that is the semantic Surface over the Background pin, which is
 	// what a desktop tab strip looks like; on a Level1 panel it is neutral
 	// 300 over neutral 200, the same one-step separation.

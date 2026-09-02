@@ -68,13 +68,13 @@ func item(id int64, l toast.Level) toast.Toast {
 // stack ordering are the load-bearing visual signal and the text carries
 // the LabelMedium role; one scene stands the column on the bottom edge's
 // midpoint, where the design language puts a transient confirmation. The
-// scenes composite over a real pane background (SurfaceAt(LevelBackdrop)), so
+// scenes composite over a real pane background (SurfaceAt(LevelChrome)), so
 // a toast fill that stops separating from real app backgrounds fails the
 // diff instead of hiding behind an arbitrary grey.
 func TestStackGolden(t *testing.T) {
 	shaper := defaultShaper(t)
-	lightBG := tokens.DefaultLight.SurfaceAt(tokens.LevelBackdrop)
-	darkBG := tokens.DefaultDark.SurfaceAt(tokens.LevelBackdrop)
+	lightBG := tokens.DefaultLight.SurfaceAt(tokens.LevelChrome)
+	darkBG := tokens.DefaultDark.SurfaceAt(tokens.LevelChrome)
 
 	cases := []struct {
 		name   string
