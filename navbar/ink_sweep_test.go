@@ -71,14 +71,14 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 // TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed asserts that
 // whatever a caller seeds the palette with, an active link's underline
 // reaches WCAG 1.4.11 against the bar's own floor fill — the only ground
-// the navbar ever draws itself on (drawNavbar fills at tokens.LevelFloor
+// the navbar ever draws itself on (drawNavbar fills at tokens.LevelBackdrop
 // unconditionally; Props carries no Ground field).
 func TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string
 	for _, seed := range underlineSweepSeeds() {
 		for _, s := range underlineSweepSchemes(seed) {
-			band := s.tok.SurfaceAt(tokens.LevelFloor)
+			band := s.tok.SurfaceAt(tokens.LevelBackdrop)
 			ink := activeUnderlineInk(s.tok)
 			got := color.ContrastRatio(ink, band)
 			if got < tokens.GraphicFloor {
@@ -123,7 +123,7 @@ func TestAPastelSeedsActiveUnderlineInkLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)
 
-	lightBand := light.SurfaceAt(tokens.LevelFloor)
+	lightBand := light.SurfaceAt(tokens.LevelBackdrop)
 	if bare := color.ContrastRatio(light.Primary, lightBand); bare >= tokens.GraphicFloor {
 		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the bar — the test no longer reads the shape it was written for", bare)
 	}

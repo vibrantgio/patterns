@@ -14,10 +14,10 @@
 // together. This package is the second kind and only the second kind.
 //
 // ELEVATION IS READ THROUGH THE EDGE, NOT THROUGH LIGHTNESS. The pane's
-// storey is the FLOOR — the surface the document's paper lies on, one
+// level is the FLOOR — the surface the document's paper lies on, one
 // measured step toward the scheme's dark extreme in both schemes — so the
 // pane is DARKER than the document beside it and stays darker for being
-// dismissible. A pane does not climb the ladder by leaving the wall, and
+// dismissible. A pane does not climb the levels by leaving the wall, and
 // the floor's elevation is zero dp: the desk is behind everything and has
 // nothing to cast onto, so there is no shadow here and the edge does the
 // whole of the work. [Surface] is the fill and [SeamInk] the edge, both
@@ -141,12 +141,12 @@ const (
 // because a pane the reader dismissed used to be behind it.
 var Buttons = desktop.ButtonRunAt(ButtonInsetDp)
 
-// Surface is the fill the pane wears: the ladder's FLOOR, one step under
+// Surface is the fill the pane wears: the BACKDROP, one step under
 // the paper toward the scheme's dark extreme in both schemes. It is a
 // function of the palette rather than a field, so that code holding a whole
 // palette and code holding a frame-time snapshot can name the same fill.
 func Surface(c tokens.ColorTokens) color.NRGBA {
-	return c.SurfaceAt(tokens.LevelFloor)
+	return c.SurfaceAt(tokens.LevelBackdrop)
 }
 
 // SeamInk is the ink of the pane's own edge, resolved against the fill it
@@ -154,8 +154,8 @@ func Surface(c tokens.ColorTokens) color.NRGBA {
 //
 // Two things are derived and neither names a scheme. The DISTANCE is
 // [SeamRatio], solved in the luminance a contrast ratio is taken in and
-// realized at the fill's own hue and chroma, the way the ladder realizes a
-// storey — so the edge carries whatever tint the palette carries and none
+// realized at the fill's own hue and chroma, the way elevation realizes a
+// level — so the edge carries whatever tint the palette carries and none
 // of its own. The DIRECTION is toward the scheme's own ink: a dark scheme's
 // edge is lighter than its pane, as the platform draws it, and a light
 // scheme's is darker, which is the only direction a light pane has room in

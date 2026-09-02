@@ -366,12 +366,12 @@ func drawSidebar(
 	size := image.Pt(w, h)
 
 	// The sidebar is chrome furniture, so it fills at the window's floor —
-	// the storey beneath the paper, in both schemes. Filling colors.Surface
+	// the level beneath the paper, in both schemes. Filling colors.Surface
 	// instead would be wrong: that neutral-ramp alias is a pairing rather
-	// than a storey, and it is the floor in the light scheme but the raised
-	// rung in the dark scheme, painting the desk a storey above the
+	// than a level, and it is the floor in the light scheme but the raised
+	// rung in the dark scheme, painting the desk a level above the
 	// document lying on it.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
 
 	// Toggle affordance at the top: a row like the items, so it shares
 	// the density's control height.

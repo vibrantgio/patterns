@@ -486,10 +486,10 @@ func drawSplitPane(
 
 	// Backstop so the seam is visible even if Left/Right are nil. It is the
 	// window's floor: whatever a split pane does not cover is the desk the
-	// panes lie on, and the desk must be the storey beneath the paper in
+	// panes lie on, and the desk must be the level beneath the paper in
 	// both schemes — the colors.Surface ramp alias is a rung that is the
-	// floor only in the light scheme and the raised storey in the dark one.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
+	// floor only in the light scheme and the raised level in the dark one.
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
 
 	// Leading pane.
 	if left != nil {

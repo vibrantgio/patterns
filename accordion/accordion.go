@@ -234,7 +234,7 @@ func drawAccordion(
 	// navigation construct whose header rows are chrome, so what shows
 	// between and behind them is the desk rather than a plane above the
 	// document.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
 
 	headerH := gtx.Dp(unit.Dp(headerHDp))
 	bodyH := gtx.Dp(unit.Dp(bodyHDp))

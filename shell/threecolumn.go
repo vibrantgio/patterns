@@ -195,9 +195,9 @@ func drawThreeColumn(
 	}
 
 	// Backstop so the divider and the empty slots read against something.
-	// It is the window's floor — the storey beneath the paper in both
+	// It is the window's floor — the level beneath the paper in both
 	// schemes, which is what a three-column frame's uncovered ground is.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelFloor), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
 
 	// Navbar spans the full width — unlike SidebarHeaderMain, where the
 	// sidebar claims the full height and the navbar starts after it.

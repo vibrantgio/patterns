@@ -236,13 +236,13 @@ func TestSeamInkIsThePlatformsWhisper(t *testing.T) {
 	}
 }
 
-// TestSurfaceIsTheFloor: the pane's storey is the floor, under the paper,
+// TestSurfaceIsTheFloor: the pane's level is the floor, under the paper,
 // in both schemes. A pane that read lighter than the document beside it
-// would be claiming a storey it does not have.
+// would be claiming a level it does not have.
 func TestSurfaceIsTheFloor(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got, want := pane.Surface(tc.colors), tc.colors.SurfaceAt(tokens.LevelFloor); got != want {
+			if got, want := pane.Surface(tc.colors), tc.colors.SurfaceAt(tokens.LevelBackdrop); got != want {
 				t.Errorf("the pane fills %v, want the floor %v", got, want)
 			}
 		})
