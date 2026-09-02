@@ -401,7 +401,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 				Emphasis:    button.Ghost,
 				// The dialog is a level-2 surface (drawModal fills
 				// SurfaceAt(Level2)), and a ghost's wash is its host
-				// surface's own one-step walk — so the close X names the
+				// surface's own walk — so the close X names the
 				// level it sits on, and its hover reads against the
 				// raised fill instead of dissolving into it.
 				Level:     tokens.Level2,

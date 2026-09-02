@@ -260,3 +260,52 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 			width, height, mark.Dx(), mark.Dy())
 	}
 }
+
+// TestCloseMarkWashClearsThePerceptibilityFloor pins the third of the
+// ghost affordances at the floor the other two are gated at in
+// components/button: the close mark is a ghost naming tokens.Level2, so
+// the wash it paints under the pointer is that level's own, and a dialog's
+// dismissal is the last control in the system that may dissolve into the
+// surface behind it.
+//
+// The surface is taken from the rendered pixels rather than assumed: the
+// bounding box is found by looking for the level-2 fill, so a panel that
+// stopped standing at level 2 would leave nothing to measure against and
+// fail here rather than measure the wrong pairing.
+func TestCloseMarkWashClearsThePerceptibilityFloor(t *testing.T) {
+	for _, sc := range []struct {
+		name string
+		c    tokens.ColorTokens
+		bg   color.NRGBA
+	}{
+		{"light", tokens.DefaultLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}},
+		{"dark", tokens.DefaultDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
+	} {
+		t.Run(sc.name, func(t *testing.T) {
+			img, fill := capturePanel(t, sc.c, sc.bg)
+			if img == nil {
+				return // headless unavailable; Capture called t.Skip
+			}
+			surface, _, _, _ := surfaceAndMark(img, fill)
+			if surface.Empty() {
+				t.Fatalf("no %v surface found in the frame: the panel no longer stands on level 2", fill)
+			}
+			hover := sc.c.StateAt(tokens.Level2, tokens.StateHover)
+			press := sc.c.StateAt(tokens.Level2, tokens.StatePressed)
+			for _, w := range []struct {
+				name string
+				wash color.NRGBA
+			}{{"hover", hover}, {"press", press}} {
+				got := themecolor.ContrastRatio(w.wash, fill)
+				if got < tokens.StateFloor {
+					t.Errorf("%s wash %v on the panel surface %v measures %.3f:1, under the %.2f:1 floor",
+						w.name, w.wash, fill, got, tokens.StateFloor)
+				}
+				t.Logf("%s wash %v on the panel surface %v: %.3f:1", w.name, w.wash, fill, got)
+			}
+			if step := themecolor.ContrastRatio(press, hover); step <= 1 {
+				t.Errorf("press %v does not lie beyond hover %v", press, hover)
+			}
+		})
+	}
+}
