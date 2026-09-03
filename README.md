@@ -102,7 +102,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces intent through `OnSort`. Row heights follow the theme's density. |
 | `pagination` | A row of numbered page buttons flanked by prev/next chevrons, the current page highlighted Primary/OnPrimary. |
-| `card` | A rounded surface with optional Header / Body / Footer slots, in an outlined (1 dp stroke on the level-1 surface) or elevated variant — the latter a level-2 tonal fill. A card is raised in place, not floating, so neither variant casts a shadow (ADR-005; E2.2 retired the elevated card's `effects/depth` call). |
+| `card` | A rounded surface with optional Header / Body / Footer slots, in an outlined or filled look. Both fill at level 1, one step above the content the card stands on, and differ only at the edge: outlined wears a 1 dp stroke, filled wears none. A card is raised, not floating, so neither look casts a shadow (ADR-005). |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
 
 **Overlays and feedback** — the things that draw over everything else.

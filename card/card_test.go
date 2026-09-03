@@ -21,9 +21,9 @@ import (
 
 const (
 	canvasW, canvasH = 280, 200
-	// The card draws into its full constraints. For the elevated variant
-	// we leave a 16-px margin so the shadow strip has room to extend
-	// outside the card's perimeter and remain visible in the golden.
+	// The card draws into its full constraints, so a golden that must
+	// show the card's edge against the surface it stands on insets it by
+	// this margin.
 	marginPx = 16
 )
 
@@ -99,8 +99,7 @@ func slots(t *testing.T, c tokens.ColorTokens) (header, body, footer layout.Widg
 }
 
 // scene renders w into a canvas-sized constraint. The optional margin
-// leaves room around the widget for ornamental output (e.g., shadows
-// extending outside the widget's nominal bounds).
+// leaves the surface the card stands on visible around it.
 func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -116,7 +115,7 @@ func TestCardGolden(t *testing.T) {
 		name       string
 		colors     tokens.ColorTokens
 		headerOnly bool
-		elevated   bool
+		filled     bool
 		bg         color.NRGBA
 		margin     int
 	}{
@@ -140,17 +139,17 @@ func TestCardGolden(t *testing.T) {
 			margin:     0,
 		},
 		{
-			name:     "light-elevated",
-			colors:   tokens.DefaultLight,
-			elevated: true,
-			bg:       color.NRGBA{R: 240, G: 240, B: 240, A: 255},
-			margin:   marginPx,
+			name:   "light-filled",
+			colors: tokens.DefaultLight,
+			filled: true,
+			bg:     color.NRGBA{R: 240, G: 240, B: 240, A: 255},
+			margin: marginPx,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			header, body, footer := slots(t, tc.colors)
-			props := card.Props{Header: header, Body: body, Footer: footer, Elevated: tc.elevated}
+			props := card.Props{Header: header, Body: body, Footer: footer, Filled: tc.filled}
 			if tc.headerOnly {
 				props = card.Props{Header: header}
 			}
@@ -160,10 +159,11 @@ func TestCardGolden(t *testing.T) {
 	}
 }
 
-// TestCardElevatedDiffersFromOutlined confirms the elevated variant
-// produces visibly different pixels from the outlined variant. Catches
-// regressions where the Elevated flag silently no-ops.
-func TestCardElevatedDiffersFromOutlined(t *testing.T) {
+// TestCardFilledDiffersFromOutlined confirms the filled look produces
+// visibly different pixels from the outlined one. The two share a fill and
+// differ only at the edge, so this catches regressions where the Filled
+// flag silently no-ops.
+func TestCardFilledDiffersFromOutlined(t *testing.T) {
 	// A flat bar, not text: the two renders must differ only in the card's
 	// own surface treatment, and an identical slot in both is the cleanest
 	// way to say so.
@@ -171,12 +171,12 @@ func TestCardElevatedDiffersFromOutlined(t *testing.T) {
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
 	outlined := card.Render(card.Props{Header: header}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
-	elevated := card.Render(card.Props{Header: header, Elevated: true}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
+	filled := card.Render(card.Props{Header: header, Filled: true}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
 
 	imgOut := golden.Capture(t, canvasSize, scene(outlined, marginPx, bg))
-	imgElev := golden.Capture(t, canvasSize, scene(elevated, marginPx, bg))
-	if n := golden.PixelDiff(imgOut, imgElev); n == 0 {
-		t.Error("elevated and outlined cards render identically; expected shadow/outline difference")
+	imgFilled := golden.Capture(t, canvasSize, scene(filled, marginPx, bg))
+	if n := golden.PixelDiff(imgOut, imgFilled); n == 0 {
+		t.Error("filled and outlined cards render identically; expected the outline difference")
 	}
 }
 

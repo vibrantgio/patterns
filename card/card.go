@@ -1,14 +1,13 @@
 // Package card provides the Patterns Card pattern: a rounded surface
 // container with optional Header / Body / Footer slots, in either an
-// outlined or elevated variant.
+// outlined or filled look.
 //
-// A card is raised in place, not floating, so both variants read as raised
-// by tonal surface step alone — no cast shadow. The default outlined card
-// sits on the standing content plane at SurfaceAt(Level1) (Neutral step
-// 200) with a 1 dp Neutral step-500 stroke; the Elevated variant fills one
-// storey deeper at SurfaceAt(Level2) (Neutral step 300), with no shadow:
-// shadows are reserved for surfaces that float and can leave (toasts,
-// menus), which a card is not.
+// A card is raised, not floating: both looks fill at SurfaceAt(Level1),
+// one step above the content the card stands on, and neither casts a
+// shadow — a shadow marks what floats and can leave (a toast, a menu),
+// which a card is not. The two looks differ only at the edge: outlined
+// circles that fill with a 1 dp neutral stroke, filled carries none and
+// is read by the fill alone.
 //
 // Card is a callable Go function consuming a components theme observable
 // and returning a stream of layout.Widget. The source is intentionally
@@ -44,18 +43,17 @@ import (
 )
 
 // Props configures a Card. All slot fields are optional; nil slots are
-// simply omitted from the inner stack. Elevated swaps the outlined
-// variant (a level-1 fill with a 1 dp neutral step-500 stroke) for a
-// level-2 tonal fill (SurfaceAt(Level2)) with no stroke and no shadow — a
-// card is raised in place.
+// simply omitted from the inner stack. Both looks fill at
+// SurfaceAt(Level1); Filled drops the outlined look's 1 dp neutral
+// stroke, which is the only difference between them.
 type Props struct {
 	Header layout.Widget
 	Body   layout.Widget
 	Footer layout.Widget
 
-	// Elevated selects the shadowed surface variant. Defaults to the
-	// outlined variant.
-	Elevated bool
+	// Filled selects the look read by its fill alone, without the
+	// outline. Defaults to the outlined look.
+	Filled bool
 }
 
 // Card returns an rx.Observable[layout.Widget] that emits a new widget
@@ -101,20 +99,17 @@ func drawCard(gtx layout.Context, props Props, colors tokens.ColorTokens, sp tok
 	r := gtx.Dp(unit.Dp(rad.Lg))
 	gap := gtx.Dp(unit.Dp(sp.S3))
 
-	// The card is raised by tonal step alone: level 1 for the default
-	// outlined variant, level 2 for Elevated (no shadow).
+	// Both looks are raised by the same tonal step — level 1, one step
+	// above the content — and neither casts a shadow.
 	fill := colors.SurfaceAt(tokens.Level1)
-	if props.Elevated {
-		fill = colors.SurfaceAt(tokens.Level2)
-	}
 
 	rrect := clip.RRect{Rect: bounds, SE: r, SW: r, NE: r, NW: r}
 	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
 
-	if !props.Elevated {
+	if !props.Filled {
 		// The outlined card's edge is what makes it an object, so it is
-		// derived rather than named: the neutral rung that reaches the
-		// graphic floor against the level-1 fill it circles.
+		// derived rather than named: the neutral step that reaches the
+		// graphic contrast floor against the level-1 fill it circles.
 		paint.FillShape(gtx.Ops, outline.Ink(colors, tokens.Level1), clip.Stroke{
 			Path:  rrect.Path(gtx.Ops),
 			Width: float32(gtx.Dp(unit.Dp(1))),
