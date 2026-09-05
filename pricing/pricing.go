@@ -273,12 +273,20 @@ func layoutTiers(
 }
 
 // tierPrimaryInk is the primary ink a tier card draws directly on its own
-// level-1 fill — the highlighted tier's ring and every tier's feature
+// raised fill — the highlighted tier's ring and every tier's feature
 // checkmarks: the primary pin when it clears the graphic floor against
-// that fill, and otherwise the rung of the primary ramp that does
-// ([tokens.ColorTokens.InkOn]).
+// that fill, and otherwise the step of the primary ramp that does
+// ([tokens.ColorTokens.InkOn]). The fill is the raise walked from the
+// content the table of tiers is printed on, which is what tierFill paints.
 func tierPrimaryInk(c tokens.ColorTokens) color.NRGBA {
-	return c.InkOn(tokens.RolePrimary, c.SurfaceAt(tokens.Level1), tokens.GraphicFloor)
+	return c.InkOn(tokens.RolePrimary, tierFill(c), tokens.GraphicFloor)
+}
+
+// tierFill is the surface a tier card fills with: the raise walked from the
+// content. Every derivation a tier takes against its own fill asks here, so
+// the fill and what is read on it cannot drift apart.
+func tierFill(c tokens.ColorTokens) color.NRGBA {
+	return c.RaisedOn(c.SurfaceAt(tokens.Level0)).Fill
 }
 
 // drawTier draws a single tier card: a rounded Surface filled to its
@@ -318,14 +326,14 @@ func drawTier(
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, tierFill(tok.color), rrect.Op(gtx.Ops))
 
-	// A tier fills at the level-1 storey and its edge is derived against
-	// that fill, so the card reads as an object in either scheme. The
-	// highlighted tier trades that edge for the accent, which is its own
-	// pairing and says which tier is being pushed: [tierPrimaryInk].
+	// A tier fills at the raise walked from the content and its edge is
+	// derived against that fill, so the card reads as an object in either
+	// scheme. The highlighted tier trades that edge for the accent, which is
+	// its own pairing and says which tier is being pushed: [tierPrimaryInk].
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	strokeColor := outline.Ink(tok.color, tokens.Level1)
+	strokeColor := outline.Ink(tok.color, tierFill(tok.color))
 	if tier.Highlighted {
 		strokeW = float32(gtx.Dp(unit.Dp(2)))
 		strokeColor = tierPrimaryInk(tok.color)

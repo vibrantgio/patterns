@@ -129,21 +129,23 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	}
 }
 
-// TestTheStripStandsOneRungOverThePanel guards the pattern's two areas.
-// The panel is content and fills at Props.Ground; the strip is furniture
-// and fills exactly one rung above it.
+// TestTheStripStandsOneStepOverThePanel guards the pattern's two areas.
+// The panel is content and fills at Props.Ground; the strip is furniture and
+// is the raise walked from it — told by its own fill, or, where the scheme
+// has no step left, by the seam along the strip's foot.
 //
 // The claim is read off sampled pixels and never off token arithmetic: the
-// strip over a level-0 panel and the panel of a level-1 instance are the same
-// rung, so the capture says "one rung up" by matching one fill against the
-// other through the same GPU round-trip that produced both.
-func TestTheStripStandsOneRungOverThePanel(t *testing.T) {
+// strip over a level-0 panel and the panel of a level-1 instance are the
+// same surface, so the capture says "one step up" by matching one fill
+// against the other through the same GPU round-trip that produced both.
+func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
 	// An out-of-range selection draws no content, so the whole panel below
 	// the strip is the pattern's own fill and nothing else.
-	fills := func(ground tokens.ElevationLevel) (strip, panel [3]uint8) {
+	stripH := int(tokens.Comfortable.ControlHeight)
+	fills := func(ground tokens.ElevationLevel) (strip, seam, panel [3]uint8) {
 		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Ground: ground}
 		w := tabs.Render(shaper, props, -1, tokens.DefaultLight, tokens.Spacing,
 			tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
@@ -152,23 +154,27 @@ func TestTheStripStandsOneRungOverThePanel(t *testing.T) {
 			off := img.PixOffset(x, y)
 			return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
 		}
-		stripH := int(tokens.Comfortable.ControlHeight)
-		// Right of the last tab cell the strip is bare band; well below it
-		// the panel is bare plane.
-		return at(canvasSize.X-1, stripH/2), at(canvasSize.X-1, stripH+8)
+		// Right of the last tab cell the strip is bare band; the strip's
+		// last row is where its seam would be; well below it the panel is
+		// bare plane.
+		return at(canvasSize.X-1, stripH/2), at(canvasSize.X-1, stripH-1), at(canvasSize.X-1, stripH+8)
 	}
 
-	groundStrip, groundPanel := fills(tokens.Level0)
-	if groundStrip == groundPanel {
-		t.Errorf("strip and panel render the same fill %v on a level-0 ground; the strip is furniture and owes its panel one rung", groundStrip)
+	told := func(strip, seam, panel [3]uint8) bool {
+		return strip != panel || (seam != strip && seam != panel)
 	}
 
-	raisedStrip, raisedPanel := fills(tokens.Level1)
-	if raisedStrip == raisedPanel {
-		t.Errorf("strip and panel render the same fill %v on a level-1 ground", raisedStrip)
+	groundStrip, groundSeam, groundPanel := fills(tokens.Level0)
+	if !told(groundStrip, groundSeam, groundPanel) {
+		t.Errorf("strip and panel render the same fill %v on a level-0 ground and no seam parts them; the strip is furniture and owes its panel a step or a seam", groundStrip)
+	}
+
+	raisedStrip, raisedSeam, raisedPanel := fills(tokens.Level1)
+	if !told(raisedStrip, raisedSeam, raisedPanel) {
+		t.Errorf("strip and panel render the same fill %v on a level-1 ground and no seam parts them", raisedStrip)
 	}
 	if groundStrip != raisedPanel {
-		t.Errorf("the strip over a level-0 panel is %v and a level-1 panel is %v; one rung up from level 0 is level 1, so these are the same fill",
+		t.Errorf("the strip over a level-0 panel is %v and a level-1 panel is %v; one step up from level 0 is level 1, so these are the same fill",
 			groundStrip, raisedPanel)
 	}
 	if groundPanel == raisedPanel {

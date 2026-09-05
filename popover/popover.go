@@ -381,7 +381,7 @@ func drawPopover(
 		// The surface's edge is derived against the storey it circles — the
 		// same Level3 the fill is painted at, named once for both, and the
 		// tail's own edge is the same ink for the same reason.
-		edge := outline.Ink(tok.color, tokens.Level3)
+		edge := outline.Ink(tok.color, tok.color.SurfaceAt(tokens.Level3))
 		stroke := float32(gtx.Dp(strokeWidth))
 		surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
 		surfRRect := clip.RRect{

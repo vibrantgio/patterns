@@ -43,7 +43,7 @@ func TestOutlineInkClearsTheGraphicFloor(t *testing.T) {
 		t.Run(sc.name, func(t *testing.T) {
 			c := sc.colors
 			for _, fill := range storeys {
-				ink := outline.Ink(c, fill.level)
+				ink := outline.Ink(c, c.SurfaceAt(fill.level))
 				for _, plane := range storeys {
 					if plane.level > fill.level {
 						continue // deeper than the fill: not a plane this surface stands on
@@ -99,7 +99,7 @@ func TestOutlineInkClearsTheFloorForEverySeed(t *testing.T) {
 		} {
 			c := sc.colors
 			for _, fill := range storeys {
-				ink := outline.Ink(c, fill.level)
+				ink := outline.Ink(c, c.SurfaceAt(fill.level))
 				for _, plane := range storeys {
 					if plane.level > fill.level {
 						continue

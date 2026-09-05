@@ -388,12 +388,13 @@ func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, t
 	}
 
 	// The outlined CTA is an edge around a raised fill and nothing else, so
-	// the edge is derived rather than named: the neutral rung that reaches
-	// the graphic floor against that fill, which is the level-1 storey. The
-	// fill is asked of the same storey.
+	// the edge is derived rather than named: the neutral step that reaches
+	// the graphic floor against that fill. The fill is the raise walked from
+	// the content the hero is printed on.
+	raise := tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, raise.Fill, rrect.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, raise.Fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
 
 	offX := (w - labelDims.Size.X) / 2
 	offY := (h - labelDims.Size.Y) / 2

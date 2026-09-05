@@ -242,14 +242,15 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
-	// The card fills at the level-1 storey and its edge is derived against
-	// that fill, rather than named at a rung that means two different
-	// contrasts in the two schemes. The fill must name the storey, not the
-	// neutral-ramp alias colors.Surface, or the edge is derived against a
-	// fill that is not there.
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level1), rrect.Op(gtx.Ops))
+	// The card fills at the raise walked from the content and its edge is
+	// derived against that fill, rather than named at a step that means two
+	// different contrasts in the two schemes. The edge is derived against
+	// the fill the card actually paints, or it is derived against a fill
+	// that is not there.
+	fill := tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill
+	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
 
 	off := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
 	contentCall.Add(gtx.Ops)
@@ -376,7 +377,7 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 	r := size / 2
 	stroke := float32(gtx.Dp(unit.Dp(1)))
 	circle := clip.RRect{Rect: image.Rectangle{Max: image.Pt(size, size)}, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level1), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
 	if name == "" {
 		return
 	}

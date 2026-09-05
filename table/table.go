@@ -381,13 +381,17 @@ func drawHeaderRow[T any](
 	tok resolvedTokens,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The header is furniture over the grid's own plane, so its band is one
-	// rung above the rung the plane fills at — walked from that ground and
-	// not named as an absolute step ([tokens.ElevationLevel.Raised]). An
-	// absolute neutral 300 here would read right only while every table
-	// happened to rest on Surface, and would put the header two rungs off its
-	// own grid the moment the grid is printed on the window's paper.
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.ground.Raised()), clip.Rect{Max: size}.Op())
+	// The header is furniture over the grid's own plane, so its band is the
+	// raise walked from the plane's own fill and not an absolute step
+	// ([tokens.ColorTokens.RaisedOn]). An absolute neutral 300 here would
+	// read right only while every table happened to rest on Surface, and
+	// would put the header two steps off its own grid the moment the grid is
+	// printed on the window's content.
+	//
+	// The seam the raise may owe is already drawn: the header closes with
+	// the same Divider rule every row does, which is the one hairline
+	// between the header band and the body and is louder than a seam.
+	paint.FillShape(gtx.Ops, tok.color.RaisedOn(tok.color.SurfaceAt(tok.ground)).Fill, clip.Rect{Max: size}.Op())
 
 	x := 0
 	for i, col := range columns {

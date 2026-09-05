@@ -2,12 +2,13 @@
 // container with optional Header / Body / Footer slots, in either an
 // outlined or filled look.
 //
-// A card is raised, not floating: both looks fill at SurfaceAt(Level1),
-// one step above the content the card stands on, and neither casts a
-// shadow — a shadow marks what floats and can leave (a toast, a menu),
-// which a card is not. The two looks differ only at the edge: outlined
-// circles that fill with a 1 dp neutral stroke, filled carries none and
-// is read by the fill alone.
+// A card is raised, not floating: both looks fill at the raise walked from
+// the surface the card stands on, and neither casts a shadow — a shadow
+// marks what floats and can leave (a toast, a menu), which a card is not.
+// The two looks differ only at the edge: outlined circles that fill with a
+// 1 dp neutral stroke, filled carries none and is read by the fill alone —
+// except where the scheme has no step left to tell the raise with, and the
+// filled card draws the seam its raise owes instead.
 //
 // Card is a callable Go function consuming a components theme observable
 // and returning a stream of layout.Widget. The source is intentionally
@@ -43,9 +44,9 @@ import (
 )
 
 // Props configures a Card. All slot fields are optional; nil slots are
-// simply omitted from the inner stack. Both looks fill at
-// SurfaceAt(Level1); Filled drops the outlined look's 1 dp neutral
-// stroke, which is the only difference between them.
+// simply omitted from the inner stack. Both looks fill at the raise walked
+// from [Props.Level]; Filled drops the outlined look's 1 dp neutral stroke,
+// which is the only difference between them.
 type Props struct {
 	Header layout.Widget
 	Body   layout.Widget
@@ -54,6 +55,13 @@ type Props struct {
 	// Filled selects the look read by its fill alone, without the
 	// outline. Defaults to the outlined look.
 	Filled bool
+
+	// Level is the level of the surface the card stands on, and the card
+	// fills one step above it. The zero value is the content, which is
+	// where most cards stand; a card inside a dialog names Level2 and
+	// comes out one step above the dialog rather than one step above a
+	// content plane it is nowhere near.
+	Level tokens.ElevationLevel
 }
 
 // Card returns an rx.Observable[layout.Widget] that emits a new widget
@@ -99,21 +107,44 @@ func drawCard(gtx layout.Context, props Props, colors tokens.ColorTokens, sp tok
 	r := gtx.Dp(unit.Dp(rad.Lg))
 	gap := gtx.Dp(unit.Dp(sp.S3))
 
-	// Both looks are raised by the same tonal step — level 1, one step
-	// above the content — and neither casts a shadow.
-	fill := colors.SurfaceAt(tokens.Level1)
+	// Both looks are raised by the same tonal step, walked from the surface
+	// the card stands on, and neither casts a shadow.
+	raise := colors.RaisedOn(colors.SurfaceAt(props.Level))
 
 	rrect := clip.RRect{Rect: bounds, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, raise.Fill, rrect.Op(gtx.Ops))
 
-	if !props.Filled {
+	switch {
+	case !props.Filled:
 		// The outlined card's edge is what makes it an object, so it is
 		// derived rather than named: the neutral step that reaches the
-		// graphic contrast floor against the level-1 fill it circles.
-		paint.FillShape(gtx.Ops, outline.Ink(colors, tokens.Level1), clip.Stroke{
+		// graphic contrast floor against the fill it circles. It is also
+		// louder than any seam, so an outlined card owes none.
+		paint.FillShape(gtx.Ops, outline.Ink(colors, raise.Fill), clip.Stroke{
 			Path:  rrect.Path(gtx.Ops),
 			Width: float32(gtx.Dp(unit.Dp(1))),
 		}.Op())
+	case raise.Seamed:
+		// The scheme has no step left to say the card is raised, so the
+		// raise says it at its own edge instead. Drawn once, by the card:
+		// the surface beneath has nothing to draw it with.
+		//
+		// Drawn as the card's own rectangle in the seam with the raise laid
+		// back over it one pixel in, rather than as a stroke: a stroke is
+		// centred on the edge it follows, so half of it would land outside
+		// the card and the card's painted footprint would depend on which
+		// scheme was running.
+		w := gtx.Dp(unit.Dp(1))
+		if w < 1 {
+			w = 1
+		}
+		paint.FillShape(gtx.Ops, raise.Seam, rrect.Op(gtx.Ops))
+		ir := r - w
+		if ir < 0 {
+			ir = 0
+		}
+		inner := clip.RRect{Rect: bounds.Inset(w), SE: ir, SW: ir, NE: ir, NW: ir}
+		paint.FillShape(gtx.Ops, raise.Fill, inner.Op(gtx.Ops))
 	}
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {

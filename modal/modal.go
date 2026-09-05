@@ -630,7 +630,7 @@ func drawModal(
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level2), surfRRect.Op(gtx.Ops))
 	// The surface's edge is derived against the storey it circles — the same
 	// Level2 the fill above is painted at, named once for both.
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tokens.Level2), clip.Stroke{
+	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tok.color.SurfaceAt(tokens.Level2)), clip.Stroke{
 		Path:  surfRRect.Path(gtx.Ops),
 		Width: float32(gtx.Dp(unit.Dp(1))),
 	}.Op())

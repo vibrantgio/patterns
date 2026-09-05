@@ -59,11 +59,11 @@ type Props struct {
 	// lifted off a page — and the strip above it moves with it.
 	//
 	// The strip is NOT this level. It is a row of handles on the panel, so
-	// it fills exactly one step above Ground, walked from the panel rather
-	// than named as an absolute step. At the
-	// default that is the semantic Surface over the Background pin, which is
-	// what a desktop tab strip looks like; on a Level1 panel it is neutral
-	// 300 over neutral 200, the same one-step separation.
+	// it fills exactly one step above Ground, walked from the panel's own
+	// fill rather than named as an absolute step
+	// ([tokens.ColorTokens.RaisedOn]). Where the scheme has no step left the
+	// strip is flush with its panel and says so with the seam its raise
+	// owes, drawn along its own foot.
 	//
 	// patterns/table's Props carries the identical field for the identical
 	// reason, and the two patterns are meant to keep saying it the same way.
@@ -256,20 +256,31 @@ func drawTabs(
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
 	// The panel plane first, at the caller's ground, then the strip band one
-	// rung over it.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(props.Ground), clip.Rect{Max: size}.Op())
+	// step over it.
+	panel := colors.SurfaceAt(props.Ground)
+	paint.FillShape(gtx.Ops, panel, clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	// The strip is furniture over the panel it caps, so its band is one rung
-	// above the panel's own rung — walked from that ground and not named as an
-	// absolute step ([tokens.ElevationLevel.Raised]). An absolute
-	// Surface here would leave the strip level with its own panel the moment
-	// the panel is printed on the window's paper.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(props.Ground.Raised()),
-		clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
+	// The strip is furniture over the panel it caps, so its band is the raise
+	// walked from the panel's own fill and not an absolute step
+	// ([tokens.ColorTokens.RaisedOn]). An absolute Surface here would leave
+	// the strip level with its own panel the moment the panel is printed on
+	// the window's content.
+	strip := colors.RaisedOn(panel)
+	paint.FillShape(gtx.Ops, strip.Fill, clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
+	if strip.Seamed && stripH < size.Y {
+		// Two flush regions, so the one above draws the hairline that says
+		// where it ends — once, inside its own foot.
+		seamH := gtx.Dp(unit.Dp(1))
+		if seamH < 1 {
+			seamH = 1
+		}
+		paint.FillShape(gtx.Ops, strip.Seam,
+			clip.Rect(image.Rect(0, stripH-seamH, size.X, stripH)).Op())
+	}
 
 	stripGtx := gtx
 	stripGtx.Constraints = layout.Exact(image.Pt(size.X, stripH))
@@ -300,9 +311,9 @@ func drawStrip(
 	if len(props.Tabs) == 0 {
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	}
-	// The underline is drawn on the strip band, one rung above the panel
-	// (see drawTabs), so that is the ground its ink is measured against.
-	stripGround := props.Ground.Raised()
+	// The underline is drawn on the strip band, one step above the panel
+	// (see drawTabs), so that is the surface its ink is measured against.
+	stripGround := colors.RaisedOn(colors.SurfaceAt(props.Ground)).Fill
 	children := make([]layout.FlexChild, 0, len(props.Tabs))
 	for i := range props.Tabs {
 		i := i
@@ -323,17 +334,19 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 
 // underlineInk is the colour a selected tab's underline is drawn in: the
 // primary pin while it clears the graphic floor against ground — the strip
-// band the underline actually sits on — and otherwise the rung of the
-// primary ramp that does ([tokens.ColorTokens.InkOn]).
-func underlineInk(colors tokens.ColorTokens, ground tokens.ElevationLevel) color.NRGBA {
-	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(ground), tokens.GraphicFloor)
+// band the underline actually sits on, handed in as the fill it is rather
+// than as a level, because the band is a raise and has no level to name —
+// and otherwise the step of the primary ramp that does
+// ([tokens.ColorTokens.InkOn]).
+func underlineInk(colors tokens.ColorTokens, ground color.NRGBA) color.NRGBA {
+	return colors.InkOn(tokens.RolePrimary, ground, tokens.GraphicFloor)
 }
 
 // tabCell renders a single tab label centred inside (S3, S2) padding,
 // with a strip-height cell. When selected, an underline of underlineDp px
 // is drawn along the cell's bottom edge in [underlineInk], measured
-// against ground — the strip band the underline actually sits on, passed
-// in rather than assumed. The cell width is at least 2×S3 so the
+// against ground — the fill of the strip band the underline actually sits
+// on, passed in rather than assumed. The cell width is at least 2×S3 so the
 // underline is visible even when the label rasterises to zero width,
 // which an empty Tab.Label does.
 func tabCell(
@@ -344,7 +357,7 @@ func tabCell(
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
-	ground tokens.ElevationLevel,
+	ground color.NRGBA,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		stripH := gtx.Constraints.Max.Y

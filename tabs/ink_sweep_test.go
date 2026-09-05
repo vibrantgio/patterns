@@ -68,11 +68,21 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// underlineGrounds are every strip band Props.Ground can actually produce:
-// Props.Ground names the panel (Level0..Level3) and the strip stands one
-// rung over it (Raised()), clamped at the Level3 ceiling.
-var underlineGrounds = []tokens.ElevationLevel{
-	tokens.Level0.Raised(), tokens.Level1.Raised(), tokens.Level2.Raised(), tokens.Level3.Raised(),
+// underlinePanels are every panel Props.Ground can name. The strip band the
+// underline sits on is the raise walked from each, which is what
+// underlineBands answers.
+var underlinePanels = []tokens.ElevationLevel{
+	tokens.Level0, tokens.Level1, tokens.Level2, tokens.Level3,
+}
+
+// underlineBands are every strip band Props.Ground can actually produce: the
+// raise walked from each panel, clamped where the scheme runs out of steps.
+func underlineBands(c tokens.ColorTokens) []stdcolor.NRGBA {
+	bands := make([]stdcolor.NRGBA, 0, len(underlinePanels))
+	for _, panel := range underlinePanels {
+		bands = append(bands, c.RaisedOn(c.SurfaceAt(panel)).Fill)
+	}
+	return bands
 }
 
 // TestUnderlineInkClearsTheGraphicFloorForEverySeed is the site-level
@@ -84,13 +94,12 @@ func TestUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	var worstLightAt, worstDarkAt string
 	for _, seed := range underlineSweepSeeds() {
 		for _, s := range underlineSweepSchemes(seed) {
-			for _, ground := range underlineGrounds {
-				band := s.tok.SurfaceAt(ground)
-				ink := underlineInk(s.tok, ground)
+			for _, band := range underlineBands(s.tok) {
+				ink := underlineInk(s.tok, band)
 				got := color.ContrastRatio(ink, band)
 				if got < tokens.GraphicFloor {
-					t.Errorf("seed %s: %s: ground %v: underline ink %s on band %s measures %.2f:1, under the %.1f:1 graphic floor",
-						underlineHex(seed), s.name, ground, underlineHex(ink), underlineHex(band), got, tokens.GraphicFloor)
+					t.Errorf("seed %s: %s: underline ink %s on band %s measures %.2f:1, under the %.1f:1 graphic floor",
+						underlineHex(seed), s.name, underlineHex(ink), underlineHex(band), got, tokens.GraphicFloor)
 				}
 				if s.light && got < worstLight {
 					worstLight, worstLightAt = got, underlineHex(seed)
@@ -116,10 +125,10 @@ func TestTheCanonicalSeedsUnderlineInkIsThePrimaryPin(t *testing.T) {
 		{"DefaultLight", tokens.DefaultLight},
 		{"DefaultDark", tokens.DefaultDark},
 	} {
-		for _, ground := range underlineGrounds {
-			if ink := underlineInk(s.tok, ground); ink != s.tok.Primary {
-				t.Errorf("%s ground %v: underline ink is %s, not the Primary pin %s — a golden moved",
-					s.name, ground, underlineHex(ink), underlineHex(s.tok.Primary))
+		for _, band := range underlineBands(s.tok) {
+			if ink := underlineInk(s.tok, band); ink != s.tok.Primary {
+				t.Errorf("%s band %s: underline ink is %s, not the Primary pin %s — a golden moved",
+					s.name, underlineHex(band), underlineHex(ink), underlineHex(s.tok.Primary))
 			}
 		}
 	}
@@ -133,18 +142,17 @@ func TestAPastelSeedsUnderlineInkLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)
 
-	lightGround := tokens.Level0.Raised()
-	lightBand := light.SurfaceAt(lightGround)
+	lightBand := light.RaisedOn(light.SurfaceAt(tokens.Level0)).Fill
 	if bare := color.ContrastRatio(light.Primary, lightBand); bare >= tokens.GraphicFloor {
 		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the strip band — the test no longer reads the shape it was written for", bare)
 	}
-	lightInk := underlineInk(light, lightGround)
+	lightInk := underlineInk(light, lightBand)
 	if lightInk == light.Primary {
 		t.Errorf("light underline ink is still the bare pin %s", underlineHex(light.Primary))
 	}
 
-	darkGround := tokens.Level0.Raised()
-	darkInk := underlineInk(dark, darkGround)
+	darkBand := dark.RaisedOn(dark.SurfaceAt(tokens.Level0)).Fill
+	darkInk := underlineInk(dark, darkBand)
 	if darkInk != dark.Primary {
 		t.Errorf("dark underline ink walked to %s; the dark pin %s clears its band and should stand",
 			underlineHex(darkInk), underlineHex(dark.Primary))

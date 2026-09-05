@@ -1,11 +1,15 @@
 // Package outline derives the ink of a surface's own edge — the one line a
 // pattern draws around itself to say where it ends.
 //
-// An outline must be derived from the ground it is drawn against, never named
-// as a fixed neutral rung: a named rung is a pairing rather than a colour, and
-// holds its perceptual depth across schemes while the ground under it moves,
+// An outline must be derived from the fill it is drawn against, never named
+// as a fixed neutral step: a named step is a pairing rather than a colour, and
+// holds its perceptual depth across schemes while the surface under it moves,
 // so it fails the contrast floor in one scheme while looking scheme-neutral in
 // the source.
+//
+// It takes that fill as a colour and not as a level, because a raised
+// surface is walked from whatever it stands on and has no level to name
+// ([tokens.ColorTokens.RaisedOn]).
 package outline
 
 import (
@@ -19,16 +23,13 @@ import (
 // surface is an object rather than a patch of page.
 const Floor = 3.0
 
-// Ink is the neutral rung nearest the ramp's mid-value step that reaches
-// Floor against the fill at the given storey.
-//
-// ground is the storey of the fill the line is drawn against, named in the
-// same vocabulary the pattern uses to paint that fill (tokens.SurfaceAt).
+// Ink is the neutral step nearest the ramp's mid-value step that reaches
+// Floor against surface, the fill the line is drawn around.
 //
 // Naming only the inner fill is sufficient because it is the harder of the
-// line's two sides: a pattern stands on a plane no deeper than its own fill,
-// so ink that clears Floor against the fill clears it against the shallower
-// plane outside by more.
-func Ink(c tokens.ColorTokens, ground tokens.ElevationLevel) color.NRGBA {
-	return c.MarkOn(tokens.RoleNeutral, c.SurfaceAt(ground), Floor)
+// line's two sides: a pattern stands on a surface no lighter than its own
+// fill, so ink that clears Floor against the fill clears it against the
+// surface outside by more.
+func Ink(c tokens.ColorTokens, surface color.NRGBA) color.NRGBA {
+	return c.MarkOn(tokens.RoleNeutral, surface, Floor)
 }
