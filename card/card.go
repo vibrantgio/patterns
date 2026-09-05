@@ -1,14 +1,18 @@
-// Package card provides the Patterns Card pattern: a rounded surface
-// container with optional Header / Body / Footer slots, in either an
-// outlined or filled look.
+// Package card provides the Patterns Card pattern: one rounded surface
+// raised a step above the surface it stands on, with optional Header /
+// Body / Footer slots.
 //
-// A card is raised, not floating: both looks fill at the raise walked from
-// the surface the card stands on, and neither casts a shadow — a shadow
-// marks what floats and can leave (a toast, a menu), which a card is not.
-// The two looks differ only at the edge: outlined circles that fill with a
-// 1 dp neutral stroke, filled carries none and is read by the fill alone —
-// except where the scheme has no step left to tell the raise with, and the
-// filled card draws the seam its raise owes instead.
+// A card singles something out, and the raise is the whole of how it does
+// it: no hairline of its own, never outlined, never wearing a role. What
+// the developer wants to say about a card is a badge in its header. Where
+// the scheme has no lighter step left, the raise is told by a seam at the
+// card's edge instead of by its fill — that is the elevation's rule for
+// every raise, not an outline.
+//
+// A card is raised, not floating, so it casts no shadow: a shadow marks
+// what floats and can leave (a toast, a menu), which a card is not. It
+// holds content, never another card; grouping inside a card is the card's
+// own structure.
 //
 // Card is a callable Go function consuming a components theme observable
 // and returning a stream of layout.Widget. The source is intentionally
@@ -32,29 +36,21 @@ import (
 	"image"
 
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
-	"github.com/vibrantgio/patterns/internal/outline"
+	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
 
 // Props configures a Card. All slot fields are optional; nil slots are
-// simply omitted from the inner stack. Both looks fill at the raise walked
-// from [Props.Level]; Filled drops the outlined look's 1 dp neutral stroke,
-// which is the only difference between them.
+// simply omitted from the inner stack.
 type Props struct {
 	Header layout.Widget
 	Body   layout.Widget
 	Footer layout.Widget
-
-	// Filled selects the look read by its fill alone, without the
-	// outline. Defaults to the outlined look.
-	Filled bool
 
 	// Level is the level of the surface the card stands on, and the card
 	// fills one step above it. The zero value is the content, which is
@@ -107,45 +103,11 @@ func drawCard(gtx layout.Context, props Props, colors tokens.ColorTokens, sp tok
 	r := gtx.Dp(unit.Dp(rad.Lg))
 	gap := gtx.Dp(unit.Dp(sp.S3))
 
-	// Both looks are raised by the same tonal step, walked from the surface
-	// the card stands on, and neither casts a shadow.
-	raise := colors.RaisedOn(colors.SurfaceAt(props.Level))
-
-	rrect := clip.RRect{Rect: bounds, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, raise.Fill, rrect.Op(gtx.Ops))
-
-	switch {
-	case !props.Filled:
-		// The outlined card's edge is what makes it an object, so it is
-		// derived rather than named: the neutral step that reaches the
-		// graphic contrast floor against the fill it circles. It is also
-		// louder than any seam, so an outlined card owes none.
-		paint.FillShape(gtx.Ops, outline.Ink(colors, raise.Fill), clip.Stroke{
-			Path:  rrect.Path(gtx.Ops),
-			Width: float32(gtx.Dp(unit.Dp(1))),
-		}.Op())
-	case raise.Seamed:
-		// The scheme has no step left to say the card is raised, so the
-		// raise says it at its own edge instead. Drawn once, by the card:
-		// the surface beneath has nothing to draw it with.
-		//
-		// Drawn as the card's own rectangle in the seam with the raise laid
-		// back over it one pixel in, rather than as a stroke: a stroke is
-		// centred on the edge it follows, so half of it would land outside
-		// the card and the card's painted footprint would depend on which
-		// scheme was running.
-		w := gtx.Dp(unit.Dp(1))
-		if w < 1 {
-			w = 1
-		}
-		paint.FillShape(gtx.Ops, raise.Seam, rrect.Op(gtx.Ops))
-		ir := r - w
-		if ir < 0 {
-			ir = 0
-		}
-		inner := clip.RRect{Rect: bounds.Inset(w), SE: ir, SW: ir, NE: ir, NW: ir}
-		paint.FillShape(gtx.Ops, raise.Fill, inner.Op(gtx.Ops))
-	}
+	// The card is raised by one tonal step walked from the surface it
+	// stands on, and casts no shadow. Where the scheme has no step left,
+	// the raise is told by the seam at its own edge instead — that is the
+	// elevation's rule for every raise, not an outline.
+	surface.Card(gtx, bounds, r, colors.RaisedOn(colors.SurfaceAt(props.Level)))
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return stack(gtx, gap, props.Header, props.Body, props.Footer)

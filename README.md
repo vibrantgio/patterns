@@ -3,7 +3,7 @@
 The pattern layer of [Vibrant Gio](https://github.com/vibrantgio), a design
 system for native desktop applications on macOS, Windows and Linux, written in
 pure Go on [Gio](https://gioui.org). Where components gives you a button, patterns
-gives you the nineteen composed things an application is actually made of — an
+gives you the twenty composed things an application is actually made of — an
 application shell, a navbar, a sidebar, a virtualised data table, a modal, a
 toast stack, a hero section.
 
@@ -48,9 +48,9 @@ Every package has the same two entry points, and the split is deliberate:
   and picks its own roles, as it does live. And a `tokens.Density` follows
   only where the pattern sizes a control: `navbar`, `sidebar`, `tabs`,
   `table`, `pagination`, `shell`, `hero`, `pricing` and `modal` take one;
-  `alert`, `accordion`, `breadcrumb`, `tooltip`, `toast`, `feature`,
-  `testimonial` and `table.RenderTextCell` do not, because nothing in
-  them has a control height. Until v0.3.0 these signatures took a
+  `alert`, `accordion`, `breadcrumb`, `group`, `tooltip`, `toast`,
+  `feature`, `testimonial` and `table.RenderTextCell` do not, because
+  nothing in them has a control height. Until v0.3.0 these signatures took a
   `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
 
 Typography is theme-owned: in the live form every pattern that draws text
@@ -102,7 +102,8 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces intent through `OnSort`. Row heights follow the theme's density. |
 | `pagination` | A row of numbered page buttons flanked by prev/next chevrons, the current page highlighted Primary/OnPrimary. |
-| `card` | A rounded surface with optional Header / Body / Footer slots, in an outlined or filled look. Both fill at level 1, one step above the content the card stands on, and differ only at the edge: outlined wears a 1 dp stroke, filled wears none. A card is raised, not floating, so neither look casts a shadow (ADR-005). |
+| `card` | The one thing that must stand apart: a rounded surface raised one step above the surface it is in, with optional Header / Body / Footer slots. The raise is the whole of how it singles something out — no hairline of its own, never outlined, never wearing a role, and what the developer wants to say about it is a badge in its header. Where the scheme has no lighter step left the raise is told by the seam at the card's edge, which is the elevation's rule for every raise. A card is raised, not floating, so it casts no shadow (ADR-005). |
+| `group` | The page dividing itself: a hairline around related components, drawn at the level of the surface the group is in and taking that surface's own fill, with an optional label top-leading inside it. It paints nothing inside and raises nothing, so what it holds stands on the surface the group is in and nothing derives against it. The hairline is the seam of two regions sharing one fill (`tokens.ColorTokens.SeamOn`), the quiet line the platform draws — not the 3:1 mark a graphic carrying meaning owes. A group may hold a card; it never holds another group, and it wears no role. |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
 
 **Overlays and feedback** — the things that draw over everything else.
@@ -121,10 +122,10 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `hero` | The landing block: optional eyebrow kicker (pure typography — a small quiet line, not a component), display title, subtitle, optional visual slot, and a primary/secondary CTA pair. With no visual it is one centred column; with one it splits into two equal columns. |
 | `feature` | An icon–title–body grid laid out `Columns × N`. The icon slot is opaque — any `layout.Widget`. |
-| `pricing` | A row of tier cards — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally highlighted, which swaps the 1 dp outline for a 2 dp Primary border and adds a "Popular" badge. |
+| `pricing` | A row of tier groups — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally `Recommended`, which draws that tier as a card raised on the content and puts a "Popular" badge on its name row. A row of tiers divides the page; the tier that must stand apart from it is the one card. |
 | `testimonial` | Quote cards with an author block and an avatar (or an initial in a circular placeholder), as a single centred card or a row of them. |
 
-`modal/gallery` is a `main` inside this module, not a twentieth pattern: it
+`modal/gallery` is a `main` inside this module, not a twenty-first pattern: it
 demonstrates a decision dialog — its Tab cycle, its focus-ring ownership, its
 Return-bound default and its inert backdrop. Run it with `go run
 ./modal/gallery`.

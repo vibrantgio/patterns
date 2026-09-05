@@ -107,15 +107,15 @@ func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// TestCardGolden records or diffs the four canonical card variants.
+// TestCardGolden records or diffs the canonical card renders.
 // light-header-only asserts that a lone slot is not padded as though the
-// other two were there but empty.
+// other two were there but empty; light-margin leaves the surface the card
+// stands on visible around it, so the raise is read at the card's edge.
 func TestCardGolden(t *testing.T) {
 	cases := []struct {
 		name       string
 		colors     tokens.ColorTokens
 		headerOnly bool
-		filled     bool
 		bg         color.NRGBA
 		margin     int
 	}{
@@ -139,9 +139,8 @@ func TestCardGolden(t *testing.T) {
 			margin:     0,
 		},
 		{
-			name:   "light-filled",
+			name:   "light-margin",
 			colors: tokens.DefaultLight,
-			filled: true,
 			bg:     color.NRGBA{R: 240, G: 240, B: 240, A: 255},
 			margin: marginPx,
 		},
@@ -149,7 +148,7 @@ func TestCardGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			header, body, footer := slots(t, tc.colors)
-			props := card.Props{Header: header, Body: body, Footer: footer, Filled: tc.filled}
+			props := card.Props{Header: header, Body: body, Footer: footer}
 			if tc.headerOnly {
 				props = card.Props{Header: header}
 			}
@@ -159,24 +158,36 @@ func TestCardGolden(t *testing.T) {
 	}
 }
 
-// TestCardFilledDiffersFromOutlined confirms the filled look produces
-// visibly different pixels from the outlined one. The two share a fill and
-// differ only at the edge, so this catches regressions where the Filled
-// flag silently no-ops.
-func TestCardFilledDiffersFromOutlined(t *testing.T) {
-	// A flat bar, not text: the two renders must differ only in the card's
-	// own surface treatment, and an identical slot in both is the cleanest
-	// way to say so.
-	header := fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 24)
-	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-
-	outlined := card.Render(card.Props{Header: header}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
-	filled := card.Render(card.Props{Header: header, Filled: true}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
-
-	imgOut := golden.Capture(t, canvasSize, scene(outlined, marginPx, bg))
-	imgFilled := golden.Capture(t, canvasSize, scene(filled, marginPx, bg))
-	if n := golden.PixelDiff(imgOut, imgFilled); n == 0 {
-		t.Error("filled and outlined cards render identically; expected the outline difference")
+// TestCardEdgeIsNeverAnOutline holds the ruling in pixels: a card's edge is
+// its raise and, where the scheme has run out of steps, the seam that raise
+// owes — never a 3:1 outline. Level 0 in the light scheme has a step left,
+// so the card's edge pixels are its own fill; level 1 has none, so they are
+// the seam the raise owes and nothing louder.
+func TestCardEdgeIsNeverAnOutline(t *testing.T) {
+	c := tokens.DefaultLight
+	for _, tc := range []struct {
+		name  string
+		level tokens.ElevationLevel
+	}{
+		{"level-0", tokens.Level0},
+		{"level-1", tokens.Level1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raise := c.RaisedOn(c.SurfaceAt(tc.level))
+			want := raise.Fill
+			if raise.Seamed {
+				want = raise.Seam
+			}
+			w := card.Render(card.Props{Header: fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 24), Level: tc.level},
+				c, tokens.Spacing, sharpRadius)
+			img := golden.Capture(t, canvasSize, scene(w, marginPx, c.SurfaceAt(tc.level)))
+			got := img.At(marginPx, canvasH/2)
+			r, g, b, _ := got.RGBA()
+			if uint8(r>>8) != want.R || uint8(g>>8) != want.G || uint8(b>>8) != want.B {
+				t.Errorf("%s: card edge is #%02x%02x%02x, want the raise's own #%02x%02x%02x",
+					tc.name, uint8(r>>8), uint8(g>>8), uint8(b>>8), want.R, want.G, want.B)
+			}
+		})
 	}
 }
 

@@ -75,8 +75,8 @@ var tierSpecs = [3]tierSpec{
 	{"Studio", "$99", "/mo", []string{"Unlimited work", "Priority support", "Custom ramps"}},
 }
 
-// tier returns the i'th tier, optionally highlighted.
-func tier(i int, highlighted bool) pricing.Tier {
+// tier returns the i'th tier, optionally the recommended one.
+func tier(i int, recommended bool) pricing.Tier {
 	spec := tierSpecs[i]
 	return pricing.Tier{
 		Name:        spec.name,
@@ -84,24 +84,28 @@ func tier(i int, highlighted bool) pricing.Tier {
 		Cadence:     spec.cadence,
 		Features:    spec.features,
 		CTA:         &pricing.CTA{Label: "Choose"},
-		Highlighted: highlighted,
+		Recommended: recommended,
 	}
 }
 
-// threeTiers returns the full row, with the middle tier highlighted when
-// asked. Highlighting adds the "Popular" badge on the name row.
-func threeTiers(highlightMiddle bool) []pricing.Tier {
-	return []pricing.Tier{tier(0, false), tier(1, highlightMiddle), tier(2, false)}
+// threeTiers returns the full row, with the middle tier recommended when
+// asked: that tier becomes a card and wears the "Popular" badge on its name
+// row, while the other two stay groups.
+func threeTiers(recommendMiddle bool) []pricing.Tier {
+	return []pricing.Tier{tier(0, false), tier(1, recommendMiddle), tier(2, false)}
 }
 
 // TestPricingGolden records or diffs the four Measurable goldens.
 func TestPricingGolden(t *testing.T) {
 	shaper := defaultShaper(t)
-	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	darkBG := color.NRGBA{R: 20, G: 20, B: 20, A: 255}
+	// The row stands on the content, and a group tier takes that surface's
+	// own fill — so the scene has to be that surface for the golden to show
+	// the tier the way a page does.
+	lightBG := tokens.DefaultLight.SurfaceAt(tokens.Level0)
+	darkBG := tokens.DefaultDark.SurfaceAt(tokens.Level0)
 
 	three := threeTiers(false)
-	threeHighlighted := threeTiers(true)
+	threeRecommended := threeTiers(true)
 	single := []pricing.Tier{tier(1, false)}
 
 	cases := []struct {
@@ -112,7 +116,8 @@ func TestPricingGolden(t *testing.T) {
 	}{
 		{"light-three-tier", tokens.DefaultLight, lightBG, three},
 		{"dark-three-tier", tokens.DefaultDark, darkBG, three},
-		{"light-three-tier-highlighted", tokens.DefaultLight, lightBG, threeHighlighted},
+		{"light-three-tier-recommended", tokens.DefaultLight, lightBG, threeRecommended},
+		{"dark-three-tier-recommended", tokens.DefaultDark, darkBG, threeRecommended},
 		{"light-single-tier", tokens.DefaultLight, lightBG, single},
 	}
 	for _, tc := range cases {
@@ -124,20 +129,67 @@ func TestPricingGolden(t *testing.T) {
 	}
 }
 
-// TestPricingHighlightDiffers confirms the Highlighted flag changes the
+// TestPricingRecommendedDiffers confirms the Recommended flag changes the
 // rendered output. Two three-tier rows are rendered with the middle tier
 // flipped; the resulting images must differ.
-func TestPricingHighlightDiffers(t *testing.T) {
+func TestPricingRecommendedDiffers(t *testing.T) {
 	shaper := defaultShaper(t)
-	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+	bg := tokens.DefaultLight.SurfaceAt(tokens.Level0)
 
 	plain := pricing.Props{Tiers: threeTiers(false), Shaper: shaper}
-	highlighted := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
+	recommended := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
 
 	a := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, plain, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
-	b := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, highlighted, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
+	b := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, recommended, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
 	if n := golden.PixelDiff(a, b); n == 0 {
-		t.Error("plain and highlighted pricing render identically; expected the 2 dp Primary border and Popular chip on the name row to introduce differences")
+		t.Error("plain and recommended pricing render identically; expected the middle tier's raise and its Popular badge to introduce differences")
+	}
+}
+
+// TestRecommendedTierIsRaisedAndTheRestAreNot holds the ruling in pixels:
+// the recommended tier is a card, so its interior is the raise walked from
+// the content; every other tier is a group, so its interior is the
+// content's own fill, byte for byte.
+func TestRecommendedTierIsRaisedAndTheRestAreNot(t *testing.T) {
+	shaper := defaultShaper(t)
+	for _, sc := range []struct {
+		name   string
+		colors tokens.ColorTokens
+	}{
+		{"light", tokens.DefaultLight},
+		{"dark", tokens.DefaultDark},
+	} {
+		t.Run(sc.name, func(t *testing.T) {
+			page := sc.colors.SurfaceAt(tokens.Level0)
+			raise := sc.colors.RaisedOn(page).Fill
+			props := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
+			img := golden.Capture(t, canvasSize, scene(
+				pricing.Render(shaper, props, sc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), page))
+			// The row is three equal columns inside the scene's margin;
+			// the sample sits in the middle of each column, a few pixels
+			// under its top edge, which is inside the S5 inset and so
+			// clear of both the hairline and the tier's first row of text.
+			row := canvasSize.X - 2*marginPx
+			at := func(col int) color.NRGBA {
+				x := marginPx + row*col/3 + row/6
+				r, g, b, _ := img.At(x, marginPx+4).RGBA()
+				return color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 0xff}
+			}
+			for _, tc := range []struct {
+				col  int
+				want color.NRGBA
+				what string
+			}{
+				{0, page, "a group tier takes the content's own fill"},
+				{1, raise, "the recommended tier is raised on the content"},
+				{2, page, "a group tier takes the content's own fill"},
+			} {
+				if got := at(tc.col); got != tc.want {
+					t.Errorf("tier %d is #%02x%02x%02x, want #%02x%02x%02x: %s",
+						tc.col, got.R, got.G, got.B, tc.want.R, tc.want.G, tc.want.B, tc.what)
+				}
+			}
+		})
 	}
 }
 

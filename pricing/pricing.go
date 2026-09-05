@@ -1,23 +1,29 @@
-// Package pricing provides the Patterns Pricing pattern: a horizontal row
-// of tier cards with an optional emphasised tier, suitable for a
-// marketing landing or onboarding screen.
+// Package pricing provides the Patterns Pricing pattern: a row of tier
+// groups with one tier optionally recommended, suitable for a marketing
+// landing or onboarding screen.
+//
+// A row of tiers is the page dividing itself, so a tier is a group: a
+// hairline at the content's own level around what the tier holds, taking
+// the content's fill. The one tier that must stand apart from the row is
+// the recommended one, and that is a card: raised one step on the content,
+// wearing the "Popular" badge in its header. The recommendation is the
+// raise's work and the badge's word — never a role-coloured edge, which a
+// group does not wear and a card is never given.
 //
 // Pricing is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and free of
 // opaque configuration — copy it into your own app and modify as needed.
 //
-// Layout: each Tier renders as a rounded Surface card with an S5 inset.
-// Cards sit in an equal-width, equal-height horizontal row separated by
-// an S4 gutter. A first pass measures the tallest card; a second pass
-// stretches every card to that height. Name, price and bullets stay at
-// the top; the CTA sits on the bottom inset, not flush under the last
-// bullet. Each card contains — top to bottom — the tier name in title
-// typography (Highlighted cards put a "Popular" badge on that same
-// row, trailing), a price / cadence pair in display typography with
-// the cadence muted, a vertical feature list with a leading checkmark
-// glyph rendered from a clip.Path, and a footer CTA button reusing
-// components/button's filled visual. The Highlighted tier swaps the
-// 1 dp strong border for a 2 dp Primary border.
+// Layout: each Tier renders with an S5 inset. Tiers sit in an equal-width,
+// equal-height horizontal row separated by an S4 gutter. A first pass
+// measures the tallest tier; a second pass stretches every tier to that
+// height. Name, price and bullets stay at the top; the CTA sits on the
+// bottom inset, not flush under the last bullet. Each tier contains — top
+// to bottom — the tier name in title typography (the recommended tier puts
+// its badge on that same row, trailing), a price / cadence pair in display
+// typography with the cadence muted, a vertical feature list with a leading
+// checkmark glyph rendered from a clip.Path, and a footer CTA button
+// reusing components/button's filled visual.
 //
 // No responsive breakpoint to stack tiers vertically is provided —
 // adopting this pattern at narrow widths is left to the caller.
@@ -44,7 +50,7 @@ import (
 	"github.com/vibrantgio/components/badge"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
-	"github.com/vibrantgio/patterns/internal/outline"
+	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -75,9 +81,10 @@ type Tier struct {
 	// CTA is the footer call-to-action button. May be nil to omit.
 	CTA *CTA
 
-	// Highlighted selects the emphasised tier: a 2 dp Primary border and
-	// a "Popular" badge on the name row, trailing.
-	Highlighted bool
+	// Recommended marks the one tier that stands apart from the row: it is
+	// drawn as a card, raised a step on the content the other tiers divide,
+	// and wears a "Popular" badge on the name row, trailing.
+	Recommended bool
 }
 
 // Props configures a Pricing row.
@@ -272,27 +279,42 @@ func layoutTiers(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
-// tierPrimaryInk is the primary ink a tier card draws directly on its own
-// raised fill — the highlighted tier's ring and every tier's feature
-// checkmarks: the primary pin when it clears the graphic floor against
-// that fill, and otherwise the step of the primary ramp that does
-// ([tokens.ColorTokens.InkOn]). The fill is the raise walked from the
-// content the table of tiers is printed on, which is what tierFill paints.
-func tierPrimaryInk(c tokens.ColorTokens) color.NRGBA {
-	return c.InkOn(tokens.RolePrimary, tierFill(c), tokens.GraphicFloor)
+// checkInk is the primary ink a tier draws its feature checkmarks in: the
+// primary pin when it clears the graphic floor against the surface the
+// checkmark is drawn on, and otherwise the step of the primary ramp that
+// does ([tokens.ColorTokens.InkOn]). A checkmark carries meaning by itself,
+// so it owes the graphic floor and derives against the tier's own fill
+// rather than against the page — the two are different surfaces for the
+// recommended tier, which is raised.
+func checkInk(c tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
+	return c.InkOn(tokens.RolePrimary, fill, tokens.GraphicFloor)
 }
 
-// tierFill is the surface a tier card fills with: the raise walked from the
-// content. Every derivation a tier takes against its own fill asks here, so
-// the fill and what is read on it cannot drift apart.
-func tierFill(c tokens.ColorTokens) color.NRGBA {
-	return c.RaisedOn(c.SurfaceAt(tokens.Level0)).Fill
+// tierLevel is the level a tier's own content stands at: the recommended
+// tier is a card, so what it holds stands one step above the content;
+// every other tier is a group, which raises nothing.
+func tierLevel(tier Tier) tokens.ElevationLevel {
+	if tier.Recommended {
+		return tokens.Level1
+	}
+	return tokens.Level0
 }
 
-// drawTier draws a single tier card: a rounded Surface filled to its
-// allocated width with content height matching the inner stack plus
-// S5 padding on all sides. The border is 2 dp [tierPrimaryInk] when
-// Highlighted, 1 dp neutral step-500 (strong border) otherwise.
+// tierFill is the surface a tier's content is read against: the raise
+// walked from the content for the recommended card, and the content's own
+// fill for a group, which takes the surface it is in. Every derivation a
+// tier makes asks here, so what a tier paints and what is read on it cannot
+// drift apart.
+func tierFill(c tokens.ColorTokens, tier Tier) color.NRGBA {
+	if tier.Recommended {
+		return c.RaisedOn(c.SurfaceAt(tokens.Level0)).Fill
+	}
+	return c.SurfaceAt(tokens.Level0)
+}
+
+// drawTier draws a single tier to its allocated width, with content height
+// matching the inner stack plus S5 padding on all sides: a group's hairline
+// for an ordinary tier, a card's raise for the recommended one.
 func drawTier(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -324,21 +346,12 @@ func drawTier(
 		height = minH
 	}
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
-	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
-
-	paint.FillShape(gtx.Ops, tierFill(tok.color), rrect.Op(gtx.Ops))
-
-	// A tier fills at the raise walked from the content and its edge is
-	// derived against that fill, so the card reads as an object in either
-	// scheme. The highlighted tier trades that edge for the accent, which is
-	// its own pairing and says which tier is being pushed: [tierPrimaryInk].
-	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	strokeColor := outline.Ink(tok.color, tierFill(tok.color))
-	if tier.Highlighted {
-		strokeW = float32(gtx.Dp(unit.Dp(2)))
-		strokeColor = tierPrimaryInk(tok.color)
+	bounds := image.Rectangle{Max: image.Pt(width, height)}
+	if tier.Recommended {
+		surface.Card(gtx, bounds, r, tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)))
+	} else {
+		surface.Group(gtx, bounds, r, tok.color.SeamOn(tok.color.SurfaceAt(tokens.Level0)))
 	}
-	paint.FillShape(gtx.Ops, strokeColor, clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
 
 	off := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
 	contentCall.Add(gtx.Ops)
@@ -361,7 +374,7 @@ func drawTierContent(
 	top = append(top, nameRowWidget(shaper, tier, tok))
 	top = append(top, priceRowWidget(shaper, tier.Price, tier.Cadence, tok))
 	for _, f := range tier.Features {
-		top = append(top, featureRowWidget(shaper, f, tok))
+		top = append(top, featureRowWidget(shaper, f, tier, tok))
 	}
 
 	gap := tok.spacing.S3
@@ -402,8 +415,8 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 	return pllayout.Col(gtx, spaced...)
 }
 
-// nameRowWidget is the card's first row: the tier name leading. When
-// Highlighted, the Popular badge sits on the same line, trailing at the
+// nameRowWidget is the tier's first row: the tier name leading. On the
+// recommended tier the Popular badge sits on the same line, trailing at the
 // inset's right edge.
 //
 // Aligned on the baseline rather than the middle. The two are set in
@@ -414,10 +427,10 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 // its label's baseline so that it can be asked.
 func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
 	name := tierNameWidget(shaper, tier.Name, tok)
-	if !tier.Highlighted {
+	if !tier.Recommended {
 		return name
 	}
-	mark := popularBadgeWidget(shaper, tok)
+	mark := popularBadgeWidget(shaper, tier, tok)
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline}.Layout(gtx,
 			layout.Rigid(name),
@@ -430,17 +443,17 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 	}
 }
 
-// popularBadgeWidget renders "Popular" as a Neutral badge: the system's own
-// word about the tier, not a control and not a status. Neutral rather than a
-// role, because the highlighted card's own treatment is what recommends the
+// popularBadgeWidget renders "Popular" as a Neutral badge: the developer's
+// word about the tier, which is the only word a card carries. Neutral
+// rather than a role, because the card's own raise is what recommends the
 // tier — a badge shouting Success on top of it would say it twice, in a
-// register that means something else.
-func popularBadgeWidget(shaper *text.Shaper, tok resolvedTokens) layout.Widget {
-	// A tier card is a level-1 surface, and the badge's fill is derived
-	// against the surface it stands on rather than against the page: a fill
-	// resolved for the page would be the card's own colour here.
+// vocabulary that means something else.
+func popularBadgeWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
+	// The badge's fill is derived against the surface it stands on rather
+	// than against the page: on the recommended card that surface is the
+	// raise, not the content.
 	return badge.Render(shaper, "Popular", nil, badge.Neutral, tok.color, tok.spacing,
-		tok.radius, tok.popular, badge.RenderState{Level: tokens.Level1})
+		tok.radius, tok.popular, badge.RenderState{Level: tierLevel(tier)})
 }
 
 // tierNameWidget renders the tier name in the TitleLarge role in
@@ -469,10 +482,10 @@ func priceRowWidget(shaper *text.Shaper, price, cadence string, tok resolvedToke
 // featureRowWidget renders a single feature bullet: a Primary checkmark
 // glyph followed by the feature label in BodyMedium Text, joined
 // by an S2 gap and centered vertically.
-func featureRowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
+func featureRowWidget(shaper *text.Shaper, label string, tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-			layout.Rigid(checkmarkWidget(tok)),
+			layout.Rigid(checkmarkWidget(tier, tok)),
 			layout.Rigid(pllayout.HSpacer(tok.spacing.S2)),
 			layout.Rigid(textWidget(shaper, label, tok.color.Text, tok.body, font.Normal)),
 		)
@@ -480,11 +493,9 @@ func featureRowWidget(shaper *text.Shaper, label string, tok resolvedTokens) lay
 }
 
 // checkmarkWidget paints a small check ("✓") inside an S4 box using a
-// clip.Path, in [tierPrimaryInk] — the same derivation the highlighted
-// tier's ring uses, since both are the primary ink drawn on the card's own
-// level-1 fill. The path is a two-segment polyline traced over the box;
-// the stroke width is 2 dp.
-func checkmarkWidget(tok resolvedTokens) layout.Widget {
+// clip.Path, in [checkInk] against the tier's own fill. The path is a
+// two-segment polyline traced over the box; the stroke width is 2 dp.
+func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		box := gtx.Dp(unit.Dp(tok.spacing.S4))
 		stroke := float32(gtx.Dp(unit.Dp(2)))
@@ -495,7 +506,7 @@ func checkmarkWidget(tok resolvedTokens) layout.Widget {
 		path.MoveTo(f32.Pt(s*0.2, s*0.55))
 		path.LineTo(f32.Pt(s*0.45, s*0.8))
 		path.LineTo(f32.Pt(s*0.8, s*0.25))
-		paint.FillShape(gtx.Ops, tierPrimaryInk(tok.color), clip.Stroke{
+		paint.FillShape(gtx.Ops, checkInk(tok.color, tierFill(tok.color, tier)), clip.Stroke{
 			Path:  path.End(),
 			Width: stroke,
 		}.Op())

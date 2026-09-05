@@ -1,11 +1,15 @@
 package pricing
 
 // This file is an internal test (package pricing, not pricing_test) so it
-// can exercise tierPrimaryInk directly, the way theme/tokens/ink_test.go
+// can exercise checkInk directly, the way theme/tokens/ink_test.go
 // exercises ColorTokens.InkOn and components/richtext/link_test.go
-// exercises richtext.FromTokens's LinkColor field. drawTier and
-// checkmarkWidget have no exported field to read the drawn ink back off
-// of, so the derivation itself is the seam this file measures.
+// exercises richtext.FromTokens's LinkColor field. checkmarkWidget has no
+// exported field to read the drawn ink back off of, so the derivation
+// itself is the seam this file measures.
+//
+// A tier's checkmarks are drawn on two different surfaces — the content
+// itself inside a group tier, the raise inside the recommended card — so
+// every claim here is held on both.
 
 import (
 	"fmt"
@@ -17,8 +21,8 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// tierInkSweepSeeds is the seed population this file reads the highlighted
-// tier's ring and the feature checkmarks' ink claims against, the same one
+// tierInkSweepSeeds is the seed population this file reads the feature
+// checkmarks' ink claims against, the same one
 // theme/tokens and components/richtext sweep their derivations with: the
 // default seed, the nine macOS system accents, both ends of the tonal
 // axis, three pastels stated at a dark scheme's tone, and four hundred
@@ -47,6 +51,17 @@ func tierInkSweepSeeds() []stdcolor.NRGBA {
 
 func tierInkHex(c stdcolor.NRGBA) string { return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B) }
 
+// tierKinds is the pair of tiers a row holds: the group every ordinary tier
+// is, and the card the recommended one is. They stand at different levels,
+// so a checkmark's ink is derived twice.
+var tierKinds = []struct {
+	name string
+	tier Tier
+}{
+	{"group tier", Tier{}},
+	{"recommended card", Tier{Recommended: true}},
+}
+
 // tierInkSweepSchemes yields every palette the sweep reads a seed as: both
 // derivations, both schemes.
 func tierInkSweepSchemes(seed stdcolor.NRGBA) []struct {
@@ -68,38 +83,40 @@ func tierInkSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// TestTierPrimaryInkClearsTheGraphicFloorForEverySeed holds the invariant
-// that whatever a caller seeds the palette with, the ink drawn directly on
-// a tier card — the highlighted ring, the feature checkmarks — reaches
-// WCAG 1.4.11 against the card's own level-1 fill.
-func TestTierPrimaryInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
+// TestCheckInkClearsTheGraphicFloorForEverySeed holds the invariant that
+// whatever a caller seeds the palette with, the ink drawn directly on a
+// tier — the feature checkmarks — reaches WCAG 1.4.11 against that tier's
+// own fill, on the group and on the recommended card alike.
+func TestCheckInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string
 	for _, seed := range tierInkSweepSeeds() {
 		for _, s := range tierInkSweepSchemes(seed) {
-			fill := s.tok.SurfaceAt(tokens.Level1)
-			ink := tierPrimaryInk(s.tok)
-			got := color.ContrastRatio(ink, fill)
-			if got < tokens.GraphicFloor {
-				t.Errorf("seed %s: %s: tier ink %s on card %s measures %.2f:1, under the %.1f:1 graphic floor",
-					tierInkHex(seed), s.name, tierInkHex(ink), tierInkHex(fill), got, tokens.GraphicFloor)
-			}
-			if s.light && got < worstLight {
-				worstLight, worstLightAt = got, tierInkHex(seed)
-			}
-			if !s.light && got < worstDark {
-				worstDark, worstDarkAt = got, tierInkHex(seed)
+			for _, k := range tierKinds {
+				fill := tierFill(s.tok, k.tier)
+				ink := checkInk(s.tok, fill)
+				got := color.ContrastRatio(ink, fill)
+				if got < tokens.GraphicFloor {
+					t.Errorf("seed %s: %s: %s: check ink %s on %s measures %.2f:1, under the %.1f:1 graphic floor",
+						tierInkHex(seed), s.name, k.name, tierInkHex(ink), tierInkHex(fill), got, tokens.GraphicFloor)
+				}
+				if s.light && got < worstLight {
+					worstLight, worstLightAt = got, tierInkHex(seed)
+				}
+				if !s.light && got < worstDark {
+					worstDark, worstDarkAt = got, tierInkHex(seed)
+				}
 			}
 		}
 	}
-	t.Logf("over %d seeds: worst light tier ink %.2f:1 (%s), worst dark tier ink %.2f:1 (%s)",
+	t.Logf("over %d seeds: worst light check ink %.2f:1 (%s), worst dark check ink %.2f:1 (%s)",
 		len(tierInkSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
-// TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin holds the invariant
-// that on the seed every golden is rendered from, the brand's own colour
-// clears the floor on the card and is what the ring and checkmarks get.
-func TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin(t *testing.T) {
+// TestTheCanonicalSeedsCheckInkIsThePrimaryPin holds the invariant that on
+// the seed every golden is rendered from, the brand's own colour clears the
+// floor on both tier surfaces and is what the checkmarks get.
+func TestTheCanonicalSeedsCheckInkIsThePrimaryPin(t *testing.T) {
 	for _, s := range []struct {
 		name string
 		tok  tokens.ColorTokens
@@ -107,33 +124,35 @@ func TestTheCanonicalSeedsTierPrimaryInkIsThePrimaryPin(t *testing.T) {
 		{"DefaultLight", tokens.DefaultLight},
 		{"DefaultDark", tokens.DefaultDark},
 	} {
-		if ink := tierPrimaryInk(s.tok); ink != s.tok.Primary {
-			t.Errorf("%s: tier ink is %s, not the Primary pin %s — a golden moved",
-				s.name, tierInkHex(ink), tierInkHex(s.tok.Primary))
+		for _, k := range tierKinds {
+			if ink := checkInk(s.tok, tierFill(s.tok, k.tier)); ink != s.tok.Primary {
+				t.Errorf("%s: %s: check ink is %s, not the Primary pin %s — a golden moved",
+					s.name, k.name, tierInkHex(ink), tierInkHex(s.tok.Primary))
+			}
 		}
 	}
 }
 
-// TestAPastelSeedsTierPrimaryInkLeavesThePin holds the invariant on a
-// light scheme seeded with a dark scheme's accent: the bare pin sits under
-// the graphic floor on this card, so the ring and checkmarks must not be
-// the bare pin.
-func TestAPastelSeedsTierPrimaryInkLeavesThePin(t *testing.T) {
+// TestAPastelSeedsCheckInkLeavesThePin holds the invariant on a light
+// scheme seeded with a dark scheme's accent: the bare pin sits under the
+// graphic floor on the recommended card, so the checkmarks there must not
+// be the bare pin.
+func TestAPastelSeedsCheckInkLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)
+	recommended := Tier{Recommended: true}
 
-	lightFill := light.SurfaceAt(tokens.Level1)
+	lightFill := tierFill(light, recommended)
 	if bare := color.ContrastRatio(light.Primary, lightFill); bare >= tokens.GraphicFloor {
 		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the card — the test no longer reads the shape it was written for", bare)
 	}
-	lightInk := tierPrimaryInk(light)
-	if lightInk == light.Primary {
-		t.Errorf("light tier ink is still the bare pin %s", tierInkHex(light.Primary))
+	if lightInk := checkInk(light, lightFill); lightInk == light.Primary {
+		t.Errorf("light check ink is still the bare pin %s", tierInkHex(light.Primary))
 	}
 
-	darkInk := tierPrimaryInk(dark)
+	darkInk := checkInk(dark, tierFill(dark, recommended))
 	if darkInk != dark.Primary {
-		t.Errorf("dark tier ink walked to %s; the dark pin %s clears its card and should stand",
+		t.Errorf("dark check ink walked to %s; the dark pin %s clears its card and should stand",
 			tierInkHex(darkInk), tierInkHex(dark.Primary))
 	}
 }
