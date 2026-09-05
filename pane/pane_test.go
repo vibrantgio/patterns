@@ -19,8 +19,8 @@ import (
 )
 
 // The window the goldens draw: wide enough that the pane is a column
-// beside a document rather than half the canvas, deep enough that both of
-// the pane's ends are visible with ground under them.
+// beside a document rather than half the window, deep enough that both of
+// the pane's ends are visible with the backdrop showing past them.
 const (
 	windowW = 420
 	windowH = 260
@@ -58,16 +58,16 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// TestBoundsFloatsInsideTheWindow reads the float itself: one margin in
-// from the leading, top and bottom edges, the asked-for width, and nothing
-// above or below it but ground.
-func TestBoundsFloatsInsideTheWindow(t *testing.T) {
+// TestBoundsSetsThePaneInsideTheWindow reads the inset itself: one margin
+// in from the leading, top and bottom edges, the asked-for width, and
+// nothing above or below it but the backdrop.
+func TestBoundsSetsThePaneInsideTheWindow(t *testing.T) {
 	var ops op.Ops
 	gtx := ctx(&ops, windowSize)
 	got := pane.Bounds(gtx, windowSize, paneW, false)
 	want := image.Rect(pane.MarginDp, pane.MarginDp, pane.MarginDp+paneW, windowH-pane.MarginDp)
 	if got != want {
-		t.Errorf("the pane floats at %v, want %v — one margin inside the window's leading, top and bottom edges", got, want)
+		t.Errorf("the pane stands at %v, want %v — one margin inside the window's leading, top and bottom edges", got, want)
 	}
 }
 
@@ -85,6 +85,7 @@ func TestHiddenTakesNoWidth(t *testing.T) {
 	// rather than on the rectangle gets the same answer: no edge, no fill,
 	// and the contents never run.
 	col := tokens.DefaultLight
+	backdrop := col.SurfaceAt(tokens.LevelBackdrop)
 	w := func(gtx layout.Context) layout.Dimensions {
 		pane.Layout(gtx, col, pane.Bounds(gtx, gtx.Constraints.Max, paneW, true),
 			func(gtx layout.Context) layout.Dimensions {
@@ -93,11 +94,11 @@ func TestHiddenTakesNoWidth(t *testing.T) {
 			})
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	}
-	img := golden.Capture(t, windowSize, scene(w, col.Background))
+	img := golden.Capture(t, windowSize, scene(w, backdrop))
 	for x := 0; x < windowW; x++ {
 		for y := 0; y < windowH; y++ {
-			if got := img.RGBAAt(x, y); !sameInk(got, col.Background) {
-				t.Fatalf("a dismissed pane painted %v at (%d,%d); the window is bare ground", got, x, y)
+			if got := img.RGBAAt(x, y); !sameInk(got, backdrop) {
+				t.Fatalf("a dismissed pane painted %v at (%d,%d); the window shows the bare backdrop", got, x, y)
 			}
 		}
 	}
@@ -105,7 +106,7 @@ func TestHiddenTakesNoWidth(t *testing.T) {
 
 // TestBoundsNeverTakesMoreThanHalfTheWindow: a narrow window owes its
 // document a readable column before it owes the pane its width, and a
-// window with no room to float anything gets no pane at all.
+// window with no room to set anything into gets no pane at all.
 func TestBoundsNeverTakesMoreThanHalfTheWindow(t *testing.T) {
 	var ops op.Ops
 	narrow := image.Pt(200, windowH)
@@ -122,8 +123,8 @@ func TestBoundsNeverTakesMoreThanHalfTheWindow(t *testing.T) {
 		size image.Point
 	}{
 		{"no area", image.Pt(0, 0)},
-		{"no height to float in", image.Pt(windowW, 2*pane.MarginDp)},
-		{"no width to float in", image.Pt(2*pane.MarginDp-1, windowH)},
+		{"no height to stand in", image.Pt(windowW, 2*pane.MarginDp)},
+		{"no width to stand in", image.Pt(2*pane.MarginDp-1, windowH)},
 	} {
 		sgtx := ctx(&ops, tc.size)
 		if got := pane.Bounds(sgtx, tc.size, paneW, false); !got.Empty() {
@@ -154,7 +155,7 @@ func TestStripHoldsTheWindowButtons(t *testing.T) {
 
 // TestStripSkipsTheButtonsAndEndsOnTheMargin reads the band's own
 // arrangement: the leading skip is the buttons' window-coordinate trailing
-// edge less the margin the pane floats off, the controls stand at the
+// edge less the margin the pane stands off, the controls stand at the
 // trailing corner, and one margin of drag follows them to the pane's edge.
 func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 	const (
@@ -207,10 +208,10 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 // edge: how far it stands from the fill it is drawn on, which way it goes,
 // and that it is a whisper rather than a mark.
 //
-// The number is the platform's. Voice Memos outlines its floating panel at
+// The number is the platform's. Voice Memos outlines its inset panel at
 // #3A3A3A on a #1B1B1B panel — 1.514:1 — and leaves the flush side of the
 // same window unoutlined. Both halves are checked here: the derived ink
-// lands on that ratio against the floor in BOTH schemes, and it lands
+// lands on that ratio against the fill in BOTH schemes, and it lands
 // nowhere near the 3:1 graphic floor an object's outline is derived to
 // elsewhere in the system.
 func TestSeamInkIsThePlatformsWhisper(t *testing.T) {
@@ -255,12 +256,11 @@ func lightness(c color.NRGBA) float64 {
 	return l
 }
 
-// TestPaneOutlineAndGround reads a drawn pane: the hairline is one pixel of
-// the seam's own ink down each straight run with the fill immediately
-// inside it, and the ground around the pane is the window's own, with
-// nothing cast onto it — the floor's elevation is zero and the edge does
-// the whole of the work.
-func TestPaneOutlineAndGround(t *testing.T) {
+// TestPaneOutlineAndBackdrop reads a drawn pane: the hairline is one pixel
+// of the seam's own ink down each straight run with the fill immediately
+// inside it, and what shows around the pane is the bare backdrop, with
+// nothing cast onto it — the chrome level's elevation is zero.
+func TestPaneOutlineAndBackdrop(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
 			bounds := image.Rect(pane.MarginDp, pane.MarginDp, pane.MarginDp+paneW, windowH-pane.MarginDp)
@@ -268,7 +268,8 @@ func TestPaneOutlineAndGround(t *testing.T) {
 				pane.Layout(gtx, tc.colors, bounds, nil)
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			img := golden.Capture(t, windowSize, scene(w, tc.colors.Background))
+			backdrop := tc.colors.SurfaceAt(tokens.LevelBackdrop)
+			img := golden.Capture(t, windowSize, scene(w, backdrop))
 			ink, fill := pane.SeamInk(tc.colors), pane.Surface(tc.colors)
 			// A row clear of the corners' arcs: the middle of the strip.
 			y := bounds.Min.Y + pane.StripDp/2
@@ -283,16 +284,16 @@ func TestPaneOutlineAndGround(t *testing.T) {
 					t.Errorf("the pane's %s edge at x=%d draws %v, want the seam %v", probe.what, probe.edge, got, ink)
 				}
 				if got := img.RGBAAt(probe.in, y); !sameInk(got, fill) {
-					t.Errorf("one pixel inside the pane's %s edge draws %v, want the floor %v — the hairline is wider than a hairline",
+					t.Errorf("one pixel inside the pane's %s edge draws %v, want the chrome level %v — the hairline is wider than a hairline",
 						probe.what, got, fill)
 				}
 			}
-			// The gutter the pane floats in, its whole height: bare ground.
+			// The gap the pane is set into, its whole height: bare backdrop.
 			for x := 0; x < bounds.Min.X; x++ {
 				for y := 0; y < windowH; y++ {
-					if got := img.RGBAAt(x, y); !sameInk(got, tc.colors.Background) {
-						t.Fatalf("the ground at (%d,%d) draws %v, want the window's own %v — the pane is casting something onto its desk",
-							x, y, got, tc.colors.Background)
+					if got := img.RGBAAt(x, y); !sameInk(got, backdrop) {
+						t.Fatalf("the gap at (%d,%d) draws %v, want the backdrop %v — the pane is casting something onto the plane it stands on",
+							x, y, got, backdrop)
 					}
 				}
 			}
@@ -313,8 +314,8 @@ func sameInk(got color.RGBA, want color.NRGBA) bool {
 }
 
 // TestPaneGolden stores the pattern's own picture in both schemes: the
-// float, the rounded outline, the floor fill and a column standing inside
-// it, on a window's ground.
+// inset, the rounded outline, the chrome fill and a column standing inside
+// it, on the window's backdrop.
 func TestPaneGolden(t *testing.T) {
 	contents := func(c color.NRGBA) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {
@@ -334,7 +335,7 @@ func TestPaneGolden(t *testing.T) {
 				pane.Layout(gtx, tc.colors, b, contents(tc.colors.Ramps.Primary.Step(300)))
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			golden.Render(t, tc.name+"-pane", windowSize, scene(w, tc.colors.Background))
+			golden.Render(t, tc.name+"-pane", windowSize, scene(w, tc.colors.SurfaceAt(tokens.LevelBackdrop)))
 		})
 	}
 }

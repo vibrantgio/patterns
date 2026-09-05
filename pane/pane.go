@@ -1,44 +1,51 @@
-// Package pane provides the Patterns Floating Pane: a chrome column that
-// floats just inside a window's leading, top and bottom edges rather than
-// being one of them, rounded on all four corners, carrying its own hairline
-// just inside that edge, with the window's ground showing around it on
-// every side. Dismissed, it takes no width at all and what stood beside it
-// reflows from the window's own leading edge.
+// Package pane provides the Patterns Pane: a chrome column set in from a
+// window's leading, top and bottom edges rather than being one of them,
+// rounded on all four corners, carrying its own hairline just inside that
+// edge, with the backdrop showing around it on every side. Dismissed, it
+// takes no width at all and what stood beside it reflows from the window's
+// own leading edge.
 //
-// WHAT KIND OF FURNITURE THIS IS. A window's regions divide into document
-// and furniture, and its furniture divides again. INTEGRAL furniture is
-// fixed and flush: it cannot be sent away, so it takes no outline and its
-// boundary is a plain seam. A FLOATING PANE is the other kind — a control
-// slides it out of the window, so it is an OBJECT, and the inset, the
-// corner radius and the internal hairline are the three things that say so
-// together. This package is the second kind and only the second kind.
+// WHAT KIND OF CHROME THIS IS. A window's regions divide into the document
+// and the chrome that frames it, and chrome divides again. FLUSH chrome
+// runs to the window's own edge and cannot be sent away, so it takes no
+// outline and a plain seam parts it from what it abuts. A PANE is the other
+// kind — a control sends it out of the window, so it is an OBJECT, and the
+// inset, the corner radius and the hairline are the three things that say
+// so together. This package is the second kind and only the second kind.
 //
-// ELEVATION IS READ THROUGH THE EDGE, NOT THROUGH LIGHTNESS. A pane is the
-// window's furniture, so its level is the CHROME level — one measured step
-// toward the scheme's dark extreme in both schemes — and the pane is
-// DARKER than the document beside it and stays darker for being
-// dismissible. A pane does not climb the levels by leaving the wall, and
-// the chrome level's elevation is zero dp: chrome lies flat on the
-// backdrop and has nothing to cast onto, so there is no shadow here and the
-// edge does the whole of the work. [Surface] is the fill and [SeamInk] the edge, both
-// derived from the palette rather than named as rungs.
+// THE PANE IS READ THROUGH ITS EDGES, NOT THROUGH ITS LIGHTNESS. A pane is
+// chrome, so it stands at the CHROME level in both schemes: darker than the
+// document beside it — and it stays darker for being dismissible — and
+// lighter than the backdrop it is set into. A pane does not climb the levels
+// by leaving the window's edge, and the chrome level's elevation is zero dp:
+// chrome lies flat on the backdrop and has nothing to cast onto, so there is
+// no shadow here. [Surface] is the fill and [SeamInk] the edge, both derived
+// from the palette rather than named as steps.
+//
+// WHY THE HAIRLINE IS DRAWN AT ALL. An inset object needs no seam where the
+// backdrop showing around it does that work. Measured on a composed window
+// at the default palettes, the backdrop does not do that work: the pane's
+// fill stands 1.034:1 off the backdrop it is set into in the dark scheme —
+// 1.71 L*, a step the eye loses — and 1.210:1, 7.08 L*, in the light one.
+// One drawing serves both schemes, so the hairline stays, at the measured
+// 1.51:1 off the fill that [SeamRatio] records.
 //
 // The edge is drawn INSIDE the pane's own rounded rectangle, never on the
-// ground outside it: half a line lying on the window's ground would blur
-// the one boundary a reader uses to tell where the pane stops. It is
-// painted as two concentric fills rather than as a stroke, because a
-// stroke is centred on the path it follows and antialiases both of its
-// sides — a one-pixel one arrives as two rows of half-strength ink and the
-// line the palette asked for is never actually painted.
+// backdrop outside it: half a line lying on the backdrop would blur the one
+// boundary a reader uses to tell where the pane stops. It is painted as two
+// concentric fills rather than as a stroke, because a stroke is centred on
+// the path it follows and antialiases both of its sides — a one-pixel one
+// arrives as two rows of half-strength ink and the line the palette asked
+// for is never actually painted.
 //
 // THE TOP STRIP IS DERIVED FROM THE WINDOW BUTTONS. Under a full-size
 // content treatment the window's control buttons are measured from the
-// window's own glass and from nothing drawn beneath them; a pane that
-// floats under them must be cut deep enough to hold them with the same air
-// below as above. [StripDp] is that arithmetic and not a taste, and it puts
-// the buttons' centre line on the strip's middle line, where a control
-// standing in the strip centres — so the strip's own controls and the
-// window's read as one row of furniture. [Strip] lays that band out.
+// window's own glass and from nothing drawn beneath them; a pane set in
+// under them must be cut deep enough to hold them with the same air below
+// as above. [StripDp] is that arithmetic and not a taste, and it puts the
+// buttons' centre line on the strip's middle line, where a control standing
+// in the strip centres — so the strip's own controls and the window's read
+// as one row of chrome. [Strip] lays that band out.
 //
 // THE RECALL CONVENTION. A control that travels with the pane cannot be the
 // one that recalls it. The pane's own dismiss control rides the strip; the
@@ -50,8 +57,8 @@
 // business. What the package fixes is the geometry both halves stand on.
 //
 // WHAT THE CALLER SUPPLIES. The pane takes its contents, its width and its
-// controls as parameters — this is furniture geometry composed inside a
-// frame the application owns, not a screen-level widget stream, so it is
+// controls as parameters — this is chrome geometry composed inside a frame
+// the application owns, not a screen-level stream of components, so it is
 // laid out directly from a [layout.Context] and a palette rather than built
 // from an observable. Source is intentionally short — copy it into your own
 // app and modify as needed.
@@ -76,23 +83,25 @@ import (
 
 // The pane's geometry. Every number here is stated once and derived from
 // there; nothing in this package reads a density or a spacing step, because
-// a pane's float is a property of the window it floats in and not of how
+// a pane's inset is a property of the window it is set into and not of how
 // tightly its rows are set.
 const (
-	// MarginDp is the inset the pane floats off the window's leading, top
-	// and bottom edges — the slivers of ground the reader sees around it.
+	// MarginDp is the inset the pane stands off the window's leading, top
+	// and bottom edges — the slivers of backdrop the reader sees around it.
 	// Those slivers claim no window drag of their own: a hand aims for the
 	// strip, not for an eight-dp gap, and a move action there would promise
 	// a handle too thin to hit.
 	MarginDp = 8
 
-	// RadiusDp rounds the pane's four corners. The pane floats inside the
+	// RadiusDp rounds the pane's four corners. The pane stands inside the
 	// window rather than being its edge, so its corners are its own to
 	// round — the window's, which the platform rounds, are a margin away.
 	RadiusDp = 10
 
-	// SeamDp is the width of the pane's internal hairline: the width the
-	// platform's own split dividers take and the width a window's other
+	// SeamDp is the width of the pane's internal hairline — drawn because
+	// the backdrop's own step is too small to part the pane from it, which
+	// the package comment records the measurement for. The width is the one
+	// the platform's own split dividers take, and the one a window's other
 	// chrome boundaries should take beside it, so that boundaries drawn for
 	// different reasons are still drawn at one weight. Wider is worse in a
 	// way that is easy to miss — a seam runs a whole edge, so its width is
@@ -120,15 +129,15 @@ const (
 	// SeamRatio is how far the pane's edge stands from the fill it is drawn
 	// on: 1.51:1, and it is a MEASUREMENT of the platform rather than a
 	// floor anything has to clear. The platform draws this edge and draws it
-	// quietly — Voice Memos outlines its floating panel at #3A3A3A on a
+	// quietly — Voice Memos outlines its inset panel at #3A3A3A on a
 	// #1B1B1B panel, 1.514:1, while the flush side of the same window
 	// carries no outline at all. That number is deliberately NOT the 3:1
 	// graphic floor an object's outline derives to elsewhere in this system,
 	// because the two lines are not the same kind of thing: a 3:1 mark
-	// carries meaning by itself and owes its ground WCAG 1.4.11, while a
-	// pane's own edge is a decorative seam saying "this region is an
+	// carries meaning by itself and owes what it is drawn on WCAG 1.4.11,
+	// while a pane's own edge is a decorative seam saying "this region is an
 	// object", read alongside the fill, the inset and the radius that say
-	// the same thing. On these grounds 3:1 would answer ink far louder than
+	// the same thing. On those grounds 3:1 would answer ink far louder than
 	// anything the platform draws around a sidebar.
 	SeamRatio = 1.51
 )
@@ -150,7 +159,7 @@ func Surface(c tokens.ColorTokens) color.NRGBA {
 }
 
 // SeamInk is the ink of the pane's own edge, resolved against the fill it
-// is drawn on rather than named as a rung.
+// is drawn on rather than named as a step.
 //
 // Two things are derived and neither names a scheme. The DISTANCE is
 // [SeamRatio], solved in the luminance a contrast ratio is taken in and
@@ -159,12 +168,12 @@ func Surface(c tokens.ColorTokens) color.NRGBA {
 // of its own. The DIRECTION is toward the scheme's own ink: a dark scheme's
 // edge is lighter than its pane, as the platform draws it, and a light
 // scheme's is darker, which is the only direction a light pane has room in
-// — from a #E8E8E8 floor the whole distance left to white is 1.23:1, less
+// — from a #E8E8E8 fill the whole distance left to white is 1.23:1, less
 // than the whisper itself.
 //
-// On the default palettes it answers #BEBEBE on the light floor, 1.52:1,
-// and #363636 on the dark one, 1.51:1 — the dark pairing within a level of
-// the platform's own #3A3A3A on #1B1B1B.
+// On the default palettes it answers #BEBEBE on the light fill, 1.52:1, and
+// #363636 on the dark one, 1.51:1 — the dark pairing within a level of the
+// platform's own #3A3A3A on #1B1B1B.
 func SeamInk(c tokens.ColorTokens) color.NRGBA {
 	fill := Surface(c)
 	y := vgcolor.RelativeLuminance(fill)
@@ -207,7 +216,7 @@ func tone(y float64) float64 {
 // width at all and the caller lays its content out from the window's own
 // leading edge, rather than the pane collapsing to a rail that still has
 // to be reasoned about), a window with no area, and a window too small to
-// float anything in. A caller reads the emptiness rather than a flag.
+// set anything into. A caller reads the emptiness rather than a flag.
 //
 // The pane and its margin may never take more than half the window: a
 // narrow window owes its document a readable column before it owes the
@@ -259,6 +268,27 @@ func Layout(gtx layout.Context, c tokens.ColorTokens, bounds image.Rectangle, co
 	contents(gtx)
 }
 
+// FillTrailingCorners fills the strip the pane's two trailing corners round
+// away from, in the fill of the region standing flush against that edge.
+//
+// The pane is set in from the window's leading, top and bottom edges and
+// flush with what it stands beside on the fourth, so the backdrop shows on
+// three sides and not on the fourth: behind a corner arc on the flush side
+// stands the region the pane abuts, not the window's plane. Without this the
+// two arcs read as nicks of backdrop bitten out of the boundary.
+//
+// Call it before [Layout], which paints over the whole strip but the arcs. A
+// caller that stands the pane in the open — with the backdrop showing on all
+// four sides, as the pattern's own stored images do — calls it not at all.
+func FillTrailingCorners(gtx layout.Context, fill color.NRGBA, bounds image.Rectangle) {
+	r := gtx.Dp(unit.Dp(RadiusDp))
+	if bounds.Empty() || r <= 0 {
+		return
+	}
+	strip := image.Rect(bounds.Max.X-r, bounds.Min.Y, bounds.Max.X, bounds.Max.Y)
+	paint.FillShape(gtx.Ops, fill, clip.Rect(strip).Op())
+}
+
 // Strip lays out the pane's top band: the window control buttons' span
 // skipped at the leading end, a stretch that moves the window across the
 // middle, and the caller's controls at the trailing corner, one margin in
@@ -266,7 +296,7 @@ func Layout(gtx layout.Context, c tokens.ColorTokens, bounds image.Rectangle, co
 //
 // buttonsEnd is where the buttons end in WINDOW coordinates — what the
 // platform reports, or the window's own edge inset where it has no such
-// controls. The pane floats one margin inside the window's leading edge, so
+// controls. The pane stands one margin inside the window's leading edge, so
 // the pane-local skip is that measurement less the margin: the buttons are
 // the window's and stand where it puts them; it is the pane that slid in
 // under them. The span is skipped rather than claimed because a move action
