@@ -62,7 +62,7 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 // stays ASCII — no symbol reaches a stored image.
 //
 // They are short on purpose. A tab cell is Rigid and sized to its label plus
-// 2×S3 of padding, so three long labels would run off the 240 px canvas; these
+// 2×S3 of padding, so three long labels would run off the 240 px frame; these
 // three leave the strip comfortably inside it.
 var tabLabels = []string{"Preview", "Code", "Notes"}
 
@@ -130,7 +130,7 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 }
 
 // TestTheStripStandsOneStepOverThePanel guards the pattern's two areas.
-// The panel is content and fills at Props.Ground; the strip is furniture and
+// The panel is content and fills at `Props.Ground`; the strip is furniture and
 // is the raise walked from it — told by its own fill, or, where the scheme
 // has no step left, by the seam along the strip's foot.
 //
@@ -166,19 +166,19 @@ func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
 
 	groundStrip, groundSeam, groundPanel := fills(tokens.Level0)
 	if !told(groundStrip, groundSeam, groundPanel) {
-		t.Errorf("strip and panel render the same fill %v on a level-0 ground and no seam parts them; the strip is furniture and owes its panel a step or a seam", groundStrip)
+		t.Errorf("strip and panel render the same fill %v on a level-0 surface and no seam parts them; the strip is furniture and owes its panel a step or a seam", groundStrip)
 	}
 
 	raisedStrip, raisedSeam, raisedPanel := fills(tokens.Level1)
 	if !told(raisedStrip, raisedSeam, raisedPanel) {
-		t.Errorf("strip and panel render the same fill %v on a level-1 ground and no seam parts them", raisedStrip)
+		t.Errorf("strip and panel render the same fill %v on a level-1 surface and no seam parts them", raisedStrip)
 	}
 	if groundStrip != raisedPanel {
 		t.Errorf("the strip over a level-0 panel is %v and a level-1 panel is %v; one step up from level 0 is level 1, so these are the same fill",
 			groundStrip, raisedPanel)
 	}
 	if groundPanel == raisedPanel {
-		t.Errorf("Props.Ground did not move the panel: level 0 and level 1 both render %v", groundPanel)
+		t.Errorf("the panel level did not move: level 0 and level 1 both render %v", groundPanel)
 	}
 }
 
@@ -195,7 +195,7 @@ func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Tabs subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Tabs did not emit an initial widget")
+		t.Fatal("Tabs did not emit an initial layout.Widget")
 	}
 	return w
 }

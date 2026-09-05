@@ -20,7 +20,7 @@ import (
 const (
 	canvasW, canvasH = 720, 320
 	// scene leaves a small margin around the grid so the outer cells
-	// retain breathing room from the canvas edge.
+	// retain breathing room from the frame edge.
 	marginPx = 16
 )
 
@@ -35,8 +35,8 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// scene renders w into a canvas-sized constraint over a flat background
-// with a uniform margin so the outer cells do not touch the canvas edge.
+// scene renders w into a frame-sized constraint over a flat background
+// with a uniform margin so the outer cells do not touch the frame edge.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -44,7 +44,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	}
 }
 
-// iconFill returns a solid-colour widget that fills its (icon-cell-sized)
+// iconFill returns a solid-colour layout.Widget that fills its (icon-cell-sized)
 // constraints. Used as an Icon stand-in so the goldens carry a
 // deterministic structural marker for the icon slot without depending on
 // any vector asset.
@@ -115,8 +115,8 @@ func TestFeatureGolden(t *testing.T) {
 		{"light-3-up", tokens.DefaultLight, lightBG, 3, three, canvasSize},
 		{"dark-3-up", tokens.DefaultDark, darkBG, 3, three, canvasSize},
 		{"light-2-up", tokens.DefaultLight, lightBG, 2, two, canvasSize},
-		// Two rows of real text do not fit the one-row canvas; the taller
-		// canvas keeps the second row's bodies on screen rather than cut
+		// Two rows of real text do not fit the one-row frame; the taller
+		// frame keeps the second row's bodies on screen rather than cut
 		// off at the edge.
 		{"light-6-items-3-up", tokens.DefaultLight, lightBG, 3, six, image.Pt(canvasW, 2*canvasH)},
 	}
@@ -172,8 +172,8 @@ func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 //
 // typeset adds the missing first-line box as a deficit rather than a floor,
 // so this three-line body occupies exactly 3 × the line height instead of
-// two gaps plus one line of glyph ink. Measured on BodyMedium at 14 dp,
-// whose natural line inks 17 px: the run is 60 px at line height 20 and 96
+// two gaps plus one drawn line of glyphs. Measured on BodyMedium at 14 dp,
+// whose natural line draws 17 px: the run is 60 px at line height 20 and 96
 // px at 32, so the +12 this test applies lengthens it by 36 px.
 func TestFeatureLineHeightGolden(t *testing.T) {
 	golden.Render(t, "light-3-up-tall-body-lines", canvasSize,

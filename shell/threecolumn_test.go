@@ -73,7 +73,7 @@ func TestShellThreeColumnGolden(t *testing.T) {
 
 // TestShellThreeColumnAsideResize verifies that pressing on the aside
 // divider and dragging horizontally emits absolute-width updates via
-// OnAsideResize. With PxPerDp=1, a 480-wide canvas, an empty sidebar
+// OnAsideResize. With PxPerDp=1, a 480-wide frame, an empty sidebar
 // (width 0) and an initial aside width of 200, the divider (6 px wide)
 // sits at x ∈ [274, 280). A press at (277, 100) followed by a drag to
 // (227, 100) moves the divider 50 px toward leading, growing the aside

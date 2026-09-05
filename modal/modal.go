@@ -1,13 +1,13 @@
-// Package modal provides the Patterns Modal pattern: a centered elevated
+// Package modal provides the Patterns Modal pattern: a centered floating
 // surface dialog over a full-window scrim backdrop, with a header (title +
 // close affordance), padded body, and optional footer action row.
 //
-// The dialog surface fills at SurfaceAt(Level2), one storey above the
+// The dialog surface fills at SurfaceAt(Level2), one level above the
 // standing level-1 content panes it covers, with a 1 dp stroke at the same
 // level. Level 2 rather than the deeper level used by unscrimmed overlays
 // (popover, dropdown menu), because the modal does not separate by fill
 // alone: the scrim dims everything beneath it and is the modal's isolating
-// cue, so its surface needs only one tonal storey. It casts no shadow: a
+// cue, so its surface needs only one tonal level. It casts no shadow: a
 // cast shadow is reserved for surfaces that float and can leave without a
 // scrim.
 //
@@ -20,7 +20,7 @@
 //
 // Desktop dialogs come in two archetypes, and this package has exactly two.
 // Which one you get is derived from [Props.Decision] — nil or not — and
-// reported by [Props.Intent]. Everything below follows from that one word;
+// reported by `Props.Intent`. Everything below follows from that one word;
 // none of it is separately configurable, because the wrong combinations are
 // what a boolean per affordance would let you write down.
 //
@@ -45,7 +45,7 @@
 // # The panel's close mark, measured
 //
 // The mark is a cross 12 dp corner to corner at a 2 dp stroke, which lands
-// 14 dp of ink on each axis — the size of this platform's own window close
+// 14 dp on each axis — the size of this platform's own window close
 // control — centred in the 20 dp icon box of a ghost components/button,
 // itself a 36 dp square at the comfortable density. See [crossPadDp] for why
 // the mark fills 60% of that box. The pointer target under it is 44 dp on
@@ -83,7 +83,7 @@
 //
 // Focus ownership: the close affordance and each footer action own their own
 // focus tag and focus ring (the close button is a components/button; actions
-// likewise register their own tags, e.g. a components/button's caller-owned
+// likewise register the tags they own, e.g. a components/button's caller-owned
 // *widget.Clickable). The modal does not wrap an action or draw a ring around
 // it — it only adds the caller-declared Props.ActionFocusTags to its Tab
 // cycle, so a focused action shows exactly one ring: its own.
@@ -119,12 +119,12 @@ import (
 	"github.com/vibrantgio/theme/typeset"
 )
 
-// Intent names the archetype a modal belongs to. Desktop dialogs come in
+// `Intent` names the archetype a modal belongs to. Desktop dialogs come in
 // two, and their affordances travel together rather than varying
 // independently:
 //
 //   - A PANEL is a place you opened and can leave. Obsidian's and
-//     Claude.app's settings are the shape: a small quiet X top-right,
+//     Claude.app's settings are the shape: a small understated X top-right,
 //     Escape and a backdrop click both close it, changes apply live so a
 //     footer is optional, and an app accelerator (⌘,) opens it. Leaving
 //     costs nothing, so every cheap exit is offered.
@@ -138,11 +138,11 @@ import (
 // Exposing those affordances as independent booleans would permit every
 // wrong combination — e.g. a "Discard changes?" dialog wearing a panel's X
 // over a backdrop that dismisses it. So there are no such booleans. The
-// intent is declared once, by supplying [Props.Decision] or leaving it nil,
+// the purpose is declared once, by supplying [Props.Decision] or leaving it nil,
 // and every affordance is derived from it — which is why a decision dialog
 // with a dismissing backdrop cannot be written down in this API at all.
 //
-// Intent is a derived value, not a field: [Props.Intent] reports it. There
+// The purpose is a derived value, not a field: `Props.Intent` reports it. There
 // is nothing to keep in sync and nothing that can contradict the callbacks.
 type Intent int
 
@@ -166,7 +166,7 @@ func (i Intent) String() string {
 	case IntentDecision:
 		return "decision"
 	}
-	return fmt.Sprintf("Intent(%d)", int(i))
+	return fmt.Sprintf("archetype(%d)", int(i))
 }
 
 // Decision turns a modal into a decision dialog. Set it on [Props.Decision]
@@ -175,7 +175,8 @@ func (i Intent) String() string {
 // Cancel and Return to the default action.
 //
 // The callbacks here are the KEYBOARD bindings, not the footer. The footer is
-// still Props.Actions (with Props.ActionFocusTags), because an action's widget
+// still Props.Actions (with Props.ActionFocusTags), because an action's
+// layout.Widget
 // is the caller's — a components/button, a link, whatever the dialog needs. List
 // the same two actions in both places: Cancel and the primary, in that order,
 // right-aligned, the way both platforms order them.
@@ -244,7 +245,7 @@ type Props struct {
 
 	// Decision, when non-nil, makes this a decision dialog rather than a
 	// dismissable panel: no close X, an inert backdrop, Escape to Cancel and
-	// Return to the default action. Leave it nil for a panel. See [Intent]
+	// Return to the default action. Leave it nil for a panel. See `Intent`
 	// for the two archetypes and [Decision] for the destructive-default rule.
 	Decision *Decision
 
@@ -261,7 +262,7 @@ type Props struct {
 	// Cancel button) — Escape and a scrim click still trigger OnClose.
 	//
 	// It is not consulted on a decision dialog, which never draws the X:
-	// hiding the close affordance is derived from the intent there, not
+	// hiding the close affordance is derived from the purpose there, not
 	// requested. HideClose is therefore only ever additive — it can hide a
 	// panel's X, and it can never show a decision's.
 	//
@@ -286,7 +287,7 @@ type Props struct {
 	// not wrap an action or draw a ring around it. A components/button action, for
 	// example, is built with a caller-owned *widget.Clickable; passing that
 	// &clickable here adds it to the Tab cycle (and the Escape trap) with no
-	// doubled outer ring. A non-focusable action (plain widget) simply omits
+	// doubled outer ring. A non-focusable action (a plain layout.Widget) simply omits
 	// its tag. nil entries are skipped. See ActionFocusTags vs Actions: the
 	// two slices are independent — list a tag here only for actions that
 	// participate in keyboard focus.
@@ -301,13 +302,13 @@ type Props struct {
 	// the theme shaper. Set it only when this
 	// instance must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
-// Intent reports which archetype these Props describe. It is derived from
+// `Intent` reports which archetype these Props describe. It is derived from
 // Decision alone, so it can never disagree with the callbacks.
 func (p Props) Intent() Intent {
 	if p.Decision != nil {
@@ -346,13 +347,13 @@ type resolvedTokens struct {
 	title   tokens.TextStyle // the TitleMedium role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 	// elevation is snapshotted so a theme elevation change re-emits the
-	// widget; the surface fill resolves through SurfaceAt, which reads
+	// layout.Widget; the surface fill resolves through SurfaceAt, which reads
 	// the default tokens.Elevation scale.
 	elevation tokens.ElevationScale
 }
 
-// Modal returns an rx.Observable[layout.Widget] that emits a new widget
-// whenever the theme or Open state changes. The widget renders a scrim and
+// Modal returns an rx.Observable[layout.Widget] that emits a new one
+// whenever the theme or Open state changes. It renders a scrim and
 // centered surface when open, or no pixels at all when closed. State (the
 // arbitration set and stack hold, focus tags, the close-button clickable)
 // persists across emissions in the rx.Defer scope.
@@ -390,8 +391,9 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 		// clickable (&st.closeClick) so the
 		// focus trap stays keyed to a single tag and no doubled focus ring is
 		// drawn; OnClose is routed through the button's OnClick. Build once
-		// here in the rx.Defer scope and fold the latest emitted widget into
-		// the input pipeline — never subscribe inside the per-frame widget
+		// here in the rx.Defer scope and fold the latest emitted layout.Widget
+		// into the input pipeline — never subscribe inside the per-frame
+		// layout.Widget
 		// closure.
 		closeBtn := rx.Of[layout.Widget](nil)
 		if props.showsClose() {
@@ -400,7 +402,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 				Description: "Close",
 				Emphasis:    button.Ghost,
 				// The dialog is a level-2 surface (drawModal fills
-				// SurfaceAt(Level2)), and a ghost's wash is its host
+				// SurfaceAt(Level2)), and a ghost's state fill is its host
 				// surface's own walk — so the close X names the
 				// level it sits on, and its hover reads against the
 				// raised fill instead of dissolving into it.
@@ -439,9 +441,9 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // Render produces a layout.Widget for a modal with pre-resolved tokens and
 // an explicit open flag. Intended for golden-image testing and static
 // demonstrations; production code should use Modal, which reads both of the
-// parameters below off the theme. The returned widget performs no input
+// parameters below off the theme. The returned layout.Widget performs no input
 // handling: pass open=true to render the scrim and surface, open=false to
-// render nothing (the widget consumes the constraints but paints no pixels).
+// render nothing (it consumes the constraints but paints no pixels).
 //
 // title is the TitleMedium role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the close
@@ -450,7 +452,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // components/button, which takes a density and no text style at all. Pass
 // tokens.DefaultTypography.TitleMedium and tokens.Comfortable for the
 // default desktop look. On a decision dialog there is no close affordance to
-// size: the intent removes it, here as on the live path, so the two render
+// size: the purpose removes it, here as on the live path, so the two render
 // the same header.
 func Render(
 	shaper *text.Shaper,
@@ -517,13 +519,13 @@ func newState(props Props) *modalState {
 //
 // It is called from inside the layout pass, on the frame goroutine that will
 // draw the result, rather than where the Open observable emitted on another
-// one. The emitted widget is re-invoked every frame until the next emission
+// one. The emitted layout.Widget is re-invoked every frame until the next emission
 // replaces it, so both transitions are guarded by st.pushed — the edge over
 // Open — and run exactly once. Two consequences a reader has to know: a modal
 // that is open but never laid out neither joins the stack nor covers
 // anything, and symmetrically one whose Open goes false while it is off the
 // tree keeps its place until it is laid out again. Compose the modal into the
-// tree unconditionally — the closed widget paints nothing — and neither can
+// tree unconditionally — the closed layout.Widget paints nothing — and neither can
 // arise; every application in this organization already does.
 func (st *modalState) track(open bool) bool {
 	switch {
@@ -579,7 +581,7 @@ func drawModal(
 		processDefaultAction(gtx, props, st)
 	}
 
-	// Scrim — full-canvas dimmer. Pointer events that miss the surface
+	// Scrim — full-frame dimmer. Pointer events that miss the surface
 	// hit the scrim tag and trigger OnClose.
 	scrimColor := scrimColor(tok.color)
 	scrimRect := image.Rectangle{Max: canvas}
@@ -590,11 +592,11 @@ func drawModal(
 	}
 	scrimClip.Pop()
 
-	// Surface width — 75% of canvas clamped to a sensible min/max in dp.
+	// Surface width — 75% of the frame clamped to a sensible min/max in dp.
 	// Height HUGS THE CONTENT: the content is laid out once into a macro
-	// (stateful widgets process their events exactly once), the surface is
+	// (stateful components process their events exactly once), the surface is
 	// sized to the recorded dims, and the macro is replayed inside the
-	// positioned surface. maxH caps the surface at the old 75%-of-canvas
+	// positioned surface. maxH caps the surface at the old 75%-of-frame
 	// bound; overflowing content is clipped to the surface.
 	surfW := clampInt(canvas.X*3/4, gtx.Dp(unit.Dp(180)), gtx.Dp(unit.Dp(560)))
 	if surfW > canvas.X {
@@ -622,13 +624,13 @@ func drawModal(
 
 	// Surface — rounded rectangle, registered as a pointer absorber so
 	// presses on its area do not reach the scrim and dismiss the modal.
-	// Level 2 on the elevation ladder: one tonal storey above the level-1
+	// Level 2 on the elevation: one tonal level above the level-1
 	// panes underneath; the scrim, not the fill, is the isolating cue
 	// (see the package doc).
 	off := op.Offset(surfPos).Push(gtx.Ops)
 	surfRRect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(surfW, surfH)}, SE: r, SW: r, NE: r, NW: r}
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level2), surfRRect.Op(gtx.Ops))
-	// The surface's edge is derived against the storey it circles — the same
+	// The surface's edge is derived against the level it circles — the same
 	// Level2 the fill above is painted at, named once for both.
 	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tok.color.SurfaceAt(tokens.Level2)), clip.Stroke{
 		Path:  surfRRect.Path(gtx.Ops),
@@ -717,7 +719,7 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 	}
 }
 
-// footerWidget renders a right-aligned row of action widgets. Each action is
+// footerWidget renders a right-aligned row of action components. Each action is
 // laid out bare: it owns its own focus tag and focus ring (the modal neither
 // wraps it nor decorates it), and joins the Tab cycle via Props.ActionFocusTags.
 // Returns nil when there are no non-nil actions.
@@ -894,7 +896,7 @@ func processDefaultAction(gtx layout.Context, props Props, st *modalState) {
 
 // focusTags returns the ordered slice of focus tags belonging to this modal:
 // the close button first, then the caller-declared action focus tags. Action
-// tags are owned by the action widgets themselves (Props.ActionFocusTags); the
+// tags are owned by the action components themselves (Props.ActionFocusTags); the
 // modal only sequences them for Tab cycling and the Escape trap.
 func focusTags(props Props, st *modalState) []event.Tag {
 	tags := make([]event.Tag, 0, focusCount(props))
@@ -932,7 +934,7 @@ func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 //
 // It is 4 dp, which puts the cross 12 dp corner to corner in the 20 dp icon
 // box a comfortable icon button hands it — 60% of the box, the proportion a
-// glyph set draws a close mark at, and 14 dp of ink once the 2 dp stroke is
+// glyph set draws a close mark at, and 14 dp across once the 2 dp stroke is
 // counted. That last number is the one it was chosen for: 14 dp is what this
 // platform's own window close control measures, so the mark a dialog is left
 // by is the size the platform leaves a window by.
@@ -970,7 +972,7 @@ func scrimColor(_ tokens.ColorTokens) color.NRGBA {
 	return color.NRGBA{R: 0, G: 0, B: 0, A: 0x80}
 }
 
-// spacerV returns a vertical-spacer widget that consumes hPx pixels in
+// spacerV returns a vertical-spacer layout.Widget that consumes hPx pixels in
 // the Y axis and zero pixels in X. Used inside the vertical Flex stack.
 func spacerV(hPx int) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {

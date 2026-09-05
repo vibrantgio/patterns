@@ -82,7 +82,7 @@ func clickAt(r *gioinput.Router, x int) {
 // rowWidth measures the natural width of a trail of labels through the static
 // Render path, which draws the same row without keeping any state. Loose
 // constraints are what make the answer the row's own width rather than the
-// canvas's.
+// frame's.
 func rowWidth(t *testing.T, shaper *text.Shaper, labels ...string) int {
 	t.Helper()
 	items := make([]breadcrumb.Item, len(labels))
@@ -281,7 +281,7 @@ func TestTrailKeyboardFocusFollowsTheSegment(t *testing.T) {
 	driveTrail(w, ops, r, canvasSize, first)
 
 	// The trail is reshuffled under the focus, then Enter is pressed.
-	// widget.Clickable requires a matched Press and Release to register.
+	// widget.Clickable requires a matched Press and Release to register a click.
 	driveTrail(w, ops, r, canvasSize, second)
 	r.Queue(
 		key.Event{Name: key.NameReturn, State: key.Press},

@@ -14,7 +14,7 @@
 //
 // The Sidebar slot accepts any rx.Observable[layout.Widget], so callers
 // can supply a patterns/sidebar instance, a patterns/accordion-based
-// column, or any other pre-built widget stream. The static Render path
+// column, or any other pre-built layout.Widget stream. The static Render path
 // accepts a pre-built layout.Widget for the sidebar slot; Props.Sidebar
 // is not consulted by Render.
 package shell
@@ -79,9 +79,9 @@ type Props struct {
 
 	// SidebarHeaderMain slots.
 	//
-	// Sidebar is the pre-built sidebar widget stream. Any
+	// Sidebar is the pre-built sidebar layout.Widget stream. Any
 	// rx.Observable[layout.Widget] is accepted — pass sidebar.Sidebar(th,
-	// sidebarProps) for the default patterns/sidebar, or any other widget
+	// sidebarProps) for the default patterns/sidebar, or any other layout.Widget
 	// stream. A nil Sidebar renders an empty leading column.
 	Sidebar rx.Observable[layout.Widget]
 	Navbar  navbar.Props
@@ -110,7 +110,7 @@ type Props struct {
 	// ThreeColumn slots. Sidebar, Navbar and Main are shared with
 	// SidebarHeaderMain (see above).
 	//
-	// Aside is the trailing column widget stream — a comments panel, an
+	// Aside is the trailing column layout.Widget stream — a comments panel, an
 	// inspector, or any other contextual surface. A nil Aside omits the
 	// column and its divider entirely.
 	Aside rx.Observable[layout.Widget]
@@ -139,14 +139,14 @@ type Props struct {
 	// pinning to the viewport at a fixed height.
 	//
 	// Sections are stacked top to bottom in a scroll region owned by
-	// the shell. Each entry is a widget stream, matching the Sidebar
+	// the shell. Each entry is a layout.Widget stream, matching the Sidebar
 	// and Aside slots, so sections re-render on theme change without a
 	// layer-boundary adapter; the shell combines them and re-emits
 	// whenever any section emits. Nil entries render empty. Each
 	// section spans the full page width (less the ContentMaxWidth
 	// clamp, when set) and receives an unbounded height, so it must
 	// return its natural height. The static Render path takes
-	// pre-built section widgets via RenderStackedPage instead
+	// pre-built section layout.Widget values via RenderStackedPage instead
 	// (Props.Sections is not consulted there).
 	Sections []rx.Observable[layout.Widget]
 
@@ -216,9 +216,9 @@ func NavbarHeight(d tokens.Density) unit.Dp {
 	return unit.Dp(d.ControlHeight + 2*d.PaddingY)
 }
 
-// Shell returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever a consumed theme token, the SplitRatio observable,
-// or a composed sub-widget changes. Sidebar and navbar event handling
+// Shell returns an rx.Observable[layout.Widget] that emits a new one
+// whenever a consumed theme token, the SplitRatio observable,
+// or a composed sub-stream changes. Sidebar and navbar event handling
 // is delegated to the respective packages; Shell only owns the
 // SplitPane divider's drag handler.
 func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -240,9 +240,9 @@ func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // is honoured by SplitPane; SidebarHeaderMain uses the supplied sidebarW
 // directly (Props.Sidebar is not consulted). Pass nil sidebarW to render
 // an empty sidebar column. A ThreeColumn Props renders without an aside
-// column — use RenderThreeColumn to supply a pre-built aside widget; a
+// column — use RenderThreeColumn to supply a pre-built aside layout.Widget; a
 // StackedPage Props renders only the navbar and footer — use
-// RenderStackedPage to supply pre-built section widgets.
+// RenderStackedPage to supply pre-built section layout.Widget values.
 //
 // label is the LabelLarge role's whole text style, which the shell
 // spends on its navbar, and d is the density both the navbar and the
@@ -369,7 +369,7 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 			right := props.Right
 			axis := props.SplitAxis
 			onChange := props.OnSplitChange
-			// applied defers the external-ratio hand-off to the widget:
+			// applied defers the external-ratio hand-off to the layout.Widget:
 			// dragState must only ever be touched on the frame goroutine.
 			// This projector runs on the rx scheduler, so writing ds here
 			// races with processDrag/drawSplitPane during layout.
@@ -543,7 +543,7 @@ func drawSplitPane(
 }
 
 // dividerColor is the semantic Divider token: one step past the Surface
-// ground, so it still registers a pixel delta against Surface on both
+// fill, so it still registers a pixel delta against Surface on both
 // light and dark schemes.
 func dividerColor(c tokens.ColorTokens) color.NRGBA {
 	return c.Divider

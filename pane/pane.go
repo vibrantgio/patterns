@@ -35,7 +35,7 @@
 // boundary a reader uses to tell where the pane stops. It is painted as two
 // concentric fills rather than as a stroke, because a stroke is centred on
 // the path it follows and antialiases both of its sides — a one-pixel one
-// arrives as two rows of half-strength ink and the line the palette asked
+// arrives as two rows of half-strength colour and the line the palette asked
 // for is never actually painted.
 //
 // THE TOP STRIP IS DERIVED FROM THE WINDOW BUTTONS. Under a full-size
@@ -137,8 +137,8 @@ const (
 	// carries meaning by itself and owes what it is drawn on WCAG 1.4.11,
 	// while a pane's own edge is a decorative seam saying "this region is an
 	// object", read alongside the fill, the inset and the radius that say
-	// the same thing. On those grounds 3:1 would answer ink far louder than
-	// anything the platform draws around a sidebar.
+	// the same thing. For that reason 3:1 would answer with a line far more
+	// pronounced than anything the platform draws around a sidebar.
 	SeamRatio = 1.51
 )
 
@@ -158,14 +158,14 @@ func Surface(c tokens.ColorTokens) color.NRGBA {
 	return c.SurfaceAt(tokens.LevelChrome)
 }
 
-// SeamInk is the ink of the pane's own edge, resolved against the fill it
+// `SeamInk` is the colour of the pane's own edge, resolved against the fill it
 // is drawn on rather than named as a step.
 //
 // Two things are derived and neither names a scheme. The DISTANCE is
 // [SeamRatio], solved in the luminance a contrast ratio is taken in and
 // realized at the fill's own hue and chroma, the way elevation realizes a
 // level — so the edge carries whatever tint the palette carries and none
-// of its own. The DIRECTION is toward the scheme's own ink: a dark scheme's
+// of its own. The DIRECTION is toward the scheme's own foreground: a dark scheme's
 // edge is lighter than its pane, as the platform draws it, and a light
 // scheme's is darker, which is the only direction a light pane has room in
 // — from a #E8E8E8 fill the whole distance left to white is 1.23:1, less
@@ -251,7 +251,7 @@ func Layout(gtx layout.Context, c tokens.ColorTokens, bounds image.Rectangle, co
 	r := gtx.Dp(unit.Dp(RadiusDp))
 	w := max(gtx.Dp(unit.Dp(SeamDp)), 1)
 	// Two concentric fills rather than a stroke, for the reason the package
-	// doc gives: filling the pane in the seam's ink and filling the inset
+	// doc gives: filling the pane in the seam's colour and filling the inset
 	// pane back in over it leaves exactly one pixel of the seam's own colour
 	// down every straight run, with the corners' arcs antialiased against
 	// each other the way a fence's rim is drawn.

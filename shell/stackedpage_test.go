@@ -45,7 +45,7 @@ func band(c color.NRGBA, h int) layout.Widget {
 
 // TestShellStackedPageGolden records or diffs the StackedPage goldens.
 // The short case fits within the viewport, so the footer is visible
-// with the Background ground below it — the footer scrolls with the
+// with the Background fill below it — the footer scrolls with the
 // content instead of pinning to the viewport bottom. The overflow
 // cases exceed the viewport and must clip at its edge.
 func TestShellStackedPageGolden(t *testing.T) {
@@ -150,7 +150,7 @@ func TestShellStackedPageContentMaxWidth(t *testing.T) {
 
 // TestShellStackedPageScrolls verifies that the shell-owned scroll
 // region both virtualizes (offscreen sections are never laid out) and
-// responds to pointer scroll events. Canvas 480×256 leaves a 204 px
+// responds to pointer scroll events. Frame 480×256 leaves a 204 px
 // body under the 52 px navbar; five 120 px sections total 600 px. At
 // rest only sections 0 and 1 fit the viewport; after scrolling 300 px
 // the window covers sections 2–4 and section 0 must not be laid out.
@@ -211,7 +211,7 @@ func TestShellStackedPageScrolls(t *testing.T) {
 }
 
 // TestShellStackedPageSectionReEmission verifies that a section stream
-// re-emitting (the shape of a theme change) re-emits the shell widget
+// re-emitting (the shape of a theme change) re-emits the shell layout.Widget
 // itself. This is the property that lets observable-driven apps repaint
 // on section changes without a layer-boundary adapter: the shell
 // emission is what drives the window's Invalidate.
@@ -243,7 +243,7 @@ func TestShellStackedPageSectionReEmission(t *testing.T) {
 		return false
 	}
 	if !waitAbove(0) {
-		t.Fatal("Shell did not emit for the initial section widget")
+		t.Fatal("Shell did not emit for the initial section layout.Widget")
 	}
 	seen := emissions.Load()
 	if !waitAbove(seen) {

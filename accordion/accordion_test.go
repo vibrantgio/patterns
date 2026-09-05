@@ -148,7 +148,7 @@ func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Accordion subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Accordion did not emit an initial widget")
+		t.Fatal("Accordion did not emit an initial layout.Widget")
 	}
 	return w
 }

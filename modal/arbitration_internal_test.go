@@ -15,7 +15,7 @@ import (
 )
 
 // TestArbiterStacksAndRestores is the property that makes modal's arbiter a
-// stack rather than popover's and tooltip's single register: a modal opened
+// stack rather than popover's and tooltip's single arbiter: a modal opened
 // over another one covers it instead of evicting it, and closing the inner
 // one hands the front back to the outer one.
 func TestArbiterStacksAndRestores(t *testing.T) {
@@ -49,7 +49,7 @@ func TestArbiterStacksAndRestores(t *testing.T) {
 
 // TestArbiterPushDoesNotClimb is the level-safety claim in the Arbiter doc: a
 // push by a modal already on the stack leaves it exactly where it is. This is
-// why modal did not need tooltip's claimed latch — a register's write is
+// why modal did not need tooltip's claimed latch — an arbiter's write is
 // unconditionally "become top" and so must be guarded by an edge, while a
 // stack's push is "join if absent" and is idempotent on its own.
 func TestArbiterPushDoesNotClimb(t *testing.T) {
@@ -148,7 +148,7 @@ func TestTrackPushesAndPopsOnTheEdge(t *testing.T) {
 }
 
 // TestOnlyTheFrontModalTakesPointerInput is isTop's behaviour driven through
-// the real router: only the modal in front registers absorbers and answers a
+// the real router: only the modal in front registers its absorbers and answers a
 // backdrop press, and when it leaves the one it was covering answers again.
 //
 // Pointer rather than keyboard, deliberately: a press needs no focus, so the
@@ -170,7 +170,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 	innerProps := Props{Arbiter: arb, HideClose: true, OnClose: func(layout.Context) { innerClosed++ }}
 	outerSt, innerSt := newState(outerProps), newState(innerProps)
 
-	// The two lines Modal's own widget closure runs, over an open flag the
+	// The two lines Modal's own layout.Widget closure runs, over an open flag the
 	// test owns instead of an rx emission. track is the shared decision.
 	mk := func(props Props, st *modalState, open *bool) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {
@@ -225,7 +225,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 
 	// The caller closes the inner modal. Its next laid-out frame pops it,
 	// and the outer one is in front again — the stack's whole reason to be
-	// an ordered slice rather than a single register.
+	// an ordered slice rather than a single arbiter.
 	innerOpen = false
 	frame()
 	if !arb.isTop(outerSt) {
@@ -235,7 +235,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 	// One more frame before the press: the outer
 	// modal is laid out BEFORE the leaver, so on the frame the pop happens it
 	// has already been laid out inert and registered no absorbers; it
-	// registers them on the frame after. A press in between reaches nothing
+	// registers its absorbers on the frame after. A press in between reaches nothing
 	// rather than the wrong modal, and no pixel is involved — live gates
 	// event.Op registration, not drawing.
 	frame()
@@ -253,7 +253,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 // "painted but inert", measured where z-order cannot answer for the stack.
 // In TestOnlyTheFrontModalTakesPointerInput the modal in front is also the
 // one laid out last, so its absorber sits on top of whatever a covered modal
-// might wrongly register — a regression that made covered modals live for
+// might wrongly register a tag — a regression that made covered modals live for
 // pointer input would pass that test on z-order alone. Here the covered
 // modal is laid out LAST: it opened first from later in the tree, and the
 // front one opened a frame later from earlier in the tree, so push order and

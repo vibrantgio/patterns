@@ -19,7 +19,7 @@ import (
 const (
 	canvasW, canvasH = 720, 280
 	// scene leaves an S5-equivalent margin around the testimonial so the
-	// outer cards retain breathing room from the canvas edge.
+	// outer cards retain breathing room from the frame edge.
 	marginPx = 20
 )
 
@@ -40,8 +40,8 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// scene renders w into a canvas-sized constraint over a flat background
-// with a uniform margin so the testimonial does not touch the canvas edge.
+// scene renders w into a frame-sized constraint over a flat background
+// with a uniform margin so the testimonial does not touch the frame edge.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())

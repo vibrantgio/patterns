@@ -210,7 +210,7 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 //
 // The number is the platform's. Voice Memos outlines its inset panel at
 // #3A3A3A on a #1B1B1B panel — 1.514:1 — and leaves the flush side of the
-// same window unoutlined. Both halves are checked here: the derived ink
+// same window unoutlined. Both halves are checked here: the derived colour
 // lands on that ratio against the fill in BOTH schemes, and it lands
 // nowhere near the 3:1 graphic floor an object's outline is derived to
 // elsewhere in the system.
@@ -227,7 +227,7 @@ func TestSeamInkIsThePlatformsWhisper(t *testing.T) {
 			}
 			towardInk := lightness(tc.colors.Text) > lightness(fill)
 			if lighter := lightness(ink) > lightness(fill); lighter != towardInk {
-				t.Errorf("the pane's edge is %v against a fill of %v and ink of %v; the edge steps toward the ink",
+				t.Errorf("the pane's edge is %v against a fill of %v and a foreground of %v; the edge steps toward the foreground",
 					ink, fill, tc.colors.Text)
 			}
 			if got >= 3.0 {
@@ -257,7 +257,7 @@ func lightness(c color.NRGBA) float64 {
 }
 
 // TestPaneOutlineAndBackdrop reads a drawn pane: the hairline is one pixel
-// of the seam's own ink down each straight run with the fill immediately
+// of the seam's own colour down each straight run with the fill immediately
 // inside it, and what shows around the pane is the bare backdrop, with
 // nothing cast onto it — the chrome level's elevation is zero.
 func TestPaneOutlineAndBackdrop(t *testing.T) {

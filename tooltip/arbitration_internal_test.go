@@ -2,9 +2,9 @@ package tooltip
 
 import "testing"
 
-// TestArbiterClaimHidesIncumbent verifies that claiming the register is the
+// TestArbiterClaimHidesIncumbent verifies that claiming the arbiter is the
 // whole of the incumbent's dismissal: visibility is read directly off the
-// register rather than mirrored beside it, so the claim itself hides
+// arbiter rather than mirrored beside it, so the claim itself hides
 // whoever held top before it.
 func TestArbiterClaimHidesIncumbent(t *testing.T) {
 	var a, b tooltipState

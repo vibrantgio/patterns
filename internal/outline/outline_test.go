@@ -15,8 +15,8 @@ import (
 
 func hex(c color.NRGBA) string { return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B) }
 
-// storeys is the whole elevation ladder, and therefore the whole set of
-// grounds any outline can be drawn against.
+// `storeys` is every level there is, and therefore the whole set of
+// surfaces any outline can be drawn against.
 var storeys = []struct {
 	name  string
 	level tokens.ElevationLevel
@@ -27,9 +27,9 @@ var storeys = []struct {
 	{"level-3", tokens.Level3},
 }
 
-// Two grounds are measured per storey, because a line has two sides. Inside
+// Two surfaces are measured per level, because a line has two sides. Inside
 // is the fill the pattern paints and therefore always knows; outside is the
-// plane it stands on, which it does not — so the sweep holds the ink against
+// plane it stands on, which it does not — so the sweep holds the line against
 // every plane no deeper than its own fill, which is every plane a raised
 // surface can be standing on.
 func TestOutlineInkClearsTheGraphicFloor(t *testing.T) {

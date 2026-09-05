@@ -42,7 +42,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// textSlot returns a content widget that draws s in the given role. A group
+// textSlot returns a content layout.Widget that draws s in the given role. A group
 // draws no text but its own label, so everything it holds is caller-built.
 //
 // ASCII only — no symbol reaches a stored image.
@@ -59,7 +59,7 @@ func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLin
 	}
 }
 
-// content is the pair of widgets every group case holds.
+// content is the pair of layout.Widget values every group case holds.
 func content(t *testing.T, c tokens.ColorTokens) []layout.Widget {
 	t.Helper()
 	shaper := defaultShaper(t)

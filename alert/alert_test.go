@@ -54,8 +54,8 @@ func variantTitle(v alert.Variant) string {
 	}
 }
 
-// fillRect is a sharp-edged solid widget used as a Body stand-in: Body is an
-// arbitrary caller-supplied widget, so a flat block keeps it a structural
+// fillRect is a sharp-edged solid layout.Widget used as a Body stand-in: Body
+// is an arbitrary caller-supplied one, so a flat block keeps it a structural
 // marker and leaves the alert's own typography — the title — to carry the
 // text.
 func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
@@ -67,7 +67,7 @@ func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 	}
 }
 
-// scene renders w into a canvas-sized constraint over a flat background.
+// scene renders w into a frame-sized constraint over a flat background.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())

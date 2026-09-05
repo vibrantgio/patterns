@@ -2,7 +2,7 @@
 // vertical Surface column that swaps between an expanded width
 // (label+icon) and a collapsed width (icon-only) on demand. The active
 // Item is rendered on the Primary ramp's selected step, two steps past
-// the Surface ground.
+// the Surface fill.
 //
 // Sidebar is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is
@@ -48,7 +48,7 @@
 // Tab passes the rail in a single step, which is also what a list of
 // navigation choices should do.
 //
-// The collapse affordance registers no focus tag either — it answers
+// The collapse affordance takes no focus tag either — it answers
 // pointer clicks only — so the rail's single stop stays the item list.
 // Its glyph is the icon set's sidebar mark (components/icons) — the
 // control that shows and hides a window's sidebar — drawn at the icon
@@ -135,9 +135,9 @@ type Props struct {
 	// this instance must shape with a different shaper than the theme
 	// provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -161,8 +161,8 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Sidebar returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever a consumed theme token or the Collapsed observable
+// Sidebar returns an rx.Observable[layout.Widget] that emits a new one
+// whenever a consumed theme token or the Collapsed observable
 // changes. Click handlers fire for any Item whose OnClick is non-nil,
 // by mouse or by Enter/Space on the selected item; Arrow-Up/Down and
 // Home/End move the selection across the whole list, including rows the
@@ -457,7 +457,7 @@ func drawItem(
 	inner := func(gtx layout.Context) layout.Dimensions {
 		if selected {
 			// Selected background is a step past the sidebar's Surface
-			// ground on the Primary ramp, keeping the highlight's primary
+			// fill on the Primary ramp, keeping the highlight's primary
 			// hue as a real, addressable colour.
 			active := colors.StateColor(tokens.RolePrimary, 200, tokens.StateSelected)
 			paint.FillShape(gtx.Ops, active, clip.Rect{Max: size}.Op())

@@ -4,7 +4,7 @@ package tabs
 // exercise underlineInk directly, the way theme/tokens/ink_test.go
 // exercises ColorTokens.InkOn and components/richtext/link_test.go
 // exercises richtext.FromTokens's LinkColor field. tabCell has no exported
-// field to read the drawn ink back off of, so the derivation itself is the
+// field to read the drawn colour back off of, so the derivation itself is the
 // seam this file measures.
 
 import (
@@ -18,7 +18,7 @@ import (
 )
 
 // underlineSweepSeeds is the seed population this file reads the tab
-// underline's ink claims against, the same one theme/tokens and
+// underline's colour claims against, the same one theme/tokens and
 // components/richtext sweep their derivations with: the default seed, the
 // nine macOS system accents, both ends of the tonal axis, three pastels
 // stated at a dark scheme's tone, and four hundred random colours from a
@@ -26,7 +26,7 @@ import (
 //
 // A palette published for a dark scheme states its accents high on the
 // tonal axis, so a brand seeded with one of them can derive a light scheme
-// whose primary pin sits a whisper off its own ground — the three pastels
+// whose primary pin sits a whisper off the surface it stands on — the three pastels
 // exercise exactly that shape.
 func underlineSweepSeeds() []stdcolor.NRGBA {
 	rng := rand.New(rand.NewSource(20260827))
@@ -68,14 +68,14 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// underlinePanels are every panel Props.Ground can name. The strip band the
+// underlinePanels are every panel `Props.Ground` can name. The strip band the
 // underline sits on is the raise walked from each, which is what
 // underlineBands answers.
 var underlinePanels = []tokens.ElevationLevel{
 	tokens.Level0, tokens.Level1, tokens.Level2, tokens.Level3,
 }
 
-// underlineBands are every strip band Props.Ground can actually produce: the
+// underlineBands are every strip band `Props.Ground` can actually produce: the
 // raise walked from each panel, clamped where the scheme runs out of steps.
 func underlineBands(c tokens.ColorTokens) []stdcolor.NRGBA {
 	bands := make([]stdcolor.NRGBA, 0, len(underlinePanels))
@@ -86,7 +86,7 @@ func underlineBands(c tokens.ColorTokens) []stdcolor.NRGBA {
 }
 
 // TestUnderlineInkClearsTheGraphicFloorForEverySeed is the site-level
-// gate: whatever a caller seeds the palette with, and whatever storey the
+// gate: whatever a caller seeds the palette with, and whatever level the
 // tab panel stands on, the selected tab's underline reaches WCAG 1.4.11
 // against the strip band it is actually drawn on.
 func TestUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
@@ -98,7 +98,7 @@ func TestUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 				ink := underlineInk(s.tok, band)
 				got := color.ContrastRatio(ink, band)
 				if got < tokens.GraphicFloor {
-					t.Errorf("seed %s: %s: underline ink %s on band %s measures %.2f:1, under the %.1f:1 graphic floor",
+					t.Errorf("seed %s: %s: underline colour %s on band %s measures %.2f:1, under the %.1f:1 graphic floor",
 						underlineHex(seed), s.name, underlineHex(ink), underlineHex(band), got, tokens.GraphicFloor)
 				}
 				if s.light && got < worstLight {
@@ -127,7 +127,7 @@ func TestTheCanonicalSeedsUnderlineInkIsThePrimaryPin(t *testing.T) {
 	} {
 		for _, band := range underlineBands(s.tok) {
 			if ink := underlineInk(s.tok, band); ink != s.tok.Primary {
-				t.Errorf("%s band %s: underline ink is %s, not the Primary pin %s — a golden moved",
+				t.Errorf("%s band %s: underline colour is %s, not the Primary pin %s — a golden moved",
 					s.name, underlineHex(band), underlineHex(ink), underlineHex(s.tok.Primary))
 			}
 		}
@@ -148,13 +148,13 @@ func TestAPastelSeedsUnderlineInkLeavesThePin(t *testing.T) {
 	}
 	lightInk := underlineInk(light, lightBand)
 	if lightInk == light.Primary {
-		t.Errorf("light underline ink is still the bare pin %s", underlineHex(light.Primary))
+		t.Errorf("light underline colour is still the bare pin %s", underlineHex(light.Primary))
 	}
 
 	darkBand := dark.RaisedOn(dark.SurfaceAt(tokens.Level0)).Fill
 	darkInk := underlineInk(dark, darkBand)
 	if darkInk != dark.Primary {
-		t.Errorf("dark underline ink walked to %s; the dark pin %s clears its band and should stand",
+		t.Errorf("dark underline colour walked to %s; the dark pin %s clears its band and should stand",
 			underlineHex(darkInk), underlineHex(dark.Primary))
 	}
 }

@@ -65,14 +65,14 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
-// Pagination returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever any consumed theme token changes. Click handlers fire
+// Pagination returns an rx.Observable[layout.Widget] that emits a new one
+// whenever any consumed theme token changes. Click handlers fire
 // for the chevrons (when not at the corresponding edge) and for each
 // numbered page button; in all cases OnSelect receives the resulting page
 // number (1-indexed).
@@ -176,7 +176,7 @@ type resolvedTokens struct {
 // current cell and the resting ones differ only in which ramp they read it
 // off. Step 300 is the tinted end used as a window's chosen-item fill — the
 // step the sidebar pill and the selected table row already wear — and step
-// 700 is the rung four along from it, which is where a ramp's own colour
+// 700 is the step four along from it, which is where a ramp's own colour
 // clears WCAG AA body text over its own 300 in both schemes.
 const (
 	cellFillStep  = 300

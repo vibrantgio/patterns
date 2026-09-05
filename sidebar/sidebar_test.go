@@ -160,7 +160,7 @@ func TestSidebarActiveTintIsVisible(t *testing.T) {
 
 // liveWidget subscribes to sb, drains the trampoline scheduler, and
 // returns the latest emitted layout.Widget. State referenced by the
-// widget closure remains valid for the test's lifetime because it is
+// layout.Widget closure remains valid for the test's lifetime because it is
 // captured by the rx.Defer scope.
 func liveWidget(t *testing.T, sb rx.Observable[layout.Widget]) layout.Widget {
 	t.Helper()
@@ -173,7 +173,7 @@ func liveWidget(t *testing.T, sb rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Sidebar subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Sidebar did not emit an initial widget")
+		t.Fatal("Sidebar did not emit an initial layout.Widget")
 	}
 	return w
 }
@@ -267,7 +267,7 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 // Twelve items in a 256 px rail at Comfortable: the toggle takes the
 // first 36 px and each item 36 more, so the last row a frame could
 // possibly lay out starts at y=36+36×6=252 and item 11 would start at
-// y=432 — 176 px past the bottom of the canvas. It is not merely
+// y=432 — 176 px past the bottom of the frame. It is not merely
 // offscreen, it has never existed: no clip area, no focus tag, nothing
 // for Tab to find.
 //
@@ -276,7 +276,7 @@ func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	const n = 12
 	const rowH = 36 // tokens.Comfortable.ControlHeight at PxPerDp=1
 	if top := rowH + rowH*(n-1); top <= canvasH {
-		t.Fatalf("item %d starts at y=%d, inside the %d px canvas; this test needs it to be unlaid-out",
+		t.Fatalf("item %d starts at y=%d, inside the %d px frame; this test needs it to be unlaid-out",
 			n-1, top, canvasH)
 	}
 
@@ -372,7 +372,7 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 
 	// Tab into the rail. It is a single keyboard stop — the scroll
 	// region — so one FocusForward is all it takes, and there is nothing
-	// else in this widget for the router to land on.
+	// else in this layout.Widget for the router to land on.
 	r.MoveFocus(key.FocusForward)
 	driveFrame(w, ops, r, expandedSize)
 
@@ -391,7 +391,7 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 // the toggle affordance invokes OnToggleCollapse exactly once. With
 // PxPerDp=1, an expanded sidebar (192 wide) renders its toggle as a
 // 192×36 hit area (the Comfortable control height) at the top of
-// the canvas; (96, 24) lands squarely inside.
+// the frame; (96, 24) lands squarely inside.
 func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 	var toggleCount int
 	props := sidebar.Props{
@@ -455,7 +455,7 @@ func indexIcon(i int) layout.Widget {
 }
 
 // TestSidebarOverflowGolden records or diffs the scroll-region overflow
-// goldens: 12 items overflow the 256 px canvas at every combination of
+// goldens: 12 items overflow the 256 px frame at every combination of
 // width and density (comfortable fits ~6 rows under the toggle, compact
 // ~8). Each case scrolls to the bottom through the live pipeline's
 // pointer path before capturing, and the last item is Active, so the

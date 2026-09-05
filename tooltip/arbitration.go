@@ -1,15 +1,15 @@
 package tooltip
 
-// Arbiter is the "only one tooltip visible at a time" register shared by a
+// Arbiter is the "only one tooltip visible at a time" rule shared by a
 // set of tooltips. It is a plain value — no mutex, no atomics, no
 // observable — because every write and every read happens during layout, on
 // the single goroutine Gio runs a frame on. The hazard a synchronised bus
 // guards against cannot arise here, so there is nothing for a guard to buy.
 //
-// # The register is the scope
+// # The arbiter is the scope
 //
 // Tooltips that share an Arbiter arbitrate with one another and with nobody
-// else. A window is one widget tree laid out by one goroutine, so one
+// else. A window is one layout.Widget tree laid out by one goroutine, so one
 // Arbiter per window is both the correct scope for "which tooltip is up"
 // and the only scope a lock-free value is safe at. Create one in the
 // window's composition root and hand it to every tooltip in that window's
@@ -21,9 +21,9 @@ package tooltip
 // that both forget an Arbiter can be up together — a cosmetic fault anyone
 // can see, which is the trade this makes against a race nobody can.
 //
-// # The register is also the visibility
+// # The arbiter is also the visibility
 //
-// Popover keeps a hold flag of its own beside the register and has the
+// Popover keeps a hold flag of its own beside the arbiter and has the
 // arbiter call OnDismiss when the two must be brought back into step. A
 // tooltip has no caller state and no dismissal callback — it is visible
 // exactly while it holds top — so the store that makes a claimant top is
@@ -33,7 +33,7 @@ package tooltip
 //
 // The incumbent stops painting on the first frame it is laid out after
 // losing top: in the same frame when the claimant comes earlier in the
-// widget tree, on the next frame when it does not, because a widget already
+// layout.Widget tree, on the next frame when it does not, because one already
 // laid out cannot un-paint.
 //
 // # Claim on the edge, never on the level

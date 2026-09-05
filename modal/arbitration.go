@@ -7,10 +7,10 @@ package modal
 // on. The hazard a synchronised bus guards against cannot arise here, so
 // there is nothing for a guard to buy.
 //
-// # The register is the scope
+// # The arbiter is the scope
 //
 // Modals that share an Arbiter stack with one another and with nobody else. A
-// window is one widget tree laid out by one goroutine, so one Arbiter per
+// window is one layout.Widget tree laid out by one goroutine, so one Arbiter per
 // window is both the correct scope for "which modal is in front" and the only
 // scope a lock-free value is safe at. Create one in the window's composition
 // root and hand it to every modal in that window's tree.
@@ -22,7 +22,7 @@ package modal
 // fault anyone can drive into, which is the trade this makes against a race
 // nobody can.
 //
-// # A stack, not a register — because modals nest
+// # A stack, not a single arbiter — because modals nest
 //
 // Popover and tooltip hold a single top: a claimant evicts the incumbent and
 // the incumbent is simply gone. A modal opened from inside another modal does
@@ -30,7 +30,7 @@ package modal
 // to the outer one. That is the whole reason this is an ordered slice and not
 // a pointer.
 //
-// # The register is also the liveness
+// # The arbiter is also the liveness
 //
 // Being in front is not a second copy of anything: [Arbiter.isTop] is the only
 // place the question is answered, and it is asked once per frame by the modal

@@ -51,7 +51,7 @@ func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Table subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Table did not emit an initial widget")
+		t.Fatal("Table did not emit an initial layout.Widget")
 	}
 	return w
 }
@@ -238,7 +238,7 @@ func TestTableGolden(t *testing.T) {
 				Shaper:  shaper,
 				// A specimen, deliberately lifted off the page it is shown
 				// on, so the grid has an edge in the image. The default
-				// ground — the window pin, where a table that IS a window's
+				// level — the window pin, where a table that IS a window's
 				// content belongs — is pinned by
 				// TestGroundPicksTheRungThePlaneFillsAt instead, which can
 				// state the rule in tokens rather than in pixels.
@@ -250,7 +250,7 @@ func TestTableGolden(t *testing.T) {
 	}
 }
 
-// scene renders w into a canvas-sized constraint over a flat background.
+// scene renders w into a frame-sized constraint over a flat background.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -276,16 +276,16 @@ func equalInts(a, b []int) bool {
 	return true
 }
 
-// TestGroundPicksTheRungThePlaneFillsAt pins what Props.Ground decides: the
-// paper the grid is printed on. The zero value is the window ground: a
-// table that raised itself one rung by default would put the biggest thing
+// TestGroundPicksTheRungThePlaneFillsAt pins what the table's level field
+// decides: the paper the grid is printed on. The zero value is the window's own content: a
+// table that raised itself one step by default would put the biggest thing
 // in a window level with the furniture framing it. Level1 is the opt-in for
 // a table that really is resting on furniture, or is a specimen lifted off a
 // page.
 //
 // The corner sampled is inside the table's rect and outside every cell's
 // text, over a sentinel no fill in this package resolves to, so a plane that
-// went unpainted would be caught as loudly as one painted at the wrong rung.
+// went unpainted would be caught as loudly as one painted at the wrong level.
 func TestGroundPicksTheRungThePlaneFillsAt(t *testing.T) {
 	shaper := defaultShaper(t)
 	sentinel := color.NRGBA{R: 255, G: 0, B: 255, A: 255}
@@ -299,7 +299,7 @@ func TestGroundPicksTheRungThePlaneFillsAt(t *testing.T) {
 		ground tokens.ElevationLevel
 		want   color.NRGBA
 	}{
-		{"default is the window ground", tokens.Level0, tokens.DefaultLight.SurfaceAt(tokens.Level0)},
+		{"default is the window's own content", tokens.Level0, tokens.DefaultLight.SurfaceAt(tokens.Level0)},
 		{"level 1 is the semantic Surface", tokens.Level1, tokens.DefaultLight.SurfaceAt(tokens.Level1)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

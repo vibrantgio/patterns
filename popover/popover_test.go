@@ -36,7 +36,7 @@ var (
 	sharpRadius = tokens.RadiusScale{}
 )
 
-// fixedRect is a sharp-edged solid widget with explicit width and height.
+// fixedRect is a sharp-edged solid layout.Widget with explicit width and height.
 // Used for both Anchor and Content stand-ins so their hit rects are
 // predictable and the goldens stay deterministic.
 func fixedRect(c color.NRGBA, widthDp, heightDp float32) layout.Widget {
@@ -60,15 +60,15 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // BodyMedium role.
 //
 // Popover, like card, carries no Shaper in its Props because it draws no text
-// of its own — Anchor and Content are both caller-supplied widgets, so the
+// of its own — Anchor and Content are both caller-supplied layout.Widget values, so the
 // typeface inside a popover is settled by whoever builds them. This is that
 // caller. ASCII only — no symbol reaches a stored image.
 //
 // The string length is load-bearing, and deliberately near the limit: the
 // surface grows to fit it, and Left placement puts that surface between the
-// centred anchor and the canvas edge. "Sort ascending" leaves 3 px of
+// centred anchor and the frame edge. "Sort ascending" leaves 3 px of
 // clearance there. A longer line would run off the left of left-dark, where
-// the canvas cannot grow — the interaction tests below address the anchor by
+// the frame cannot grow — the interaction tests below address the anchor by
 // hardcoded coordinates in this 320×240 frame.
 //
 // It draws through theme/typeset, like every other text site in this
@@ -76,7 +76,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // gioui.org/widget.Label does not produce that box. A MaxLines:1 label is
 // exactly the case widget.Label measures identically at every line height,
 // so the content is BodyMedium and stands in its declared 20 dp box rather
-// than its 17 px of ink, and the surface grows with it.
+// than its 17 px of drawn glyphs, and the surface grows with it.
 func textContent(t *testing.T, fg color.NRGBA) layout.Widget {
 	t.Helper()
 	shaper := defaultShaper(t)
@@ -161,7 +161,7 @@ func TestPopoverOpenAndClosedDiffer(t *testing.T) {
 
 // livePopover subscribes to the Popover observable, drains the trampoline
 // scheduler with Wait(), and returns the latest emitted layout.Widget.
-// State referenced by the widget closure remains valid for the test's
+// State referenced by the layout.Widget closure remains valid for the test's
 // lifetime because it is captured by the rx.Defer scope.
 func livePopover(t *testing.T, props popover.Props) layout.Widget {
 	t.Helper()
@@ -175,7 +175,7 @@ func livePopover(t *testing.T, props popover.Props) layout.Widget {
 		t.Fatalf("Popover subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Popover did not emit an initial widget")
+		t.Fatal("Popover did not emit an initial layout.Widget")
 	}
 	return w
 }
@@ -198,7 +198,7 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 
 // TestOutsideClickInvokesOnDismiss verifies the Measurable interaction —
 // a pointer.Press outside the popover's anchor and surface bounds invokes
-// OnDismiss. A press inside the surface (canvas centre, where the anchor
+// OnDismiss. A press inside the surface (frame centre, where the anchor
 // lives, then near the anchor) must NOT invoke OnDismiss.
 func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 	var dismissed int
@@ -219,8 +219,8 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 	driveFrame(w, ops, r, canvasSize)
 	driveFrame(w, ops, r, canvasSize)
 
-	// (1) Press at the canvas corner — guaranteed outside both the anchor
-	// (centred ~30 dp around canvas centre) and the surface (above it for
+	// (1) Press at the frame corner — guaranteed outside both the anchor
+	// (centred ~30 dp around frame centre) and the surface (above it for
 	// Placement=Top). OnDismiss must fire.
 	corner := f32.Pt(4, 4)
 	r.Queue(
@@ -233,7 +233,7 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 	}
 	outsideHits := dismissed
 
-	// (2) Press at the canvas centre — guaranteed inside the anchor — must
+	// (2) Press at the frame centre — guaranteed inside the anchor — must
 	// not bleed through to the outside-absorber and dismiss.
 	centre := f32.Pt(canvasW/2, canvasH/2)
 	r.Queue(
@@ -247,8 +247,8 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 }
 
 // TestOutsideClickDismissesWithChipSizedCanvas replicates the popover-
-// canvas coupling (mindchat's model picker): the caller hands the popover
-// an Exact anchor-sized box, so the anchor covers the whole canvas and an
+// frame coupling (mindchat's model picker): the caller hands the popover
+// an Exact anchor-sized box, so the anchor covers the whole frame and an
 // outside press can only land beyond it. OnDismiss must still fire for a
 // press elsewhere in the window, and an anchor press must still be
 // absorbed silently.
@@ -285,7 +285,7 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 	driveFrame(coupled, ops, r, canvasSize)
 
 	// (1) Press far from the chip and from the surface hanging below it —
-	// outside the chip-sized canvas entirely. OnDismiss must fire.
+	// outside the chip-sized frame entirely. OnDismiss must fire.
 	far := f32.Pt(8, float32(canvasH-8))
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: far, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
@@ -293,7 +293,7 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 	)
 	driveFrame(coupled, ops, r, canvasSize)
 	if dismissed == 0 {
-		t.Fatalf("press outside the chip-sized canvas did not invoke OnDismiss; dismissed = %d", dismissed)
+		t.Fatalf("press outside the chip-sized frame did not invoke OnDismiss; dismissed = %d", dismissed)
 	}
 	outsideHits := dismissed
 
@@ -314,7 +314,7 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 //
 // The claim is a layout-time event — a popover takes top on the first
 // frame it is drawn open — so entering B into the tree is what "opening B"
-// means here. Both widgets are laid out against one gtx, the way mvu lays
+// means here. Both layout.Widget values are laid out against one gtx, the way mvu lays
 // out its layers, and the assertions are that:
 //
 //   - A is dismissed in the same frame B claims, in BOTH tree orders. The
@@ -397,9 +397,9 @@ func TestArbitrationDismissesPriorPopover(t *testing.T) {
 }
 
 // TestOpenNowIsReadEveryFrame pins the OpenNow spelling of open-ness: the
-// caller owns a plain bool, the widget reads it during layout, and no
+// caller owns a plain bool, the layout.Widget reads it during layout, and no
 // emission stands between the flip and the frame that shows it. It is
-// the SAME widget value on all four frames — the one the stream emitted for
+// the SAME layout.Widget value on all four frames — the one the stream emitted for
 // the theme — which is the whole point: with Props.Open the flag can only
 // change by re-emitting, and the emission arrives on another goroutine, a
 // frame later, into an atomic cell the caller has to keep beside it.
@@ -432,7 +432,7 @@ func TestOpenNowIsReadEveryFrame(t *testing.T) {
 	open = true
 	driveFrame(w, ops, r, canvasSize)
 	if contentDraws != 1 {
-		t.Fatalf("OpenNow flipped true but the same widget did not open; contentDraws = %d, want 1", contentDraws)
+		t.Fatalf("OpenNow flipped true but the same layout.Widget did not open; contentDraws = %d, want 1", contentDraws)
 	}
 	driveFrame(w, ops, r, canvasSize)
 	if contentDraws != 2 {
@@ -496,7 +496,7 @@ func TestOpenNowArbitratesOnTheEdge(t *testing.T) {
 		t.Fatalf("B's claim: aDismissed = %d, bDismissed = %d; want 1, 0", aDismissed, bDismissed)
 	}
 
-	// Several quiet frames: B's flag is still true, so a level-guarded claim
+	// Several idle frames: B's flag is still true, so a level-guarded claim
 	// would re-take top every frame and the two would trade it forever.
 	for i := 0; i < 3; i++ {
 		driveFrame(frame, ops, r, canvasSize)
@@ -529,13 +529,13 @@ func TestOpenNowWinsOverOpen(t *testing.T) {
 
 // ---- Placement tests ----
 
-// roomW is the width of the sub-canvas the placement tests hand the popover
+// roomW is the width of the sub-frame the placement tests hand the popover
 // inside the wider scene. The scene is wider so an unclamped surface has
 // somewhere to spill to and the capture records it.
 const roomW = 200
 
-// inRoom hands w a canvas roomW wide at the scene's leading edge, full
-// height. Nothing clips it: a surface that ran off the canvas would still be
+// inRoom hands w a frame roomW wide at the scene's leading edge, full
+// height. Nothing clips it: a surface that ran off the frame would still be
 // drawn, which is what makes the clamp assertions mean anything.
 func inRoom(w layout.Widget, width int) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
@@ -561,7 +561,7 @@ func fillRun(img *image.RGBA, y int, c color.NRGBA) (lo, hi int, ok bool) {
 }
 
 // inkRun reports the leftmost and rightmost x on row y that is not the
-// scene's background, so an anti-aliased tip counts as ink.
+// scene's background, so an anti-aliased tip counts as drawn.
 func inkRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
 	b := img.Bounds()
 	for x := b.Min.X; x < b.Max.X; x++ {
@@ -577,7 +577,7 @@ func inkRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
 	return lo, hi, ok
 }
 
-// placementScene renders one open popover in a roomW-wide canvas inside the
+// placementScene renders one open popover in a roomW-wide frame inside the
 // standard scene and returns the capture plus the surface fill to look for.
 func placementScene(t *testing.T, align popover.Alignment, contentW float32, room int) (*image.RGBA, color.NRGBA) {
 	t.Helper()
@@ -594,10 +594,10 @@ func placementScene(t *testing.T, align popover.Alignment, contentW float32, roo
 }
 
 // TestSurfaceIsNudgedBackInsideTheCanvas is the reflow contract: a surface
-// centred on an anchor standing at the canvas's trailing edge would run off
+// centred on an anchor standing at the frame's trailing edge would run off
 // that edge, and the popover moves it back rather than letting it clip.
 //
-// The anchor is 60 wide against a 200-wide canvas, so trailing-aligned it
+// The anchor is 60 wide against a 200-wide frame, so trailing-aligned it
 // spans [140, 200] with its midline at 170; the surface is 160 + 2*S3 = 184
 // wide, which centred on 170 would run to 262. Clamped it ends on 200.
 func TestSurfaceIsNudgedBackInsideTheCanvas(t *testing.T) {
@@ -609,18 +609,18 @@ func TestSurfaceIsNudgedBackInsideTheCanvas(t *testing.T) {
 		t.Fatal("no surface pixels on the row under the surface's top edge")
 	}
 	if hi >= roomW {
-		t.Errorf("surface runs to x=%d, past the %d-wide canvas it was given", hi, roomW)
+		t.Errorf("surface runs to x=%d, past the %d-wide frame it was given", hi, roomW)
 	}
 	if hi < roomW-3 {
-		t.Errorf("surface ends at x=%d; a clamped surface stands on the canvas edge at %d", hi, roomW-1)
+		t.Errorf("surface ends at x=%d; a clamped surface stands on the frame edge at %d", hi, roomW-1)
 	}
 	if lo < 0 {
-		t.Errorf("surface starts at x=%d, off the canvas's leading edge", lo)
+		t.Errorf("surface starts at x=%d, off the frame's leading edge", lo)
 	}
 }
 
 // TestSurfaceWiderThanItsCanvasIsLeftAlone documents the escape hatch: a
-// caller that cut its canvas to the anchor has said nothing about the room
+// caller that cut its frame to the anchor has said nothing about the room
 // it has, and shoving an over-wide surface against one edge would only move
 // the overflow to the other.
 func TestSurfaceWiderThanItsCanvasIsLeftAlone(t *testing.T) {
@@ -631,14 +631,14 @@ func TestSurfaceWiderThanItsCanvasIsLeftAlone(t *testing.T) {
 		t.Fatal("no surface pixels on the row under the surface's top edge")
 	}
 	if lo >= 0 && hi < room {
-		t.Errorf("surface at [%d,%d] was squeezed into a %d-wide canvas it cannot fit", lo, hi, room)
+		t.Errorf("surface at [%d,%d] was squeezed into a %d-wide frame it cannot fit", lo, hi, room)
 	}
 }
 
 // TestTailPointsAtTheDrawnAnchor is the other half of the seam: the anchor
-// reports the shape it drew and the popover stands it at the canvas's
+// reports the shape it drew and the popover stands it at the frame's
 // trailing edge, so the tail aims at the drawn control's midline (170 for a
-// 60-wide anchor against a 200-wide canvas) rather than at the canvas's own
+// 60-wide anchor against a 200-wide frame) rather than at the frame's own
 // (100), even after the surface beneath it has been nudged.
 func TestTailPointsAtTheDrawnAnchor(t *testing.T) {
 	img, fill := placementScene(t, popover.AlignTrailing, 160, roomW)
@@ -660,7 +660,7 @@ func TestTailPointsAtTheDrawnAnchor(t *testing.T) {
 func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 	img, fill := placementScene(t, popover.AlignTrailing, 160, roomW)
 	const (
-		foot     = 134 // the anchor is 28 tall centred in a 240 canvas
+		foot     = 134 // the anchor is 28 tall centred in a 240 frame
 		edge     = 142 // and the surface stands S2 below it
 		drawnMid = roomW - 30
 	)
@@ -669,7 +669,7 @@ func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 		t.Fatalf("the row at the anchor's foot (y=%d) is bare; the tail floats above the anchor", foot)
 	}
 	if mid := (lo + hi) / 2; mid < drawnMid-2 || mid > drawnMid+2 {
-		t.Errorf("the ink at the anchor's foot runs [%d,%d]; the tail's tip belongs on %d", lo, hi, drawnMid)
+		t.Errorf("what is drawn at the anchor's foot runs [%d,%d]; the tail's tip belongs on %d", lo, hi, drawnMid)
 	}
 	// On the surface's own top edge the outline gives way to the tail's
 	// fill across the tail's width — the interruption is what makes the two

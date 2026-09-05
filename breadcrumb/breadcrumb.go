@@ -75,8 +75,8 @@ type Props struct {
 	// triangle beside it should be, and a trail set in a smaller style than
 	// the desktop TitleSmall — or one whose separator should read as a
 	// hairline between labels rather than a mark of its own — wants a
-	// smaller square than the default. Ink fills the square's full height,
-	// so this is the separator's ink height and not a box around it.
+	// smaller square than the default. The glyph fills the square's full
+	// height, so this is the separator's drawn height and not a box around it.
 	Chevron unit.Dp
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
@@ -87,14 +87,14 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
-// Breadcrumb returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever any consumed theme token changes. Click handlers fire
+// Breadcrumb returns an rx.Observable[layout.Widget] that emits a new one
+// whenever any consumed theme token changes. Click handlers fire
 // for any item whose OnClick is non-nil; mirror the components/button
 // interaction model (widget.Clickable + semantic ops) per segment.
 //

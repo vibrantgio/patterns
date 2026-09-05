@@ -73,7 +73,7 @@ type Item struct {
 	// AuthorName inside the author block.
 	AuthorRole string
 
-	// AuthorAvatar is an optional avatar widget rendered as an S8 × S8
+	// AuthorAvatar is an optional avatar layout.Widget rendered as an S8 × S8
 	// leading visual inside the author block. When nil, a border-
 	// bordered circular placeholder containing the first letter of
 	// AuthorName is rendered instead.
@@ -98,9 +98,9 @@ type Props struct {
 	// only when this instance must shape with a different shaper than the
 	// theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -114,8 +114,8 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Testimonial returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever any consumed theme token changes. The layout is purely
+// Testimonial returns an rx.Observable[layout.Widget] that emits a new one
+// whenever any consumed theme token changes. The layout is purely
 // presentational — no interaction state is carried across emissions.
 func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
@@ -259,7 +259,7 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	return layout.Dimensions{Size: image.Pt(width, height)}
 }
 
-// drawCardContent stacks the card's inner widgets — quote glyph, quote
+// drawCardContent stacks the card's inner parts — quote glyph, quote
 // body, author block — top to bottom with S3 gaps between adjacent items.
 func drawCardContent(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTokens) layout.Dimensions {
 	ws := []layout.Widget{
@@ -348,7 +348,7 @@ func authorBlockWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layou
 	}
 }
 
-// avatarWidget renders the caller-supplied avatar widget clipped to an
+// avatarWidget renders the caller-supplied avatar layout.Widget clipped to an
 // S8 × S8 square. When item.AuthorAvatar is nil, a border-stroked
 // circular placeholder containing the first rune of item.AuthorName is
 // drawn instead.
@@ -370,9 +370,9 @@ func avatarWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Wid
 
 // drawPlaceholder paints a hollow circle of diameter `size` and, when name is
 // non-empty, the first rune centred inside it in BodyMedium neutral 700. The
-// circle is hollow, so the ground on both sides of its line is the card's own
-// Surface fill — the level-1 storey — and the line is derived against that
-// rather than named at a rung.
+// circle is hollow, so the surface on both sides of its line is the card's own
+// Surface fill — level 1 — and the line is derived against that
+// rather than named at a level.
 func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size int, tok resolvedTokens) {
 	r := size / 2
 	stroke := float32(gtx.Dp(unit.Dp(1)))

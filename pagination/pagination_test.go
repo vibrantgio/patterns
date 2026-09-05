@@ -34,7 +34,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// scene renders w into a canvas-sized constraint over a flat background.
+// scene renders w into a frame-sized constraint over a flat background.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -128,7 +128,7 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 
 	// The cell's own geometry, derived rather than measured: the row is a
 	// leading chevron, then one ControlHeight square per page, every pair
-	// separated by an S2 gap, laid out middle-aligned in the canvas. Sampling
+	// separated by an S2 gap, laid out middle-aligned in the frame. Sampling
 	// three pixels in from the cell's leading top corner clears both the
 	// (sharp) corner and the centred digit.
 	side := int(tokens.Comfortable.ControlHeight)
@@ -168,7 +168,7 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 				t.Errorf("resting page cell = %v, want the neutral fill %v", got, want)
 			}
 
-			// The digit's ink comes from the fill's own ramp; OnPrimary is
+			// The digit's colour comes from the fill's own ramp; OnPrimary is
 			// derived against the ramp's pin and does not clear WCAG AA over
 			// the tinted step used here.
 			ink := tc.c.Ramps.Primary.Step(700)
@@ -180,8 +180,8 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 			}
 
 			// And it reads at the weight the cells beside it do, so the
-			// current page is the coloured cell rather than the loud or the
-			// faint one.
+			// current page is the coloured cell rather than the strongest or the
+			// faintest one.
 			resting := tcolor.ContrastRatio(tc.c.Ramps.Neutral.Step(700), tc.c.Ramps.Neutral.Step(300))
 			current := tcolor.ContrastRatio(ink, tint)
 			if d := current / resting; d < 0.75 || d > 1.35 {
@@ -195,7 +195,7 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 // page digit in the LabelLarge role is.
 const aaBodyText = 4.5
 
-// liveWidget subscribes to obs and returns its last emitted widget.
+// liveWidget subscribes to obs and returns its last emitted layout.Widget.
 func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
 	t.Helper()
 	var w layout.Widget
@@ -207,7 +207,7 @@ func liveWidget(t *testing.T, obs rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Pagination subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Pagination did not emit an initial widget")
+		t.Fatal("Pagination did not emit an initial layout.Widget")
 	}
 	return w
 }

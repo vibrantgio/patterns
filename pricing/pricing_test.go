@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	// The canvas must be tall enough that the shared CTA row is not clipped
-	// when every card stretches to the tallest tier — the highlighted Team
+	// The frame must be tall enough that the shared CTA row is not clipped
+	// when every card stretches to the tallest tier — the recommended Team
 	// with four feature lines plus the Popular chip.
 	canvasW, canvasH = 720, 400
 	// scene leaves an S5-equivalent margin around the pricing row so
-	// the row's outer cards retain breathing room from the canvas edge.
+	// the row's outer cards retain breathing room from the frame edge.
 	marginPx = 20
 )
 
@@ -44,8 +44,8 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// scene renders w into a canvas-sized constraint over a flat background
-// with a uniform margin so the outer cards do not touch the canvas edge.
+// scene renders w into a frame-sized constraint over a flat background
+// with a uniform margin so the outer cards do not touch the frame edge.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())

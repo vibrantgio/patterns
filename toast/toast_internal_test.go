@@ -153,7 +153,7 @@ func TestExpireEmitsExpiredAfterTheLifetime(t *testing.T) {
 }
 
 // TestStackRendersTheModelQueue confirms the render path is driven by
-// Props.Toasts and nothing else: a new queue re-emits the widget.
+// Props.Toasts and nothing else: a new queue re-emits the layout.Widget.
 func TestStackRendersTheModelQueue(t *testing.T) {
 	send, toasts := rx.Subject[[]Toast](0, 1)
 	send.Next(nil)
@@ -181,7 +181,7 @@ func TestStackRendersTheModelQueue(t *testing.T) {
 	select {
 	case <-emissions:
 	case <-time.After(2 * time.Second):
-		t.Fatal("Stack did not emit an initial widget within 2s")
+		t.Fatal("Stack did not emit an initial layout.Widget within 2s")
 	}
 
 	var q Queue
@@ -225,7 +225,7 @@ func TestStackWithNoToastsRendersEmpty(t *testing.T) {
 
 // TestFadeAlphaWalksTheLifetime pins the one thing the frame still decides.
 // The alpha is derived from Toast.At and gtx.Now, never stored, and it holds
-// at 0 past expiry — the widget does not prune, it waits for the model.
+// at 0 past expiry — the layout.Widget does not prune, it waits for the model.
 func TestFadeAlphaWalksTheLifetime(t *testing.T) {
 	const lifetime = 1000 * time.Millisecond
 	const fade = 400 * time.Millisecond
@@ -258,7 +258,7 @@ func TestFadeAlphaWalksTheLifetime(t *testing.T) {
 }
 
 // TestAnExpiredToastPaintsNothing is the pixel half of the claim above: the
-// widget no longer prunes, so a toast whose lifetime has run stays in the
+// layout.Widget no longer prunes, so a toast whose lifetime has run stays in the
 // queue until Expired lands — and for that window it must be invisible, not
 // merely faint. The frame it produces is byte-identical to an empty stack's.
 func TestAnExpiredToastPaintsNothing(t *testing.T) {
@@ -290,7 +290,7 @@ func TestAnExpiredToastPaintsNothing(t *testing.T) {
 }
 
 // surfaceFill is the flat, opaque colour paintToast fills every toast
-// with, whatever its level: the inverse chip's ground. It no longer tells
+// with, whatever its level: the inverse chip's fill. It no longer tells
 // two toasts apart — that is what levelEdge is for.
 func surfaceFill(tok resolvedTokens) color.NRGBA {
 	return tok.color.InverseSurface
@@ -354,7 +354,7 @@ func nearColor(got color.RGBA, want color.NRGBA) bool {
 }
 
 // TestAnchorsPlaceTheColumn pins in pixels where each Position puts the
-// column on one canvas: the four corners hug their two edges by the spacing
+// column on one frame: the four corners hug their two edges by the spacing
 // scale's edge margin, and the bottom-centre anchor hugs the bottom edge
 // with the same air on both sides of the column. The corners are measured
 // alongside the centre on purpose — the centre was added to a decision the
@@ -495,7 +495,7 @@ func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
 		}
 		// The air is real, not just arithmetic: find the first column right
 		// of the edge carrying anything that is neither the fill nor the
-		// edge, which is the message's first ink.
+		// edge, which is the message's first drawn pixel.
 		fill := surfaceFill(tok)
 		firstInk := -1
 		for x := edge.Max.X; x < edge.Max.X+4*air && firstInk < 0; x++ {
@@ -508,21 +508,21 @@ func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
 			}
 		}
 		if firstInk < 0 {
-			t.Fatalf("level %d: no message ink found beside the edge", l)
+			t.Fatalf("level %d: no message pixels found beside the edge", l)
 		}
 		if gap := firstInk - edge.Max.X; gap <= edge.Dx() {
 			t.Errorf("level %d: %d px of air between the edge and the message against a %d px edge; the mark must not out-measure the space it keeps",
 				l, gap, edge.Dx())
 		}
-		t.Logf("level %d: edge %d px wide, message ink %d px past it", l, edge.Dx(), firstInk-edge.Max.X)
+		t.Logf("level %d: edge %d px wide, message starts %d px past it", l, edge.Dx(), firstInk-edge.Max.X)
 	}
 }
 
 // TestLeadingEdgeReadsOnTheChipInBothSchemes is the colour half of the same
 // claim: the edge is the only thing on a toast that says which level this
 // is, so it owes its chip the floor edgeFloor names, in both schemes and at
-// every level. The rung each scheme lands on is logged rather than asserted
-// — which rung answers is the ramp's business, not this package's — but the
+// every level. The step each scheme lands on is logged rather than asserted
+// — which step answers is the ramp's business, not this package's — but the
 // contrast it reaches is this package's, because it is what the component
 // asked for.
 func TestLeadingEdgeReadsOnTheChipInBothSchemes(t *testing.T) {

@@ -1,4 +1,4 @@
-// Package outline derives the ink of a surface's own edge — the one line a
+// Package outline derives the colour of a surface's own edge — the one line a
 // pattern draws around itself to say where it ends.
 //
 // An outline must be derived from the fill it is drawn against, never named
@@ -23,12 +23,12 @@ import (
 // surface is an object rather than a patch of page.
 const Floor = 3.0
 
-// Ink is the neutral step nearest the ramp's mid-value step that reaches
+// `Ink` is the neutral step nearest the ramp's mid-value step that reaches
 // Floor against surface, the fill the line is drawn around.
 //
 // Naming only the inner fill is sufficient because it is the harder of the
 // line's two sides: a pattern stands on a surface no lighter than its own
-// fill, so ink that clears Floor against the fill clears it against the
+// fill, so a line that clears Floor against the fill clears it against the
 // surface outside by more.
 func Ink(c tokens.ColorTokens, surface color.NRGBA) color.NRGBA {
 	return c.MarkOn(tokens.RoleNeutral, surface, Floor)

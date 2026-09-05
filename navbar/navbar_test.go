@@ -40,7 +40,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// scene renders w into a canvas-sized constraint over a flat background.
+// scene renders w into a frame-sized constraint over a flat background.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -114,7 +114,7 @@ func TestNavbarActiveVsDefaultDiffer(t *testing.T) {
 
 // ---- Interaction tests ----
 
-// fillRect is a sharp-edged solid widget with a fixed size.
+// fillRect is a sharp-edged solid layout.Widget with a fixed size.
 func fillRect(c color.NRGBA, w, h int) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		size := image.Pt(w, h)
@@ -125,7 +125,7 @@ func fillRect(c color.NRGBA, w, h int) layout.Widget {
 
 // liveWidget subscribes to nb, drains the trampoline scheduler, and
 // returns the latest emitted layout.Widget. State referenced by the
-// widget closure remains valid for the test's lifetime because it is
+// layout.Widget closure remains valid for the test's lifetime because it is
 // captured by the rx.Defer scope.
 func liveWidget(t *testing.T, nb rx.Observable[layout.Widget]) layout.Widget {
 	t.Helper()
@@ -138,7 +138,7 @@ func liveWidget(t *testing.T, nb rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Navbar subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Navbar did not emit an initial widget")
+		t.Fatal("Navbar did not emit an initial layout.Widget")
 	}
 	return w
 }
@@ -184,7 +184,7 @@ func TestNavbarTabTraversal(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	// Frame 0: register tags.
+	// Frame 0: register the tags.
 	driveFrame(w, ops, r, canvasSize)
 
 	// Drain any synthetic focus events for the externally-owned tags so
@@ -266,9 +266,9 @@ func TestNavbarTabTraversal(t *testing.T) {
 }
 
 // TestNavbarLinkClickFiresOnClick verifies clicking a link invokes its
-// OnClick callback. With PxPerDp=1, canvas 480×64, no brand, no actions, two
+// OnClick callback. With PxPerDp=1, frame 480×64, no brand, no actions, two
 // links: each cell is its label plus (S3, Density.PaddingY) padding and an
-// underline, separated by an S2 spacer, and the row is centred at canvas-mid.
+// underline, separated by an S2 spacer, and the row is centred at frame-mid.
 // "Docs" and "Components" measure 57 and 105 px, so the row is 57+8+105 = 170
 // wide and starts at x = 155; link 0 occupies x in [155, 212], y in [15, 49].
 // A press/release at (180, 32) lands squarely inside it, clear of link 1.
@@ -336,7 +336,7 @@ const navbarUnderlineDp = 2
 // TestNavbarCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline (the static Render path is frozen at
 // tokens.Comfortable): the bar's vertical inset and the link padding
-// drop to the Compact PaddingY (6 dp). The canvas is [barHeight] at
+// drop to the Compact PaddingY (6 dp). The frame is [barHeight] at
 // Compact — 46 dp, not the shell's 40 dp pin; see barHeight for why.
 func TestNavbarCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -376,10 +376,10 @@ func inkBand(img *image.RGBA, c color.NRGBA) (int, int) {
 // measured: brand, links and actions each drawn so its own middle lands on the
 // bar's middle, at every height the bar is given.
 //
-// The brand fixture is the shape that breaks a naive layout: a widget that
+// The brand fixture is the shape that breaks a naive layout: a layout.Widget that
 // honours a minimum height it was never meant to fill — a column of text
 // laid out in a vertical Flex is the everyday one — comes back the full
-// height of the row and inks only the top of it, which reads as inked well
+// height of the row and paints only the top of it, which reads as painted well
 // above the links beside it unless each slot is measured with no cross
 // minimum at all.
 //
@@ -399,7 +399,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	// the density's padding above and below, and the Active underline.
 	cellH := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
 
-	// A brand that fills the height it is offered and inks only the top of
+	// A brand that fills the height it is offered and paints only the top of
 	// it, which is what a run of text in a column does.
 	brand := func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, brandInk, clip.Rect{Max: image.Pt(60, brandInkH)}.Op())
@@ -445,7 +445,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	}
 }
 
-// TestNavbarKeepsItsBottomPadding asserts that in a canvas of [barHeight]
+// TestNavbarKeepsItsBottomPadding asserts that in a frame of [barHeight]
 // the Active underline — the lowest thing the bar draws — clears the
 // bottom PaddingY, so the bar keeps the breathing room its own inset asks
 // for and is nowhere near the edge it would be clipped at.

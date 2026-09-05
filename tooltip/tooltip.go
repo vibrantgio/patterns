@@ -13,16 +13,16 @@
 // layout.Widget. The source is intentionally short and free of opaque
 // configuration — copy it into your own app and modify as needed.
 //
-// Elevation: the tooltip deliberately takes NO rung on the tonal elevation
-// ladder. Its bubble is inverse-video — it fills with
+// Elevation: the tooltip deliberately takes NO level on the tonal
+// elevation. Its bubble is inverse-video — it fills with
 // the high-contrast Text colour and paints its label in Surface —
 // because a tooltip is too small for a one-or-two-step neutral fill to
 // read at a glance; inversion is the stronger cue for a tiny transient
 // annotation (Material's tooltips use an inverse surface for the same
-// reason). Were it on the ladder it would sit with the other unscrimmed
+// reason). Were it on the elevation it would sit with the other unscrimmed
 // transient overlays at level 3.
 //
-// The trigger renders at the canvas centre; the tooltip surface is placed
+// The trigger renders at the frame centre; the tooltip surface is placed
 // adjacent per Placement. Show/hide is instantaneous in this package;
 // entrance/exit transitions are deferred to a later Effects-integration
 // goal. Touch long-press is out of scope.
@@ -81,9 +81,9 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 
 	// Arbiter is the set of tooltips this one arbitrates within: showing it
@@ -104,7 +104,7 @@ type resolvedTokens struct {
 	delay time.Duration
 }
 
-// Tooltip returns an rx.Observable[layout.Widget] that emits a new widget
+// Tooltip returns an rx.Observable[layout.Widget] that emits a new one
 // whenever the theme changes. State (the arbitration set and hold, hover
 // gesture, focus tag, dwell stamp) persists across emissions in the
 // rx.Defer scope.
@@ -152,7 +152,7 @@ func Tooltip(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 // Render produces a layout.Widget for a tooltip with pre-resolved tokens
 // and an explicit shown flag. Intended for golden-image testing and
 // static demonstrations; production code should use Tooltip, which reads
-// the shaper and the same text style off the theme. The returned widget
+// the shaper and the same text style off the theme. The returned layout.Widget
 // performs no input handling or arbitration: pass shown=true to render
 // the trigger plus the floating surface, shown=false to render only the
 // trigger.
@@ -182,7 +182,7 @@ func Render(
 // each Tooltip subscription. Its address is also the tooltip's identity
 // inside the Arbiter — and, because a tooltip is visible exactly while it
 // holds top, that identity is the whole of its visible state: there is no
-// shown flag here to fall out of step with the register.
+// shown flag here to fall out of step with the arbiter.
 type tooltipState struct {
 	arb *Arbiter
 
@@ -225,7 +225,7 @@ func drawTooltip(
 	canvas := gtx.Constraints.Max
 
 	// 1. Record the trigger into a macro to measure its dims; centre it
-	//    on the canvas. The trigger's centred rect is the basis for both
+	//    on the frame. The trigger's centred rect is the basis for both
 	//    the hit area registered for hover/focus and the surface
 	//    positioning math below.
 	triggerMacro := op.Record(gtx.Ops)
@@ -256,7 +256,7 @@ func drawTooltip(
 
 	// 3. Dwell timer and arbitration. Both are frame state, written and
 	//    read here on the goroutine that will draw the result: the timer
-	//    runs on gtx.Now and the claim is a store into a plain register.
+	//    runs on gtx.Now and the claim is a store into a plain value.
 	//    Nothing polls "am I still top" — losing top is not an event this
 	//    tooltip has to notice, because holding it is the only thing that
 	//    makes it paint. See arbitration.go.
@@ -287,9 +287,9 @@ func drawTooltip(
 		}
 	}
 
-	// 4. Paint the trigger at the centred offset. When live, register
-	//    the hover gesture and a focus tag clipped to the trigger rect
-	//    so Enter/Leave and focus events fire for this hit area.
+	// 4. Paint the trigger at the centred offset. When live it registers the
+	//    hover gesture and a focus tag clipped to the trigger rect so
+	//    Enter/Leave and focus events fire for this hit area.
 	{
 		triggerOff := op.Offset(triggerPos).Push(gtx.Ops)
 		if live {
@@ -303,7 +303,7 @@ func drawTooltip(
 	}
 
 	// 5. Surface, only while this tooltip holds arbitration top. Visibility
-	//    is read straight off the register rather than mirrored in a flag
+	//    is read straight off the arbiter rather than mirrored in a flag
 	//    beside it.
 	if st.arb.isTop(st) {
 		drawSurface(gtx, shaper, props, tok, triggerRect)

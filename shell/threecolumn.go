@@ -40,7 +40,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 	}
 	nb := navbar.Navbar(th, props.Navbar)
 	// Colour and density fold into one snapshot stream so the five-way
-	// CombineLatest keeps room for the widget and width inputs.
+	// CombineLatest keeps room for the layout.Widget and width inputs.
 	tokObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[rx.Tuple2[tokens.ColorTokens, tokens.Density]] {
 		return rx.CombineLatest2(t.Color, t.Density)
 	})
@@ -66,7 +66,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 			main := props.Main
 			footer := props.Footer
 			onResize := props.OnAsideResize
-			// applied defers the external-width hand-off to the widget:
+			// applied defers the external-width hand-off to the layout.Widget:
 			// asideDragState must only ever be touched on the frame
 			// goroutine. This projector runs on the rx scheduler, so
 			// writing ds here races with processAsideDrag and
@@ -94,7 +94,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // RenderThreeColumn produces a layout.Widget for a ThreeColumn shell
 // with pre-resolved tokens and no event processing. Intended for
 // golden-image testing and static demonstrations; production code
-// should use Shell. sidebarW and asideW are pre-built widgets for the
+// should use Shell. sidebarW and asideW are pre-built layout.Widget values for the
 // leading and trailing columns (Props.Sidebar and Props.Aside are not
 // consulted); a nil sidebarW renders an empty leading column, and a
 // nil asideW omits the aside column and its divider entirely.

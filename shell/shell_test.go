@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	shmW, shmH       = 480, 256 // sidebar-header-main canvas
-	splitW, splitH   = 480, 128 // split-pane canvas
-	vsplitW, vsplitH = 128, 480 // vertical-axis split-pane canvas
+	shmW, shmH       = 480, 256 // sidebar-header-main frame
+	splitW, splitH   = 480, 128 // split-pane frame
+	vsplitW, vsplitH = 128, 480 // vertical-axis split-pane frame
 	dragCanvasW      = 200
 	dragCanvasH      = 100
 	tabCanvasW       = 480
@@ -43,7 +43,7 @@ var (
 	splitSize  = image.Pt(splitW, splitH)
 	vsplitSize = image.Pt(vsplitW, vsplitH)
 	dragSize   = image.Pt(dragCanvasW, dragCanvasH)
-	vdragSize  = image.Pt(dragCanvasH, dragCanvasW) // 100×200: tall canvas for Y drags
+	vdragSize  = image.Pt(dragCanvasH, dragCanvasW) // 100×200: tall frame for Y drags
 	tabSize    = image.Pt(tabCanvasW, tabCanvasH)
 )
 
@@ -208,7 +208,7 @@ func liveWidget(t *testing.T, sh rx.Observable[layout.Widget]) layout.Widget {
 		t.Fatalf("Shell subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Shell did not emit an initial widget")
+		t.Fatal("Shell did not emit an initial layout.Widget")
 	}
 	return w
 }
@@ -228,7 +228,7 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 
 // TestShellSplitPaneDividerDrag verifies that pressing on the seam and
 // dragging horizontally emits ratio updates via OnSplitChange. With
-// PxPerDp=1 and canvas 200×100 at initial ratio 0.5, the painted seam
+// PxPerDp=1 and frame 200×100 at initial ratio 0.5, the painted seam
 // (1 px) sits at x=100 and the grab band (6 px, centred on it) at
 // x ∈ [98, 104). A press at (100, 50) followed by a drag to (150, 50)
 // shifts the ratio by 50/200 = +0.25, so the expected new ratio is 0.75.
@@ -272,7 +272,7 @@ func TestShellSplitPaneDividerDrag(t *testing.T) {
 
 // TestShellSplitPaneVerticalDividerDrag is the SplitAxis=Vertical
 // counterpart of TestShellSplitPaneDividerDrag. With PxPerDp=1 and a
-// 100×200 canvas at initial ratio 0.5, the horizontal seam sits at
+// 100×200 frame at initial ratio 0.5, the horizontal seam sits at
 // y=100 under a 6 px grab band at y ∈ [98, 104). A press at (50, 100)
 // followed by a drag to (50, 150) shifts the ratio by 50/200 = +0.25,
 // so the expected new ratio is 0.75.
@@ -410,7 +410,7 @@ func TestShellSplitPaneGrabBandReachesIntoPanes(t *testing.T) {
 	driveFrame(w, ops, r, dragSize)
 	driveFrame(w, ops, r, dragSize)
 
-	// Canvas 200×100 at ratio 0.5 with PxPerDp=1: the seam is the single
+	// Frame 200×100 at ratio 0.5 with PxPerDp=1: the seam is the single
 	// pixel at x=100 and the trailing pane starts at x=101, so x=103 is
 	// inside both the pane and the 6 px grab band at [98, 104).
 	press := f32.Pt(103, 50)
@@ -585,7 +585,7 @@ func TestShellSidebarHeaderMainTabTraversal(t *testing.T) {
 // rx.Observable[layout.Widget] (not sidebar.Sidebar) works as the Sidebar
 // slot and that the op-stream order is sidebar → navbar → main, preserving
 // Tab focus traversal. Structure mirrors TestShellSidebarHeaderMainTabTraversal;
-// the only delta is Props.Sidebar being a plain rx.Of widget instead of
+// the only delta is Props.Sidebar being a plain rx.Of layout.Widget instead of
 // sidebar.Sidebar.
 func TestShellCustomSidebarWidget(t *testing.T) {
 	shaper := defaultShaper(t)
@@ -691,7 +691,7 @@ func TestShellCustomSidebarWidget(t *testing.T) {
 
 	check("after Focus(seed)", true, false, false, false)
 
-	// Tab #1 → custom sidebar widget (rendered first in Flex op-stream).
+	// Tab #1 → custom sidebar layout.Widget (rendered first in Flex op-stream).
 	r.MoveFocus(key.FocusForward)
 	driveFrame(composed, ops, r, tabSize)
 	check("Tab #1 (→ custom sidebar)", false, true, false, false)

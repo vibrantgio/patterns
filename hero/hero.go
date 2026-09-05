@@ -62,7 +62,7 @@ type CTA struct {
 // adapts to the presence of each slot.
 type Props struct {
 	// Eyebrow is the optional kicker rendered above the Title — the small
-	// quiet line a marketing block leads with, and typography rather than a
+	// understated line a marketing block leads with, and typography rather than a
 	// component. An empty string omits the eyebrow row entirely.
 	Eyebrow string
 
@@ -88,9 +88,9 @@ type Props struct {
 	// Set it only when this instance must shape with a different shaper
 	// than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -106,7 +106,7 @@ type resolvedTokens struct {
 	shaper   *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Hero returns an rx.Observable[layout.Widget] that emits a new widget
+// Hero returns an rx.Observable[layout.Widget] that emits a new one
 // whenever any consumed theme token changes. CTA click state survives
 // across emissions: the widget.Clickable for each CTA is allocated once
 // per subscription inside the rx.Defer scope.
@@ -250,12 +250,13 @@ func textColumn(
 
 // eyebrowWidget renders the eyebrow: the kicker over the title, and pure
 // typography rather than a component. It is a run of LabelSmall text on the
-// hero's own ground, quiet by its size and by its ink, and the S3 gap under
-// it is the whole of what separates it from the title.
+// surface the hero stands on, less pronounced by its size and by its
+// foreground, and the S3 gap under it is the whole of what separates it from
+// the title.
 //
-// The ink is the neutral ramp's own measured answer for that ground at the
-// text floor, not a named rung: the kicker is the smallest type on the block
-// and a rung that reads at BodyLarge need not read at LabelSmall.
+// The foreground is the neutral ramp's own measured answer for that surface
+// at the text floor, not a named step: the kicker is the smallest type on the
+// block and a step that reads at BodyLarge need not read at LabelSmall.
 func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
 	ink := tok.color.MarkOn(tokens.RoleNeutral, tok.color.SurfaceAt(tokens.Level0), tokens.TextFloor)
 	return textWidget(shaper, label, ink, tok.eyebrow, font.Normal)

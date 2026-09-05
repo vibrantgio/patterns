@@ -49,7 +49,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// fillRect is a sharp-edged solid widget used as a Body or Action stand-in.
+// fillRect is a sharp-edged solid layout.Widget used as a Body or Action stand-in.
 // Text and rounded paths are avoided in goldens because GPU font and AA
 // rasterisation are non-deterministic across platforms.
 func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
@@ -61,7 +61,7 @@ func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 	}
 }
 
-// fixedRect is a sharp-edged solid widget with explicit width and height.
+// fixedRect is a sharp-edged solid layout.Widget with explicit width and height.
 // Used for footer action stand-ins so their hit rect is predictable.
 func fixedRect(c color.NRGBA, widthDp, heightDp float32) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
@@ -71,7 +71,7 @@ func fixedRect(c color.NRGBA, widthDp, heightDp float32) layout.Widget {
 	}
 }
 
-// scene renders w into a canvas-sized constraint over a flat background.
+// scene renders w into a frame-sized constraint over a flat background.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -83,11 +83,11 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 // identically on every machine via DeterministicShaper; ASCII only, so no
 // symbol reaches a stored image.
 //
-// There are two of them, one per intent, because a fixture's title is half
-// of what makes it that intent legible. "Discard changes?" is a question you
+// There are two of them, one per purpose, because a fixture's title is half
+// of what makes that purpose legible. "Discard changes?" is a question you
 // must answer; "Preferences" is a place you opened. A fixture must never
 // pair a decision's title with a panel's X over a dismissing scrim — that
-// combination is not a valid intent.
+// combination is not a valid purpose.
 const (
 	panelTitle    = "Preferences"
 	decisionTitle = "Discard changes?"
@@ -99,9 +99,10 @@ const (
 // ---- Golden tests ----
 
 // TestModalGolden records or diffs the stored goldens, one fixture per
-// intent:
+// purpose:
 //
-//   - light-open / dark-open / light-closed are PANELS — a title and a quiet
+//   - light-open / dark-open / light-closed are PANELS — a title and an
+//     understated
 //     ghost X, the surface you can leave.
 //   - light-with-actions is the DECISION — the question, the footer that
 //     answers it, and no X anywhere.
@@ -202,7 +203,7 @@ func TestModalCompactGolden(t *testing.T) {
 		t.Fatalf("Modal subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Modal did not emit an initial widget")
+		t.Fatal("Modal did not emit an initial layout.Widget")
 	}
 	golden.Render(t, "light-compact-open", canvasSize, scene(w, lightBG))
 }
@@ -211,7 +212,7 @@ func TestModalCompactGolden(t *testing.T) {
 
 // liveModal subscribes to the Modal observable, drains the trampoline
 // scheduler with Wait(), and returns the latest emitted layout.Widget.
-// State referenced by the widget closure remains valid for the test's
+// State referenced by the layout.Widget closure remains valid for the test's
 // lifetime because it is captured by the rx.Defer scope.
 func liveModal(t *testing.T, props modal.Props) layout.Widget {
 	t.Helper()
@@ -228,13 +229,13 @@ func liveModal(t *testing.T, props modal.Props) layout.Widget {
 		t.Fatalf("Modal subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Modal did not emit an initial widget")
+		t.Fatal("Modal did not emit an initial layout.Widget")
 	}
 	return w
 }
 
 // liveButtonAction subscribes to a labelled components/button keyed to a caller-owned
-// clickable and returns its latest emitted widget. The caller passes &clk in
+// clickable and returns its latest emitted layout.Widget. The caller passes &clk in
 // Props.ActionFocusTags so the button joins the modal's Tab cycle while owning
 // its own focus tag and ring.
 func liveButtonAction(t *testing.T, label string, clk *widget.Clickable) layout.Widget {
@@ -253,7 +254,7 @@ func liveButtonAction(t *testing.T, label string, clk *widget.Clickable) layout.
 		t.Fatalf("button action subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("button action did not emit a widget")
+		t.Fatal("button action did not emit a layout.Widget")
 	}
 	return w
 }
@@ -287,7 +288,7 @@ func TestEscapeInvokesOnClose(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	// Frame 1: register tags and request initial focus.
+	// Frame 1: register the tags and request initial focus.
 	driveFrame(w, ops, r, canvasSize)
 	// Frame 2: focus has been applied; the close button now holds focus.
 	driveFrame(w, ops, r, canvasSize)
@@ -316,7 +317,7 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	// Frame 1 registers tags + requests initial focus; frame 2 applies it,
+	// Frame 1 registers the tags + requests initial focus; frame 2 applies it,
 	// leaving the close button focused (same setup as the Escape test).
 	driveFrame(w, ops, r, canvasSize)
 	driveFrame(w, ops, r, canvasSize)
@@ -338,7 +339,7 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 // the scrim region but outside the modal surface invokes OnClose. A press
 // inside the surface must NOT invoke OnClose.
 //
-// This is the PANEL half of the intent contract; TestBackdropClickOnDecisionIsInert
+// This is the PANEL half of the purpose contract; TestBackdropClickOnDecisionIsInert
 // is the other half.
 func TestBackdropClickInvokesOnClose(t *testing.T) {
 	var closed int
@@ -366,7 +367,7 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 	}
 	scrimClicks := closed
 
-	// (2) Press at the canvas centre — guaranteed inside the surface — must
+	// (2) Press at the frame centre — guaranteed inside the surface — must
 	// not invoke OnClose.
 	centre := f32.Pt(canvasW/2, canvasH/2)
 	r.Queue(
@@ -519,7 +520,7 @@ func TestActionOwnsFocusTag(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveFrame(w, ops, r, canvasSize) // register tags + request initial focus
+	driveFrame(w, ops, r, canvasSize) // register the tags + request initial focus
 	driveFrame(w, ops, r, canvasSize) // initial focus → close button
 
 	r.Queue(key.Event{Name: key.NameTab, State: key.Press})
@@ -607,7 +608,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 		return gtx.Focused(tag)
 	}
 
-	render(false) // register tags + request initial focus
+	render(false) // register the tags + request initial focus
 	render(false) // initial focus → close button
 
 	r.Queue(key.Event{Name: key.NameTab, State: key.Press})
@@ -629,7 +630,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 	}
 }
 
-// ---- The two intents ----
+// ---- The two purposes ----
 
 // scrimPress queues a press-and-release near the top-left corner — guaranteed
 // scrim, never surface — and drives one frame.
@@ -655,8 +656,8 @@ func pressReturn(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 	driveFrame(w, ops, r, canvasSize)
 }
 
-// openFrames drives the two frames an opening modal needs: the first registers
-// the tags and requests initial focus, the second applies it.
+// openFrames drives the two frames an opening modal needs: the first
+// registers the tags and requests initial focus, the second applies it.
 func openFrames(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 	driveFrame(w, ops, r, canvasSize)
 	driveFrame(w, ops, r, canvasSize)
@@ -689,7 +690,7 @@ func TestBackdropClickOnDecisionIsInert(t *testing.T) {
 	}
 }
 
-// TestBackdropClickOnPanelCloses is the panel half stated in the intent's own
+// TestBackdropClickOnPanelCloses is the panel half stated in the purpose's own
 // terms, next to its opposite, TestBackdropClickOnDecisionIsInert; the pair
 // reads as one contract so a future change cannot silence half of it
 // unnoticed.
@@ -950,7 +951,7 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 	}
 	if n := golden.PixelDiff(decision, hidden); n != 0 {
 		t.Errorf("a decision dialog differs from a close-less panel by %d pixel(s); "+
-			"hiding the X is exactly what the intent derives", n)
+			"hiding the X is exactly what the purpose derives", n)
 	}
 }
 
@@ -1009,19 +1010,19 @@ func TestDefaultActionDerivation(t *testing.T) {
 }
 
 // TestIntentIsDerivedFromDecision pins the single source of truth: there is no
-// intent field to fall out of step with the callbacks.
+// purpose field to fall out of step with the callbacks.
 func TestIntentIsDerivedFromDecision(t *testing.T) {
 	if got := (modal.Props{}).Intent(); got != modal.IntentPanel {
-		t.Errorf("Props{}.Intent() = %v, want %v", got, modal.IntentPanel)
+		t.Errorf("zero Props derive %v, want %v", got, modal.IntentPanel)
 	}
 	if got := (modal.Props{HideClose: true}).Intent(); got != modal.IntentPanel {
-		t.Errorf("HideClose does not make a decision dialog: Intent() = %v, want %v", got, modal.IntentPanel)
+		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, modal.IntentPanel)
 	}
 	if got := (modal.Props{Decision: &modal.Decision{}}).Intent(); got != modal.IntentDecision {
-		t.Errorf("Props{Decision: …}.Intent() = %v, want %v", got, modal.IntentDecision)
+		t.Errorf("Props with a Decision derive %v, want %v", got, modal.IntentDecision)
 	}
 	if got, want := modal.IntentPanel.String()+"/"+modal.IntentDecision.String(), "panel/decision"; got != want {
-		t.Errorf("Intent.String() pair = %q, want %q", got, want)
+		t.Errorf("the archetype names pair = %q, want %q", got, want)
 	}
 }
 
@@ -1029,7 +1030,7 @@ func TestIntentIsDerivedFromDecision(t *testing.T) {
 
 // TestACoveredModalIsInertEvenWhileFocused drives the modal stack through the
 // whole live pipeline. Two panels are open at once in one Arbiter, and the
-// one behind answers neither a key nor a press — even though a widget of its
+// one behind answers neither a key nor a press — even though a control of its
 // own still holds keyboard focus, which is the case where being covered is
 // the only thing that stops it.
 //

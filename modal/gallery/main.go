@@ -12,7 +12,7 @@
 // and watch nothing happen, because a decision is not dismissed by a stray
 // click. Click "Open dialog" to bring it back.
 //
-// The two buttons wear different emphasis registers, which is the other half
+// The two buttons wear different emphases, which is the other half
 // of the same idea: OK is Filled, the one action the surface is about, and
 // Cancel is Tonal beside it.
 //

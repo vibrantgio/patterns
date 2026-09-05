@@ -2,10 +2,10 @@
 // strip with a Primary-coloured underline on the selected tab, plus
 // a content panel rendered below that shows the selected tab's content.
 //
-// The two are different kinds of area and wear different rungs. The panel
-// is content and fills at [Props.Ground], whose zero value is the window
-// ground; the strip is furniture and fills exactly one rung above it. See
-// Props.Ground for why the ground is the caller's to say.
+// The two are different kinds of area and stand at different levels. The
+// panel is content and fills at the `Ground` field of [Props], whose zero
+// value is the window's own content; the strip is furniture and fills exactly
+// one step above it. See that field for why the level is the caller's to say.
 //
 // Tabs is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. Source is intentionally short and
@@ -51,15 +51,15 @@ type Props struct {
 	// "no tab selected" (no underline, empty content area).
 	Selected rx.Observable[int]
 
-	// Ground is the rung the content panel fills at — the surface the
-	// selected tab's content is read on. The zero value is Level0, the window
-	// ground, because a tab panel holds what the window exists to show rather
+	// `Ground` is the level the content panel fills at — the surface the
+	// selected tab's content is read on. The zero value is Level0, the window's
+	// own content, because a tab panel holds what the window exists to show rather
 	// than something standing around it. Set Level1 where the panel genuinely
 	// rests on furniture — inside a dialog, on a pane, or as a specimen
 	// lifted off a page — and the strip above it moves with it.
 	//
 	// The strip is NOT this level. It is a row of handles on the panel, so
-	// it fills exactly one step above Ground, walked from the panel's own
+	// it fills exactly one step above it, walked from the panel's own
 	// fill rather than named as an absolute step
 	// ([tokens.ColorTokens.RaisedOn]). Where the scheme has no step left the
 	// strip is flush with its panel and says so with the seam its raise
@@ -68,7 +68,7 @@ type Props struct {
 	// patterns/table's Props carries the identical field for the identical
 	// reason, and the two patterns are meant to keep saying it the same way.
 	// The one difference is [Render]: table's static path takes no Props and
-	// pins its own specimen rung, while this one is handed the whole Props
+	// pins its own specimen level, while this one is handed the whole Props
 	// and honours this field like the observable path does.
 	Ground tokens.ElevationLevel
 
@@ -85,9 +85,9 @@ type Props struct {
 	// this instance must shape with a different shaper than the theme
 	// provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -107,7 +107,7 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Tabs returns an rx.Observable[layout.Widget] that emits a new widget
+// Tabs returns an rx.Observable[layout.Widget] that emits a new one
 // whenever a consumed theme token or the Selected observable changes.
 // Per the WAI-ARIA tab pattern, focus follows selection: clicking a tab
 // or pressing Arrow-Left/Right/Home/End moves both selection and focus.
@@ -165,10 +165,10 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
 // default desktop look.
 //
-// [Props.Ground] is read here exactly as the observable path reads it: this
-// function is handed the whole Props, so a specimen that is deliberately
-// lifted off the page it is shown on says Level1 at its own call site
-// rather than having a rung pinned behind its back.
+// The `Ground` field of [Props] is read here exactly as the observable path
+// reads it: this function is handed the whole Props, so a specimen that is
+// deliberately lifted off the page it is shown on says Level1 at its own call
+// site rather than having a level pinned behind its back.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -255,7 +255,7 @@ func drawTabs(
 	d tokens.Density,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The panel plane first, at the caller's ground, then the strip band one
+	// The panel plane first, at the caller's level, then the strip band one
 	// step over it.
 	panel := colors.SurfaceAt(props.Ground)
 	paint.FillShape(gtx.Ops, panel, clip.Rect{Max: size}.Op())
@@ -312,7 +312,7 @@ func drawStrip(
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	}
 	// The underline is drawn on the strip band, one step above the panel
-	// (see drawTabs), so that is the surface its ink is measured against.
+	// (see drawTabs), so that is the surface its colour is measured against.
 	stripGround := colors.RaisedOn(colors.SurfaceAt(props.Ground)).Fill
 	children := make([]layout.FlexChild, 0, len(props.Tabs))
 	for i := range props.Tabs {
@@ -333,7 +333,7 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 }
 
 // underlineInk is the colour a selected tab's underline is drawn in: the
-// primary pin while it clears the graphic floor against ground — the strip
+// primary pin while it clears the graphic floor against `ground` — the strip
 // band the underline actually sits on, handed in as the fill it is rather
 // than as a level, because the band is a raise and has no level to name —
 // and otherwise the step of the primary ramp that does
@@ -345,7 +345,7 @@ func underlineInk(colors tokens.ColorTokens, ground color.NRGBA) color.NRGBA {
 // tabCell renders a single tab label centred inside (S3, S2) padding,
 // with a strip-height cell. When selected, an underline of underlineDp px
 // is drawn along the cell's bottom edge in [underlineInk], measured
-// against ground — the fill of the strip band the underline actually sits
+// against `ground` — the fill of the strip band the underline actually sits
 // on, passed in rather than assumed. The cell width is at least 2×S3 so the
 // underline is visible even when the label rasterises to zero width,
 // which an empty Tab.Label does.

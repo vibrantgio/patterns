@@ -42,7 +42,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // symbol reaches a stored image.
 //
 // The title is short on purpose: with a Visual the text column is half of a
-// 480 px canvas, and DisplaySmall is the largest role in the scale, so a
+// 480 px frame, and DisplaySmall is the largest role in the scale, so a
 // longer title would wrap to three lines and push the subtitle off the bottom.
 const (
 	heroEyebrow  = "Design system"
@@ -80,7 +80,7 @@ func withEyebrowAndCTAs(p hero.Props) hero.Props {
 	return p
 }
 
-// fillRect is a sharp-edged solid widget used as a Visual stand-in: Visual is
+// fillRect is a sharp-edged solid layout.Widget used as a Visual stand-in: Visual is
 // a caller-supplied illustration slot, so a flat block keeps it a structural
 // marker while the hero's own four roles carry the text.
 func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
@@ -92,7 +92,7 @@ func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 	}
 }
 
-// scene renders w into a canvas-sized constraint over a flat background.
+// scene renders w into a frame-sized constraint over a flat background.
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -151,7 +151,7 @@ func TestHeroGolden(t *testing.T) {
 
 // TestHeroVisualSlotShiftsLayout confirms that supplying a Visual moves the
 // hero from a single-column layout into a two-column split — without a
-// Visual, the right half of the canvas is empty; with a Visual the right
+// Visual, the right half of the frame is empty; with a Visual the right
 // half carries the Visual's pixels.
 func TestHeroVisualSlotShiftsLayout(t *testing.T) {
 	shaper := defaultShaper(t)

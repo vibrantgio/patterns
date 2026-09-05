@@ -1,5 +1,5 @@
 // Package popover provides the Patterns Popover pattern: an anchored
-// elevated surface placed adjacent to a caller-supplied anchor widget,
+// floating surface placed adjacent to a caller-supplied anchor,
 // with a small triangular tail glyph pointing at the anchor. Outside-
 // click dismissal and popover-vs-popover arbitration are frame state:
 // opening a second popover dismisses the first, through a plain Arbiter
@@ -7,9 +7,9 @@
 // arbitration.go.
 //
 // Elevation: the popover surface (and its tail) fills at
-// SurfaceAt(Level3) (Neutral step 400), the deepest rung of the ladder.
+// SurfaceAt(Level3) (Neutral step 400), the highest level there is.
 // A popover is an unscrimmed, shadowless transient overlay — unlike the
-// modal (level 2), which has a scrim, and the toast, which takes no rung
+// modal (level 2), which has a scrim, and the toast, which takes no level
 // at all and keeps its cast shadow, the popover's fill plus its 1 dp
 // Neutral step-500 stroke are its only separation cues, so it takes the
 // deepest tonal step. components/input's dropdown menu, the
@@ -20,12 +20,12 @@
 // intentionally short and free of opaque configuration — copy it into
 // your own app and modify as needed.
 //
-// THE CANVAS IS THE ROOM. The popover stands its anchor in the canvas its
+// THE FRAME IS THE ROOM. The popover stands its anchor in the frame its
 // caller hands it — at [Alignment]'s edge of it — and keeps the surface inside
-// that canvas across the placement's cross axis, nudging it back where it
-// would run off rather than letting it clip. So the canvas must be the room
+// that frame across the placement's cross axis, nudging it back where it
+// would run off rather than letting it clip. So the frame must be the room
 // the caller actually has, the content column or the window, and not a box
-// cut to the anchor's own size: a canvas that cannot hold the surface is not
+// cut to the anchor's own size: a frame that cannot hold the surface is not
 // a bound, and the popover leaves such a surface where the anchor puts it.
 // Aligning the anchor is the popover's job for the same reason — it is the
 // one place the drawn anchor, the surface and the room are all known, so an
@@ -66,29 +66,29 @@ const (
 	Right
 )
 
-// Alignment is where across the canvas the popover stands its anchor.
+// Alignment is where across the frame the popover stands its anchor.
 //
-// It is the placement half of the canvas contract: the anchor draws the
-// shape it has and this says which of the canvas's edges that shape is set
+// It is the placement half of the frame contract: the anchor draws the
+// shape it has and this says which of the frame's edges that shape is set
 // against, so the popover knows the drawn rect exactly and can aim the tail
 // at it. An anchor that widens its own report to reach an edge instead
 // leaves the popover aiming at the middle of a box nothing was drawn in.
 type Alignment int
 
 const (
-	// AlignCenter is the zero value: the anchor stands across the canvas's
-	// middle, which is what a canvas cut to the anchor's own size wants.
+	// AlignCenter is the zero value: the anchor stands across the frame's
+	// middle, which is what a frame cut to the anchor's own size wants.
 	AlignCenter Alignment = iota
 
-	// AlignLeading stands the anchor against the canvas's leading edge.
+	// AlignLeading stands the anchor against the frame's leading edge.
 	AlignLeading
 
-	// AlignTrailing stands the anchor against the canvas's trailing edge.
+	// AlignTrailing stands the anchor against the frame's trailing edge.
 	AlignTrailing
 )
 
 // outsideMargin is how far the outside-press absorber reaches beyond the
-// caller's canvas on every side. Presses land anywhere in the window and
+// caller's frame on every side. Presses land anywhere in the window and
 // every one of them outside this popover dismisses it, so the margin is
 // simply larger than any display.
 const outsideMargin = unit.Dp(8192)
@@ -125,7 +125,7 @@ type Props struct {
 	//
 	// A non-nil OpenNow is the whole answer and Open is ignored. Popover then
 	// re-emits only when the theme changes, because the flag no longer needs
-	// an emission to be seen: the widget already runs every frame and reads
+	// an emission to be seen: the layout.Widget already runs every frame and reads
 	// it there. Everything downstream is unaffected — the arbitration claim
 	// and release are edges over whatever this returns, exactly as they are
 	// over Open.
@@ -136,8 +136,8 @@ type Props struct {
 	Placement Placement
 	OnDismiss func(gtx layout.Context)
 
-	// Align is which edge of the canvas the anchor is stood against. The
-	// zero value centres it. See [Alignment] and the package doc's canvas
+	// Align is which edge of the frame the anchor is stood against. The
+	// zero value centres it. See [Alignment] and the package doc's frame
 	// contract.
 	Align Alignment
 
@@ -153,16 +153,17 @@ type resolvedTokens struct {
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	// elevation is snapshotted so a theme elevation change re-emits the
-	// widget; the surface fill resolves through SurfaceAt, which reads
+	// layout.Widget; the surface fill resolves through SurfaceAt, which reads
 	// the default tokens.Elevation scale.
 	elevation tokens.ElevationScale
 }
 
-// Popover returns an rx.Observable[layout.Widget] that emits a new widget
+// Popover returns an rx.Observable[layout.Widget] that emits a new one
 // whenever the theme or Open state changes. State (the arbitration hold,
 // event tags) persists across emissions in the rx.Defer scope.
 //
-// With Props.OpenNow set the widget reads the flag itself, every frame, and
+// With Props.OpenNow set the layout.Widget reads the flag itself, every frame,
+// and
 // the stream carries only the theme.
 func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	open := props.Open
@@ -195,7 +196,7 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 				// Arbitration is frame state. The claim and the release
 				// happen here, on the frame goroutine that will draw the
 				// result, rather than where the Open observable emitted on
-				// another one. The emitted widget is re-invoked every frame
+				// another one. The emitted layout.Widget is re-invoked every frame
 				// until the next emission replaces it, so both transitions
 				// are guarded by st.holds and run exactly once.
 				switch {
@@ -218,7 +219,8 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 
 // Render produces a layout.Widget for a popover with pre-resolved tokens
 // and an explicit open flag. Intended for golden-image testing and static
-// demonstrations; production code should use Popover. The returned widget
+// demonstrations; production code should use Popover. The returned
+// layout.Widget
 // performs no input handling: pass open=true to render the anchor +
 // floating surface, open=false to render only the anchor.
 func Render(
@@ -259,9 +261,9 @@ func newState(props Props) *popoverState {
 	return &popoverState{arb: arb, dismiss: props.OnDismiss}
 }
 
-// drawPopover stands the anchor at Align's edge of the canvas, then — when
+// drawPopover stands the anchor at Align's edge of the frame, then — when
 // open — the floating surface adjacent to it per Placement, nudged back
-// inside the canvas where it would run off, plus a tail glyph seated on the
+// inside the frame where it would run off, plus a tail glyph seated on the
 // anchor. When live, it also registers three event tags (outside, anchor,
 // surface) and dispatches the events drained for them.
 func drawPopover(
@@ -278,7 +280,7 @@ func drawPopover(
 	tailW := gtx.Dp(tailRun)
 
 	// 1. Record the anchor into a macro to measure its dims; stand it at
-	//    Align's edge of the canvas. That rect is the DRAWN anchor — the
+	//    Align's edge of the frame. That rect is the DRAWN anchor — the
 	//    basis for the surface's position and for where the tail points.
 	anchorMacro := op.Record(gtx.Ops)
 	anchorGtx := gtx
@@ -341,7 +343,7 @@ func drawPopover(
 		surfaceRect = clampToCanvas(surfaceRect, canvas, props.Placement)
 	}
 
-	// 3. Outside-press absorber. The canvas is the room this popover may
+	// 3. Outside-press absorber. The frame is the room this popover may
 	//    use, not the window, so the absorber extends a wide margin beyond
 	//    it on every side to catch presses anywhere in the window.
 	//    Registered first so that anchor- and surface-clip tags (registered
@@ -373,14 +375,14 @@ func drawPopover(
 	// 5. Surface + tail + content, only when open. The surface absorbs
 	//    presses; the tail is a triangular path bridging the gap to the
 	//    anchor, drawn in the surface fill colour and carrying the surface's
-	//    own edge around it. Level 3 on the elevation ladder: an unscrimmed,
+	//    own edge around it. Level 3, the highest there is: an unscrimmed,
 	//    shadowless transient overlay separates by fill alone (see the
 	//    package doc).
 	if openNow {
 		fill := tok.color.SurfaceAt(tokens.Level3)
-		// The surface's edge is derived against the storey it circles — the
+		// The surface's edge is derived against the level it circles — the
 		// same Level3 the fill is painted at, named once for both, and the
-		// tail's own edge is the same ink for the same reason.
+		// tail's own edge is the same stroke colour for the same reason.
 		edge := outline.Ink(tok.color, tok.color.SurfaceAt(tokens.Level3))
 		stroke := float32(gtx.Dp(strokeWidth))
 		surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
@@ -413,8 +415,8 @@ func drawPopover(
 	return layout.Dimensions{Size: canvas}
 }
 
-// alignX is where across a canvas of width canvasW a shape of width shapeW
-// stands, for each Alignment. A shape wider than the canvas starts at the
+// alignX is where across a frame of width canvasW a shape of width shapeW
+// stands, for each Alignment. A shape wider than the frame starts at the
 // leading edge whatever the alignment says, because there is no room to
 // stand it anywhere else.
 func alignX(a Alignment, canvasW, shapeW int) int {
@@ -432,14 +434,14 @@ func alignX(a Alignment, canvasW, shapeW int) int {
 	}
 }
 
-// clampToCanvas nudges the surface back inside the canvas along the axis the
-// placement does not travel on — the axis on which leaving the canvas is an
+// clampToCanvas nudges the surface back inside the frame along the axis the
+// placement does not travel on — the axis on which leaving the frame is an
 // overflow rather than the point. The placement axis is left alone: a
-// Bottom-placed surface is meant to hang below the canvas.
+// Bottom-placed surface is meant to hang below the frame.
 //
-// A canvas too small to hold the surface is not a bound and is left alone:
+// A frame too small to hold the surface is not a bound and is left alone:
 // shoving an over-wide surface against one edge only moves the overflow to
-// the other, and the caller that cut its canvas to the anchor has said
+// the other, and the caller that cut its frame to the anchor has said
 // nothing about the room it has. The tail is aimed at the anchor rather than
 // at the surface, so it keeps pointing where it did through the nudge.
 func clampToCanvas(surface image.Rectangle, canvas image.Point, p Placement) image.Rectangle {
@@ -476,9 +478,9 @@ func clampToCanvas(surface image.Rectangle, canvas image.Point, p Placement) ima
 // stands on the flat run of the edge.
 //
 // The fill reaches one stroke back into the surface, covering the outline
-// under the base; the two slanted sides are then stroked in the same ink.
+// under the base; the two slanted sides are then stroked in the same colour.
 // The surface's edge therefore runs into the tail and out again rather than
-// being drawn straight through it. Coordinates are canvas-absolute (no
+// being drawn straight through it. Coordinates are frame-absolute (no
 // transform is on the stack when this is called).
 func drawTail(gtx layout.Context, anchor, surface image.Rectangle, p Placement, run, radius int, fill, edge color.NRGBA, stroke float32) {
 	var (

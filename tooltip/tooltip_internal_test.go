@@ -60,7 +60,7 @@ func driveFrameAt(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.P
 }
 
 // hoverRig builds a live single-tooltip frame driver over its own Arbiter,
-// and returns the arbiter, the tooltip's state and the widget.
+// and returns the arbiter, the tooltip's state and the layout.Widget.
 func hoverRig(delay time.Duration) (*Arbiter, *tooltipState, layout.Widget) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	arb := NewArbiter()
@@ -82,13 +82,13 @@ func TestHoverEntryAfterDelayShows(t *testing.T) {
 	ops := new(op.Ops)
 	t0 := time.Unix(1700000000, 0)
 
-	// Frame 1: register hover and focus tags. Nothing in the queue yet.
+	// Frame 1: register the hover and focus tags. Nothing in the queue yet.
 	driveFrameAt(w, ops, r, intCanvas, t0)
 	if arb.isTop(st) {
 		t.Fatalf("tooltip visible before any hover event; want hidden")
 	}
 
-	// Queue a pointer.Move at the canvas centre (inside the trigger). The
+	// Queue a pointer.Move at the frame centre (inside the trigger). The
 	// router synthesizes pointer.Enter into the hover gesture next frame.
 	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intCanvasW/2, intCanvasH/2), Source: pointer.Mouse})
 
@@ -201,7 +201,7 @@ func TestSecondTooltipDismissesFirst(t *testing.T) {
 }
 
 // TestOvertakenTooltipDoesNotStealBackInTheSameFrame is the tree-order half
-// of the latch. When the claimant sits earlier in the widget tree than the
+// of the latch. When the claimant sits earlier in the layout.Widget tree than the
 // incumbent, the incumbent lays out *after* losing top with its hover
 // unchanged and its dwell long since elapsed. A claim guarded on "am I visible" would take
 // top straight back, inside that same frame and after the claimant had

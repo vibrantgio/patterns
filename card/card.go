@@ -22,7 +22,7 @@
 // Card draws no text of its own, which is why Props carries no Shaper
 // where its sibling patterns do: all three slots are caller-supplied
 // layout.Widgets, so the typeface of anything inside a card is settled by
-// whoever builds those widgets. Nil slots are dropped from the stack
+// whoever builds them. Nil slots are dropped from the stack
 // entirely, and the S3 gaps fall only between the slots that survive — a
 // Body-only card is not padded as though the Header and Footer were there
 // but empty.
@@ -60,8 +60,8 @@ type Props struct {
 	Level tokens.ElevationLevel
 }
 
-// Card returns an rx.Observable[layout.Widget] that emits a new widget
-// whenever any consumed theme token changes. The widget fills its
+// Card returns an rx.Observable[layout.Widget] that emits a new one
+// whenever any consumed theme token changes. The card fills its
 // available constraints and renders a rounded Surface, with the three
 // slots stacked vertically inside an S4 inset and separated by S3 gaps.
 func Card(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -92,7 +92,7 @@ type resolvedTokens struct {
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	// elevation is snapshotted so a theme elevation change re-emits the
-	// widget; the fills themselves resolve through SurfaceAt, which reads
+	// layout.Widget; the fills themselves resolve through SurfaceAt, which reads
 	// the default tokens.Elevation scale.
 	elevation tokens.ElevationScale
 }

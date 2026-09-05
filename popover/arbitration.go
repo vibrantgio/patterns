@@ -2,16 +2,16 @@ package popover
 
 import "gioui.org/layout"
 
-// Arbiter is the "only one popover open at a time" register shared by a set
+// Arbiter is the "only one popover open at a time" rule shared by a set
 // of popovers. It is a plain value — no mutex, no atomics, no observable —
 // because every write and every read happens during layout, on the single
 // goroutine Gio runs a frame on. The hazard a synchronised bus guards
 // against cannot arise here, so there is nothing for a guard to buy.
 //
-// # The register is the scope
+// # The arbiter is the scope
 //
 // Popovers that share an Arbiter arbitrate with one another and with nobody
-// else. A window is one widget tree laid out by one goroutine, so one
+// else. A window is one layout.Widget tree laid out by one goroutine, so one
 // Arbiter per window is both the correct scope for "which popover is open"
 // and the only scope a lock-free value is safe at. Create one in the window's
 // composition root and hand it to every popover in that window's tree.
@@ -27,7 +27,7 @@ import "gioui.org/layout"
 // Claiming top dismisses the popover that held it, there and then, from
 // inside the claimant's own layout pass. The incumbent is not left to notice
 // on some later frame that it lost, so the dismissal does not depend on which
-// of the two the widget tree reaches first. What does still depend on tree
+// of the two the layout.Widget tree reaches first. What does still depend on tree
 // order is one frame of the incumbent's *input* registration: an incumbent
 // laid out before the claimant has already registered its absorbers for that
 // frame and goes inert on the next one. Nothing is painted from that (live

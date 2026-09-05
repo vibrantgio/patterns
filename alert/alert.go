@@ -1,6 +1,6 @@
 // Package alert provides the Patterns Alert pattern: a tinted-Surface
 // rounded banner with a leading variant icon, a Title, and an arbitrary
-// Body widget. Variants are Info, Success, Warning, and Error.
+// Body layout.Widget. Variants are Info, Success, Warning, and Error.
 //
 // Alert is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. Source is intentionally short and
@@ -16,7 +16,7 @@
 // OnStatusContainer, both realized at a tone by the theme rather than mixed
 // here. Info is the info role, not the accent: an informational banner that
 // wore the brand said whatever the brand happened to say, and under a
-// red-heavy brand it said "error" louder than the error variant did.
+// red-heavy brand it said "error" more loudly than the error variant did.
 //
 // The banner fills the constraints it is given rather than shrinking to
 // its content — it reports gtx.Constraints.Max as its size — so an Alert
@@ -69,13 +69,13 @@ type Props struct {
 	// map function makes of it. Set it only when this instance must shape
 	// with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
-// Alert returns an rx.Observable[layout.Widget] that emits a new widget
+// Alert returns an rx.Observable[layout.Widget] that emits a new one
 // whenever any consumed theme token changes.
 func Alert(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The

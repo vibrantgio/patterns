@@ -5,7 +5,7 @@
 //
 // Sort and filter are external transforms. The Items observable emits
 // already-sorted, already-filtered slices; the table renders whatever it
-// receives and surfaces header-click intent via OnSort. Filter UI is the
+// receives and surfaces the header click's purpose via OnSort. Filter UI is the
 // consumer's responsibility (typically a textfield above the table whose
 // changes re-emit a filtered Items slice). This keeps the table dumb: no
 // opaque runtime configuration, source is the spec, copy and modify as
@@ -13,7 +13,7 @@
 //
 // # Keyboard reach
 //
-// Body rows are not interactive: they register no focus tag, no click and
+// Body rows are not interactive: they take no focus tag, no click and
 // no selection, and the only keyboard reach in the table is Tab onto a
 // sortable header cell. Props.Current does not change that: it is a fill
 // the consumer asks for over a row it already knows about, drawn only for
@@ -25,10 +25,10 @@
 // exist for a row the frame skipped. The list.State this package already
 // holds is where that selection lives.
 //
-// Per-row widget state (editors, checkboxes, expanders) is preserved across
+// Per-row component state (editors, checkboxes, expanders) is preserved across
 // sort/filter by wiring components/keyed.Defer into a Column's Cell closure: the
 // consumer captures a *keyed.Deferred[K, *WidgetState] in the rx.Defer scope
-// holding the Items observable, and returns the same widget pointer for the
+// holding the Items observable, and returns the same state pointer for the
 // same row key on every emission. The table itself stores no per-row state
 // — every Column.Cell call is fresh.
 package table
@@ -57,7 +57,7 @@ import (
 )
 
 // Column declares one column of a Table. Cell is invoked once per visible
-// row per frame; the returned Widget is constrained to the column's
+// row per frame; the returned layout.Widget is constrained to the column's
 // computed width and a fixed row height. Width is a hint: a non-zero
 // value pins the column to that pixel width; zero flexes the column
 // equally with other flexed columns. Sortable=true makes the header
@@ -97,14 +97,14 @@ type Props[T any] struct {
 	// the clicked column and re-emits Sort and a re-sorted Items slice.
 	OnSort func(gtx layout.Context, col int)
 
-	// Ground is the rung the table's own plane fills at — the paper the
-	// grid is printed on. The zero value is Level0, the window ground: a
-	// table is what a window exists to show rather than something standing
-	// around it, and a table that raised itself one rung would leave a
+	// `Ground` is the level the table's own plane fills at — the paper the
+	// grid is printed on. The zero value is Level0, the window's own content:
+	// a table is what a window exists to show rather than something standing
+	// around it, and a table that raised itself one step would leave a
 	// window's furniture standing level with its content. Set Level1 where
 	// the table genuinely rests on furniture — inside a dialog, on a panel,
 	// or as a specimen lifted off a page — and the walks that read from this
-	// ground move with it.
+	// field move with it.
 	//
 	// [Render], the static specimen path, keeps the semantic Surface it has
 	// always drawn and takes no Props at all; this field is the observable
@@ -122,7 +122,7 @@ type Props[T any] struct {
 	// row scrolled out of the viewport costs nothing because it is never
 	// asked. Keyboard traversal over rows is still unbuilt; build it on
 	// components/list's LayoutSelectable, which moves an index over every
-	// row, not on a focus tag per row. It wants a SECOND ink: the neutral
+	// row, not on a focus tag per row. It wants a SECOND colour: the neutral
 	// state walks are reserved for a cursor and this tint for the current
 	// item, so a list can show both at once without either standing in for
 	// the other.
@@ -136,9 +136,9 @@ type Props[T any] struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -163,10 +163,10 @@ type resolvedTokens struct {
 	header  tokens.TextStyle      // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density        // row/header height source
 	shaper  *text.Shaper          // the theme's shaper; nil in the Render path
-	ground  tokens.ElevationLevel // the rung the table's plane fills at (Props.Ground)
+	ground  tokens.ElevationLevel // the level the table's plane fills at (`Props.Ground`)
 }
 
-// Table returns an rx.Observable[layout.Widget] that emits a new widget
+// Table returns an rx.Observable[layout.Widget] that emits a new one
 // whenever a consumed theme token, Items, or Sort changes. Header clicks
 // invoke OnSort; the body is laid out via components/list.Layout so per-frame
 // cost is O(visible-rows), not O(len(items)).
@@ -221,10 +221,11 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // demonstrations; production code should use Table, which reads both of the
 // parameters below off the theme.
 //
-// Its plane is the semantic Surface and its header the rung above that,
+// Its plane is the semantic Surface and its header the level above that,
 // which is a specimen deliberately lifted off the page it is shown on. A
-// table that is a window's own content belongs on the window ground
-// instead: that is [Props.Ground], and it is the observable path's.
+// table that is a window's own content belongs on the window's own content
+// level instead: that is the `Ground` field of [Props], and it is the
+// observable path's.
 //
 // header is the LabelLarge role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the grid draws
@@ -390,7 +391,7 @@ func drawHeaderRow[T any](
 	//
 	// The seam the raise may owe is already drawn: the header closes with
 	// the same Divider rule every row does, which is the one hairline
-	// between the header band and the body and is louder than a seam.
+	// between the header band and the body and is more pronounced than a seam.
 	paint.FillShape(gtx.Ops, tok.color.RaisedOn(tok.color.SurfaceAt(tok.ground)).Fill, clip.Rect{Max: size}.Op())
 
 	x := 0

@@ -31,7 +31,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 
 	// Two components/button actions, each keyed to its own caller-owned clickable.
 	// Those clickables are the action focus tags; the modal owns
-	// none on their behalf, so they must register themselves — which the live
+	// none on their behalf, so they must register the tags themselves — which the live
 	// button does — to be focusable.
 	var clkA, clkB widget.Clickable
 	actA := liveButton(t, shaper, "A", &clkA)
@@ -83,7 +83,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 		w(gtx)
 		r.Frame(ops)
 	}
-	drive() // frame 1: register tags
+	drive() // frame 1: register the tags
 	drive() // frame 2: initial focus applied
 
 	tags := focusTags(props, st)
@@ -123,7 +123,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 }
 
 // liveCloseWidget subscribes to a button.Button keyed to &st.closeClick and
-// returns its latest emitted widget, so a direct drawModal call gets the same
+// returns its latest emitted layout.Widget, so a direct drawModal call gets the same
 // interactive close affordance the production Modal pipeline threads in.
 func liveCloseWidget(t *testing.T, st *modalState, shaper *text.Shaper) layout.Widget {
 	t.Helper()
@@ -141,13 +141,13 @@ func liveCloseWidget(t *testing.T, st *modalState, shaper *text.Shaper) layout.W
 		t.Fatalf("close button subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("close button did not emit a widget")
+		t.Fatal("close button did not emit a layout.Widget")
 	}
 	return w
 }
 
 // liveButton subscribes to a labelled button.Button keyed to a caller-owned
-// clickable and returns its latest emitted widget — a focusable footer action
+// clickable and returns its latest emitted layout.Widget — a focusable footer action
 // whose own &clk is passed in Props.ActionFocusTags.
 func liveButton(t *testing.T, shaper *text.Shaper, label string, clk *widget.Clickable) layout.Widget {
 	t.Helper()
@@ -165,7 +165,7 @@ func liveButton(t *testing.T, shaper *text.Shaper, label string, clk *widget.Cli
 		t.Fatalf("button action subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("button action did not emit a widget")
+		t.Fatal("button action did not emit a layout.Widget")
 	}
 	return w
 }
@@ -195,7 +195,7 @@ func TestFocusTagsIncludesDynamicBeforeStatic(t *testing.T) {
 // TestAffordancesAreDerivedFromIntent is the dialog grammar as one table: the
 // four cells the two archetypes fill, read straight off the predicates the
 // component uses. The row that matters most is the last one — there is no
-// Props anywhere in this table with a decision's intent and a dismissing
+// Props anywhere in this table with a decision's purpose and a dismissing
 // backdrop, because there is no field that could produce one.
 func TestAffordancesAreDerivedFromIntent(t *testing.T) {
 	onClose := func(layout.Context) {}
@@ -223,7 +223,7 @@ func TestAffordancesAreDerivedFromIntent(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := tc.props.Intent(); got != tc.wantIntent {
-				t.Errorf("Intent() = %v, want %v", got, tc.wantIntent)
+				t.Errorf("the derived archetype = %v, want %v", got, tc.wantIntent)
 			}
 			if got := tc.props.showsClose(); got != tc.wantClose {
 				t.Errorf("showsClose() = %v, want %v", got, tc.wantClose)

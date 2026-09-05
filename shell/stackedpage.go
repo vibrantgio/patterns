@@ -57,7 +57,7 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // RenderStackedPage produces a layout.Widget for a StackedPage shell
 // with pre-resolved tokens and no event processing. Intended for
 // golden-image testing and static demonstrations; production code
-// should use Shell. sections are pre-built widgets for the scroll
+// should use Shell. sections are pre-built layout.Widget values for the scroll
 // region (Props.Sections is not consulted); Footer and ContentMaxWidth
 // are taken from props, with Footer appended after the last section.
 //
@@ -108,7 +108,7 @@ func drawStackedPage(
 	}
 	bodyH := size.Y - navH
 
-	// Page ground behind content shorter than the viewport.
+	// Page fill behind content shorter than the viewport.
 	paint.FillShape(gtx.Ops, colors.Background, clip.Rect{Max: size}.Op())
 
 	// Navbar pinned across the full width; sections scroll beneath it.

@@ -158,7 +158,7 @@ type trailSegment struct {
 	click widget.Clickable
 	// onClick is the callback the identity was last drawn with. It is the
 	// callback that fires, because it is the one the user clicked: the frame
-	// that drew the affordance is the frame whose intent the click carries.
+	// that drew the affordance is the frame whose purpose the click carries.
 	onClick func(gtx layout.Context)
 	// frame is the value of trailState.frame when this identity was last
 	// drawn.

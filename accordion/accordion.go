@@ -1,6 +1,6 @@
 // Package accordion provides the Patterns Accordion pattern: a vertical
 // stack of collapsible Section groups. Each Section has a Title header
-// row with a chevron rotated per open state, and an optional Body widget
+// row with a chevron rotated per open state, and an optional Body layout.Widget
 // shown beneath the header when the Section is open. When SingleOpen is
 // true, activating a closed Section first dispatches OnToggle for every
 // currently-open Section so the parent's flip-the-bool handler converges
@@ -71,15 +71,15 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
 // Layout constants. headerHDp and bodyHDp are deliberately chosen so a
 // three-section accordion with one open body packs to 240 dp tall,
-// matching the canonical golden canvas.
+// matching the canonical golden frame.
 const (
 	headerHDp     = 48
 	bodyHDp       = 96
@@ -95,8 +95,8 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Accordion returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever a consumed theme token or the Open observable changes.
+// Accordion returns an rx.Observable[layout.Widget] that emits a new one
+// whenever a consumed theme token or the Open observable changes.
 // Pointer clicks, Enter, and Space on a focused header invoke OnToggle.
 // Arrow-Up/Down move focus between section headers (no wrap).
 func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -172,7 +172,7 @@ func processInput(gtx layout.Context, props Props, clicks []widget.Clickable, op
 		// every other currently-open section first. Closes are emitted in
 		// ascending index order so the OnToggle call sequence is
 		// deterministic. The captured openMap is a snapshot from the
-		// inputs emission that produced this widget; the parent's flip-
+		// inputs emission that produced this layout.Widget; the parent's flip-
 		// the-bool handler reaches a single-open state on the next
 		// emission regardless of how many sections were open in the
 		// snapshot.

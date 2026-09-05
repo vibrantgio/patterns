@@ -1,6 +1,6 @@
 // Package toast provides the Patterns Toast pattern: a position-anchored
 // column of transient notifications. A toast request is an event, so it
-// becomes a message: widget code calls [Notify], which lands a [Requested]
+// becomes a message: layout code calls [Notify], which lands a [Requested]
 // on the frame's ops queue, the application's Update reduces it onto a
 // [Queue] it holds in its model, and [Stack] renders that queue through
 // Props.Toasts. Each toast auto-dismisses after its Lifetime, which is a
@@ -74,7 +74,7 @@ const (
 	Error
 )
 
-// Position is where on the canvas the stack anchors: one of the four
+// Position is where in the frame the stack anchors: one of the four
 // corners, or the midpoint of the bottom edge. Newest toast renders
 // nearest the anchored edge; older toasts sit further from it.
 type Position int
@@ -85,7 +85,7 @@ const (
 	TopLeft
 	BottomLeft
 	// BottomCenter anchors the stack to the middle of the bottom edge:
-	// the column is centred between the canvas's side edges, the newest
+	// the column is centred between the frame's side edges, the newest
 	// toast sits one edge margin above the bottom, and older ones stack
 	// upward from it. It is where a transient confirmation belongs — the
 	// reader is looking at what they just acted on, not at a corner — and
@@ -143,9 +143,9 @@ type Expired struct{ ID int64 }
 // messages take.
 //
 // The message is collected off gtx.Ops, and mvu's collector is keyed on the
-// exact buffer the frame is being recorded into: a call made from a widget
+// exact buffer the frame is being recorded into: a call made from a layout.Widget
 // recording somewhere else — inside a components/cache.FrameCache body, most of
-// all — is dropped silently. Emit from the widget that owns gtx.Ops.
+// all — is dropped silently. Emit from the layout.Widget that owns gtx.Ops.
 func Notify(gtx layout.Context, level Level, text string) {
 	mvu.MessageOp{Message: Requested{Level: level, Text: text, At: gtx.Now}}.Add(gtx.Ops)
 }
@@ -250,9 +250,9 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -263,7 +263,7 @@ type resolvedTokens struct {
 	style   tokens.TextStyle // the LabelMedium role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 	// elevation is snapshotted so a theme elevation change re-emits the
-	// widget; the base fill resolves through SurfaceAt, which reads the
+	// layout.Widget; the base fill resolves through SurfaceAt, which reads the
 	// default tokens.Elevation scale.
 	elevation tokens.ElevationScale
 	// fade is the trailing fade window, the motion scale's DurSlow stop.
@@ -275,7 +275,7 @@ type resolvedTokens struct {
 // Stack returns an rx.Observable[layout.Widget] that renders Props.Toasts as
 // a positioned column. It holds no state of its own: the queue arrives from
 // the model, and the only thing the frame decides is each toast's alpha.
-// Expiry is not the widget's job — a toast past its Lifetime paints nothing
+// Expiry is not the layout.Widget's job — a toast past its Lifetime paints nothing
 // and waits for the Expired message to take it out of the model.
 func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
@@ -323,7 +323,7 @@ func Stack(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // Render produces a layout.Widget for a fixed []Toast snapshot with
 // pre-resolved tokens. Intended for golden-image testing and static
 // demonstrations; production code should use Stack, which takes the
-// shaper and the same text style off the theme. The returned widget
+// shaper and the same text style off the theme. The returned layout.Widget
 // performs no input handling, no fading, and schedules no invalidation.
 //
 // label is the LabelMedium role's whole text style — typeface, weight,
@@ -433,7 +433,7 @@ const (
 	toastMinHDp  = 36
 )
 
-// paintStack lays out the column of toasts at the canvas anchor
+// paintStack lays out the column of toasts at the frame anchor
 // Props.Position names, each at the alpha its placed entry carries.
 func paintStack(
 	gtx layout.Context,
@@ -463,9 +463,9 @@ func paintStack(
 	case TopLeft, BottomLeft:
 		x = edgePad
 	case BottomCenter:
-		// The column's own middle on the canvas's. Width is already
+		// The column's own middle on the frame's. Width is already
 		// clamped to the space between the two edge margins, so a
-		// canvas too narrow for the full width centres what is left
+		// frame too narrow for the full width centres what is left
 		// rather than overhanging either edge.
 		x = (canvas.X - width) / 2
 	default:
@@ -648,30 +648,30 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 //
 // The number does not bind, which is worth knowing before anyone tunes it.
 // Over the whole seed sweep, both derivations, all four levels and both
-// schemes, asking for 3.0 picks exactly the rungs asking for 4.5 does: step
+// schemes, asking for 3.0 picks exactly the steps asking for 4.5 does: step
 // 500 in a light scheme, never worse than 5.52:1 over the dark chip, and
 // step 400 in a dark scheme, never worse than 7.58:1 over the light one.
-// What chooses the rung is the shape of the role's ramp against a ground
+// What chooses the step is the shape of the role's ramp against a surface
 // built out of the counterpart scheme — see edgeColor — and not this floor.
 const edgeFloor = 4.5
 
-// edgeColor maps Level to the colour of its leading edge: the rung of that
+// edgeColor maps Level to the colour of its leading edge: the step of that
 // level's own ramp nearest the ramp's mid-value step that still clears
 // edgeFloor over the inverse chip (tokens.MarkOn), so the edge flips with
 // light/dark and follows whatever seed, palette or high-contrast variant
 // the theme is emitting.
 //
 // It reads a ramp rather than a pinned base: the pins are tuned to be
-// filled and written on, chosen against the scheme's own grounds, and are
-// on the wrong side of an inverse ground — a dark scheme's pins sit at
+// filled and written on, chosen against the scheme's own surfaces, and are
+// on the wrong side of an inverse surface — a dark scheme's pins sit at
 // L* 82, most of the way to that scheme's own light chip.
 //
-// It asks for a rung near the ramp's middle rather than naming a fixed
-// one, because a single rung cannot read over both schemes' chips at
+// It asks for a step near the ramp's middle rather than naming a fixed
+// one, because a single step cannot read over both schemes' chips at
 // every hue without losing chroma: a light scheme lands on step 500 at
-// all four levels — the rung where each role holds its anchor's full
+// all four levels — the step where each role holds its anchor's full
 // chroma — and a dark scheme is forced to step 400, the nearest-to-middle
-// rung that still reads over its own light chip at all.
+// step that still reads over its own light chip at all.
 //
 // Info reads the info ramp rather than the accent one, so an
 // informational chip's colour says "info" regardless of the brand's own

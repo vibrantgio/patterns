@@ -73,9 +73,9 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -87,7 +87,7 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Feature returns an rx.Observable[layout.Widget] that emits a new widget
+// Feature returns an rx.Observable[layout.Widget] that emits a new one
 // whenever any consumed theme token changes. The grid is purely
 // presentational: cells carry no interaction state, so no per-emission
 // click bookkeeping is needed.

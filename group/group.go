@@ -7,8 +7,8 @@
 // against it: what a group holds stands on the surface the group is in, at
 // that surface's own level. The hairline is the seam of two regions that
 // share one fill, derived to be findable against that fill in either
-// scheme (tokens.ColorTokens.SeamOn), which is the quiet line the platform
-// draws and not the 3:1 mark a graphic carrying meaning owes.
+// scheme (tokens.ColorTokens.SeamOn), which is the understated line the
+// platform draws and not the 3:1 mark a graphic carrying meaning owes.
 //
 // A group wears no role. It is not operated, so it has no emphasis to
 // speak with, and a role-coloured hairline would borrow the accent's
@@ -73,9 +73,9 @@ type Props struct {
 	// theme's shaper, which is built once for the process and shared by
 	// every component reading that typography.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct.
 	Shaper *text.Shaper
 
 	// Level is the level of the surface the group is in. The group draws
@@ -94,7 +94,7 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Group returns an rx.Observable[layout.Widget] that emits a new widget
+// Group returns an rx.Observable[layout.Widget] that emits a new one
 // whenever any consumed theme token changes.
 func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
@@ -172,7 +172,7 @@ func draw(
 }
 
 // labelWidget draws the group's own label: the LabelLarge role in the
-// neutral ramp's low-contrast step, which is the step every quiet label in
+// neutral ramp's low-contrast step, which is the step every understated label in
 // this system is set in. It is not the accent — a group wears no role — and
 // not the Text pin, which would give a section header the weight of the
 // content it names.

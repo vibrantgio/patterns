@@ -101,9 +101,9 @@ type Props struct {
 	// component's map function makes of it. Set it only when this instance
 	// must shape with a different shaper than the theme provides.
 	//
-	// A shaper is not safe to use from two goroutines; Gio lays the widget
-	// forest out on the one goroutine that runs the event loop, which is
-	// what makes sharing it correct. See theme/tokens.Typography.Shaper.
+	// A shaper is not safe to use from two goroutines; Gio lays every
+	// layout.Widget out on the one goroutine that runs the event loop,
+	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 }
 
@@ -120,8 +120,8 @@ type resolvedTokens struct {
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
-// Pricing returns an rx.Observable[layout.Widget] that emits a new
-// widget whenever any consumed theme token changes. CTA click state
+// Pricing returns an rx.Observable[layout.Widget] that emits a new one
+// whenever any consumed theme token changes. CTA click state
 // survives across emissions: one widget.Clickable per tier is allocated
 // once per subscription inside the rx.Defer scope.
 func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -228,7 +228,7 @@ func drawPricing(
 	// Measure each card's natural height, then draw again with every
 	// card's Min.Y set to that max so they share a floor. The Flex
 	// row's own Size.Y is Constrained to the incoming Min and cannot
-	// be the source of that max — an Exact canvas would stretch every
+	// be the source of that max — an Exact frame would stretch every
 	// card to the window.
 	rec := op.Record(gtx.Ops)
 	_, maxH := layoutTiers(gtx, shaper, props, tok, clicks, 0)
@@ -255,7 +255,7 @@ func layoutTiers(
 		i := i
 		children = append(children, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			// Flex forwards the parent's cross-axis Min. An Exact
-			// canvas would stretch every card to the window; drop
+			// frame would stretch every card to the window; drop
 			// that Min, then apply the shared height we measured.
 			if minCardH > 0 {
 				gtx.Constraints.Min.Y = minCardH
@@ -279,7 +279,7 @@ func layoutTiers(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
-// checkInk is the primary ink a tier draws its feature checkmarks in: the
+// checkInk is the primary colour a tier draws its feature checkmarks in: the
 // primary pin when it clears the graphic floor against the surface the
 // checkmark is drawn on, and otherwise the step of the primary ramp that
 // does ([tokens.ColorTokens.InkOn]). A checkmark carries meaning by itself,
@@ -446,7 +446,7 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 // popularBadgeWidget renders "Popular" as a Neutral badge: the developer's
 // word about the tier, which is the only word a card carries. Neutral
 // rather than a role, because the card's own raise is what recommends the
-// tier — a badge shouting Success on top of it would say it twice, in a
+// tier — a badge speaking Success on top of it would say it twice, in a
 // vocabulary that means something else.
 func popularBadgeWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
 	// The badge's fill is derived against the surface it stands on rather

@@ -50,7 +50,7 @@ func markOnly() modal.Props {
 }
 
 // surfaceAndMark locates, in a captured frame, the dialog surface and the
-// ink drawn inside it, and reports the peak contrast that ink reaches against
+// mark drawn inside it, and reports the peak contrast that mark reaches against
 // the surface fill.
 //
 // Both are found by colour rather than by arithmetic. The surface is the
@@ -147,7 +147,7 @@ func TestCloseMarkContrast(t *testing.T) {
 			if mark.Empty() {
 				t.Fatal("no close mark found: the panel's surface is bare")
 			}
-			t.Logf("surface %v, mark %v (%d×%d px), ink %v on fill %v, %.2f:1",
+			t.Logf("surface %v, mark %v (%d×%d px), colour %v on fill %v, %.2f:1",
 				surface, mark, mark.Dx(), mark.Dy(), ink, fill, contrast)
 
 			if contrast < closeMarkFloor {
@@ -161,7 +161,7 @@ func TestCloseMarkContrast(t *testing.T) {
 				t.Errorf("close mark measures %d×%d px, want a square mark", mark.Dx(), mark.Dy())
 			}
 			// It is a mark and not a speck, and this is the assertion that
-			// says so — contrast alone never would, because the ink token is
+			// says so — contrast alone never would, because the mark colour is
 			// the same however little of it gets drawn.
 			//
 			// The floor is the platform's own: a window close control
@@ -264,7 +264,7 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 // TestCloseMarkWashClearsThePerceptibilityFloor pins the third of the
 // ghost affordances at the floor the other two are gated at in
 // components/button: the close mark is a ghost naming tokens.Level2, so
-// the wash it paints under the pointer is that level's own, and a dialog's
+// the state fill it paints under the pointer is that level's own, and a dialog's
 // dismissal is the last control in the system that may dissolve into the
 // surface behind it.
 //
@@ -298,10 +298,10 @@ func TestCloseMarkWashClearsThePerceptibilityFloor(t *testing.T) {
 			}{{"hover", hover}, {"press", press}} {
 				got := themecolor.ContrastRatio(w.wash, fill)
 				if got < tokens.StateFloor {
-					t.Errorf("%s wash %v on the panel surface %v measures %.3f:1, under the %.2f:1 floor",
+					t.Errorf("%s state fill %v on the panel surface %v measures %.3f:1, under the %.2f:1 floor",
 						w.name, w.wash, fill, got, tokens.StateFloor)
 				}
-				t.Logf("%s wash %v on the panel surface %v: %.3f:1", w.name, w.wash, fill, got)
+				t.Logf("%s state fill %v on the panel surface %v: %.3f:1", w.name, w.wash, fill, got)
 			}
 			if step := themecolor.ContrastRatio(press, hover); step <= 1 {
 				t.Errorf("press %v does not lie beyond hover %v", press, hover)

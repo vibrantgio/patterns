@@ -35,7 +35,7 @@ var (
 	sharpRadius = tokens.RadiusScale{}
 )
 
-// fillRect is a simple sharp-edged solid widget used as a slot stand-in
+// fillRect is a simple sharp-edged solid layout.Widget used as a slot stand-in
 // wherever the case is about slot geometry rather than slot content.
 func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
@@ -55,10 +55,10 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// textSlot returns a slot widget that draws s in the given role.
+// textSlot returns a slot layout.Widget that draws s in the given role.
 //
 // Card's Props carries no Shaper because it draws no text of its own: all
-// three slots are caller-supplied widgets, so the typeface inside a card is
+// three slots are caller-supplied layout.Widget values, so the typeface inside a card is
 // settled by whoever builds them. This is that caller. Text slots rather
 // than coloured bars let the goldens show the slot stack absorbing real
 // content — the S3 gaps between surviving slots, and whether anything is
@@ -98,7 +98,7 @@ func slots(t *testing.T, c tokens.ColorTokens) (header, body, footer layout.Widg
 		textSlot(shaper, typo.LabelMedium, c.Primary, 1, "Read the token")
 }
 
-// scene renders w into a canvas-sized constraint. The optional margin
+// scene renders w into a frame-sized constraint. The optional margin
 // leaves the surface the card stands on visible around it.
 func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
@@ -162,7 +162,7 @@ func TestCardGolden(t *testing.T) {
 // its raise and, where the scheme has run out of steps, the seam that raise
 // owes — never a 3:1 outline. Level 0 in the light scheme has a step left,
 // so the card's edge pixels are its own fill; level 1 has none, so they are
-// the seam the raise owes and nothing louder.
+// the seam the raise owes and nothing more pronounced.
 func TestCardEdgeIsNeverAnOutline(t *testing.T) {
 	c := tokens.DefaultLight
 	for _, tc := range []struct {

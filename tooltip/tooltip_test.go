@@ -36,7 +36,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// fixedRect is a sharp-edged solid widget with explicit width and height.
+// fixedRect is a sharp-edged solid layout.Widget with explicit width and height.
 // Used as the Trigger stand-in so the hit rect is predictable and the
 // goldens stay deterministic.
 func fixedRect(c color.NRGBA, widthDp, heightDp float32) layout.Widget {

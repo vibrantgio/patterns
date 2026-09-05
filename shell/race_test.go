@@ -26,7 +26,7 @@ import (
 // it. The dims assertions are secondary; the real check is -race.
 
 // raceHarness subscribes sh on the Goroutine scheduler and returns a
-// getter for the most recent widget, waiting for the first emission
+// getter for the most recent layout.Widget, waiting for the first emission
 // (kick is called each poll to (re-)prod cold Subjects whose first
 // value may precede the subscription).
 func raceHarness(t *testing.T, sh rx.Observable[layout.Widget], kick func()) (latest func() layout.Widget, stop func()) {
@@ -45,7 +45,7 @@ func raceHarness(t *testing.T, sh rx.Observable[layout.Widget], kick func()) (la
 	}
 	if cur.Load() == nil {
 		sub.Unsubscribe()
-		t.Fatal("Shell did not emit a widget")
+		t.Fatal("Shell did not emit a layout.Widget")
 	}
 	latest = func() layout.Widget { return cur.Load().(layout.Widget) }
 	return latest, sub.Unsubscribe
