@@ -2,6 +2,7 @@ package shell
 
 import (
 	"image"
+	"image/color"
 
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
@@ -24,13 +25,24 @@ import (
 // resizes, the aside keeps its width and the main column absorbs the
 // change.
 type asideDragState struct {
-	tag      dragTag
+	tag      asideDragTag
 	pressX   float32 // pointer X at press, in shell-local coords
 	startW   unit.Dp // aside width at press
 	active   bool
 	current  unit.Dp // last seen width (from observable or drag)
 	lastEmit unit.Dp
 	emitted  bool
+}
+
+// asideDragTag is a non-zero-size type so its address is a unique event
+// tag for the aside splitter's pointer hit area.
+type asideDragTag struct{ _ byte }
+
+// seamColor is the semantic Seam token: one step past the Surface
+// fill, so it still registers a pixel delta against Surface on both
+// light and dark schemes.
+func seamColor(c tokens.ColorTokens) color.NRGBA {
+	return c.Seam
 }
 
 func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {

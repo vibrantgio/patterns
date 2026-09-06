@@ -21,10 +21,7 @@ package shell
 
 import (
 	"image"
-	"image/color"
 
-	"gioui.org/io/event"
-	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -34,6 +31,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/patterns/navbar"
+	"github.com/vibrantgio/patterns/splitter"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -48,9 +46,9 @@ const (
 	SidebarHeaderMain Layout = iota
 	// SplitPane renders Left and Right slots abutting a draggable
 	// vertical hairline seam whose position is governed by SplitRatio.
-	// The seam runs the window's whole height, so it is painted one
-	// hairline wide and dragged by a band several times that — see
-	// splitSeamDp and splitGrabDp.
+	// The seam is a patterns/splitter: it runs the window's whole height,
+	// so it is painted one hairline wide and taken by a band several
+	// times that.
 	SplitPane
 	// ThreeColumn renders a navbar across the full width of the top
 	// edge (unlike SidebarHeaderMain, where the sidebar claims the full
@@ -175,28 +173,11 @@ const (
 	// two columns of chrome without ever reaching the window's edge.
 	asideSplitterDp = 6
 
-	// splitSeamDp is what the SplitPane seam paints, and the room it
-	// takes between the panes: a hairline.
-	//
-	// The seam is the one edge in this package that runs the whole cross
-	// axis, top edge to bottom edge. Whatever band an application paints
-	// across the top of its window, the seam crosses it — so the seam's
-	// width is the width of the scar it leaves there, and a thick one
-	// severs the band into two pieces with the window's title marooned on
-	// the smaller of them. Platform splitters are one point for the
-	// same reason: at that width an edge reads as an edge, and anything
-	// wider starts reading as a third column that nothing occupies.
-	splitSeamDp = 1
-
-	// splitGrabDp is the pointer band centred on that hairline.
-	//
-	// Paint and grab are deliberately different sizes. A hairline is what
-	// the eye wants and a poor target for a pointer, so the band reaches
-	// into both panes rather than reserving a gutter of its own, and it is
-	// registered after them — the topmost area takes the hit, which is
-	// what should happen to a press this close to the seam.
-	splitGrabDp = 6
-
+	// minRatio and maxRatio bound the SplitPane's boundary: neither pane
+	// is ever dragged away entirely, so each keeps a twentieth of the
+	// length whatever the other does. The seam between them — its width,
+	// its colour, the band it is taken by — is patterns/splitter's, and it
+	// runs the whole cross axis, top edge to bottom edge.
 	minRatio       = 0.05
 	maxRatio       = 0.95
 	minAsideDp     = 160
@@ -335,21 +316,16 @@ func composeSidebarHeaderMain(sb, nb, main layout.Widget, navbarH unit.Dp) layou
 
 // ---- SplitPane -----------------------------------------------------------
 
-// dragState is captured once per subscription and survives all
-// emissions for the lifetime of the Shell instance.
-type dragState struct {
-	tag      dragTag
-	press    float32 // pointer main-axis position at press, in shell-local coords
-	startR   float32 // ratio at press
-	active   bool
+// splitState is captured once per subscription and survives all
+// emissions for the lifetime of the Shell instance. The splitter owns
+// the hand on the seam; what is left here is the ratio it moves, which
+// is the SplitPane's own idiom and not the splitter's.
+type splitState struct {
+	sp       splitter.State
 	current  float32 // last seen ratio (from observable or drag)
 	lastEmit float32 // last ratio passed to OnSplitChange
 	emitted  bool
 }
-
-// dragTag is a non-zero-size type so its address is a unique event
-// tag for the splitter's pointer hit area.
-type dragTag struct{ _ byte }
 
 func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	ratioObs := props.SplitRatio
@@ -361,7 +337,7 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 	})
 	inputs := rx.CombineLatest2(colorObs, ratioObs)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
-		ds := &dragState{current: 0.5}
+		ds := &splitState{current: 0.5}
 		return rx.Map(inputs, func(next rx.Tuple2[tokens.ColorTokens, float32]) layout.Widget {
 			colors := next.First
 			ext := clampRatio(next.Second)
@@ -370,7 +346,7 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 			axis := props.SplitAxis
 			onChange := props.OnSplitChange
 			// applied defers the external-ratio hand-off to the layout.Widget:
-			// dragState must only ever be touched on the frame goroutine.
+			// splitState must only ever be touched on the frame goroutine.
 			// This projector runs on the rx scheduler, so writing ds here
 			// races with processDrag/drawSplitPane during layout.
 			applied := false
@@ -380,12 +356,12 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 				// back to whatever the caller most recently fed in
 				// mid-drag. An emission arriving mid-drag is applied on
 				// the first frame after release.
-				if !applied && !ds.active {
+				if !applied && !ds.sp.Dragging() {
 					ds.current = ext
 					applied = true
 				}
-				processDrag(gtx, ds, axis, onChange)
-				return drawSplitPane(gtx, ds.current, left, right, colors, ds, axis)
+				processDrag(gtx, ds, axis, colors, onChange)
+				return drawSplitPane(gtx, ds.current, left, right, colors, ds, axis, onChange)
 			}
 		})
 	})
@@ -394,48 +370,65 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 func staticSplitPane(left, right layout.Widget, ratio float32, colors tokens.ColorTokens, axis layout.Axis) layout.Widget {
 	r := clampRatio(ratio)
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawSplitPane(gtx, r, left, right, colors, nil, axis)
+		return drawSplitPane(gtx, r, left, right, colors, nil, axis, nil)
 	}
 }
 
-func processDrag(gtx layout.Context, ds *dragState, axis layout.Axis, onChange func(gtx layout.Context, ratio float32)) {
-	total := float32(axis.Convert(gtx.Constraints.Max).X)
-	if total <= 0 {
-		return
+// processDrag hands this frame's pointer events to the splitter before
+// anything is laid out from the ratio, so that the panes and the seam are
+// drawn at the position the drag reached rather than one frame behind it.
+func processDrag(
+	gtx layout.Context,
+	ds *splitState,
+	axis layout.Axis,
+	colors tokens.ColorTokens,
+	onChange func(gtx layout.Context, ratio float32),
+) {
+	inner, boundary := splitGeometry(gtx, axis, ds.current)
+	ds.sp.Update(gtx, splitProps(gtx, ds, axis, colors, inner, boundary, onChange))
+}
+
+// splitGeometry maps a ratio onto this frame's pixels: the length the two
+// panes share once the seam has taken its own, and the boundary they meet
+// at. The ratio is a fraction of that shared length, so the seam's width
+// comes off it before the split rather than out of one pane.
+func splitGeometry(gtx layout.Context, axis layout.Axis, ratio float32) (inner, boundary int) {
+	inner = max(axis.Convert(gtx.Constraints.Max).X-splitter.SeamWidth(gtx), 0)
+	boundary = min(max(int(float32(inner)*ratio+0.5), 0), inner)
+	return inner, boundary
+}
+
+// splitProps states the splitter for one frame and converts what it
+// reports back into the ratio the SplitPane keeps. A nil state is the
+// static render path: a seam nothing can take hold of.
+func splitProps(
+	gtx layout.Context,
+	ds *splitState,
+	axis layout.Axis,
+	colors tokens.ColorTokens,
+	inner, boundary int,
+	onChange func(gtx layout.Context, ratio float32),
+) splitter.Props {
+	p := splitter.Props{
+		Axis:     axis,
+		Boundary: float32(boundary),
+		Min:      minRatio * float32(inner),
+		Max:      maxRatio * float32(inner),
+		Colors:   colors,
 	}
-	for {
-		e, ok := gtx.Event(pointer.Filter{
-			Target: &ds.tag,
-			Kinds:  pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel,
-		})
-		if !ok {
-			break
-		}
-		pe, ok := e.(pointer.Event)
-		if !ok {
-			continue
-		}
-		switch pe.Kind {
-		case pointer.Press:
-			ds.press = axis.FConvert(pe.Position).X
-			ds.startR = ds.current
-			ds.active = true
-		case pointer.Drag:
-			if !ds.active {
-				continue
-			}
-			delta := axis.FConvert(pe.Position).X - ds.press
-			r := clampRatio(ds.startR + delta/total)
-			ds.current = r
-			if onChange != nil && (!ds.emitted || ds.lastEmit != r) {
-				ds.lastEmit = r
-				ds.emitted = true
-				onChange(gtx, r)
-			}
-		case pointer.Release, pointer.Cancel:
-			ds.active = false
+	if ds == nil || inner <= 0 {
+		return p
+	}
+	p.OnChange = func(at float32) {
+		r := clampRatio(at / float32(inner))
+		ds.current = r
+		if onChange != nil && (!ds.emitted || ds.lastEmit != r) {
+			ds.lastEmit = r
+			ds.emitted = true
+			onChange(gtx, r)
 		}
 	}
+	return p
 }
 
 // drawSplitPane lays the panes along axis: for layout.Horizontal the
@@ -443,45 +436,27 @@ func processDrag(gtx layout.Context, ds *dragState, axis layout.Axis, onChange f
 // layout.Vertical they stack with a horizontal one. Geometry is
 // computed in main-axis terms and mapped back through axis.Convert.
 //
-// The op-stream order is leading pane, trailing pane, seam, grab band.
-// The panes come first because Tab traversal follows the op stream and a
-// reader expects leading before trailing. The seam is painted after both
-// so a pane that overruns its constraints cannot erase it. The grab band
-// comes last because it is the only one of the four whose rectangle
-// overlaps its neighbours: Gio hands a hit to the topmost area covering
-// it and stops there, so registering the band after the panes is what
-// keeps a press two pixels from the seam a drag rather than a click on
-// whatever the pane happens to have put at its edge.
+// The op-stream order is leading pane, trailing pane, splitter. The panes
+// come first because Tab traversal follows the op stream and a reader
+// expects leading before trailing. The splitter comes last because it
+// draws the line the panes abut and puts its hit area over both of them:
+// Gio hands a hit to the topmost area covering it and stops there, so
+// laying the splitter out after the panes is what keeps a press two
+// pixels from the seam a drag rather than a click on whatever the pane
+// happens to have put at its edge.
 func drawSplitPane(
 	gtx layout.Context,
 	ratio float32,
 	left, right layout.Widget,
 	colors tokens.ColorTokens,
-	ds *dragState,
+	ds *splitState,
 	axis layout.Axis,
+	onChange func(gtx layout.Context, ratio float32),
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	total := axis.Convert(size).X
 	cross := axis.Convert(size).Y
-	seamPx := gtx.Dp(unit.Dp(splitSeamDp))
-	if seamPx < 1 {
-		seamPx = 1
-	}
-	grabPx := gtx.Dp(unit.Dp(splitGrabDp))
-	if grabPx < seamPx {
-		grabPx = seamPx
-	}
-	inner := total - seamPx
-	if inner < 0 {
-		inner = 0
-	}
-	leftPx := int(float32(inner)*ratio + 0.5)
-	if leftPx < 0 {
-		leftPx = 0
-	}
-	if leftPx > inner {
-		leftPx = inner
-	}
+	seamPx := splitter.SeamWidth(gtx)
+	inner, leftPx := splitGeometry(gtx, axis, ratio)
 	rightPx := inner - leftPx
 
 	// Backstop so the seam is visible even if Left/Right are nil. It is the
@@ -508,45 +483,14 @@ func drawSplitPane(
 		st.Pop()
 	}
 
-	// Seam: the hairline the panes abut, drawn the full cross axis.
-	seamRect := image.Rectangle{
-		Min: axis.Convert(image.Pt(leftPx, 0)),
-		Max: axis.Convert(image.Pt(leftPx+seamPx, cross)),
-	}
-	paint.FillShape(gtx.Ops, seamColor(colors), clip.Rect(seamRect).Op())
-
-	// Grab band: wider than the seam, centred on it, over both panes.
+	// The seam the panes abut, and the hand on it.
+	var sp *splitter.State
 	if ds != nil {
-		grabMin := leftPx - (grabPx-seamPx)/2
-		grabMax := grabMin + grabPx
-		if grabMin < 0 {
-			grabMin = 0
-		}
-		if grabMax > total {
-			grabMax = total
-		}
-		grabRect := image.Rectangle{
-			Min: axis.Convert(image.Pt(grabMin, 0)),
-			Max: axis.Convert(image.Pt(grabMax, cross)),
-		}
-		area := clip.Rect(grabRect).Push(gtx.Ops)
-		event.Op(gtx.Ops, &ds.tag)
-		cursor := pointer.CursorColResize
-		if axis == layout.Vertical {
-			cursor = pointer.CursorRowResize
-		}
-		cursor.Add(gtx.Ops)
-		area.Pop()
+		sp = &ds.sp
 	}
+	sp.Layout(gtx, splitProps(gtx, ds, axis, colors, inner, leftPx, onChange))
 
 	return layout.Dimensions{Size: size}
-}
-
-// seamColor is the semantic Seam token: one step past the Surface
-// fill, so it still registers a pixel delta against Surface on both
-// light and dark schemes.
-func seamColor(c tokens.ColorTokens) color.NRGBA {
-	return c.Seam
 }
 
 // ---- helpers -------------------------------------------------------------
