@@ -32,19 +32,19 @@ const (
 	shmW, shmH       = 480, 256 // sidebar-header-main frame
 	splitW, splitH   = 480, 128 // split-pane frame
 	vsplitW, vsplitH = 128, 480 // vertical-axis split-pane frame
-	dragCanvasW      = 200
-	dragCanvasH      = 100
-	tabCanvasW       = 480
-	tabCanvasH       = 256
+	dragFrameW       = 200
+	dragFrameH       = 100
+	tabFrameW        = 480
+	tabFrameH        = 256
 )
 
 var (
 	shmSize    = image.Pt(shmW, shmH)
 	splitSize  = image.Pt(splitW, splitH)
 	vsplitSize = image.Pt(vsplitW, vsplitH)
-	dragSize   = image.Pt(dragCanvasW, dragCanvasH)
-	vdragSize  = image.Pt(dragCanvasH, dragCanvasW) // 100×200: tall frame for Y drags
-	tabSize    = image.Pt(tabCanvasW, tabCanvasH)
+	dragSize   = image.Pt(dragFrameW, dragFrameH)
+	vdragSize  = image.Pt(dragFrameH, dragFrameW) // 100×200: tall frame for Y drags
+	tabSize    = image.Pt(tabFrameW, tabFrameH)
 )
 
 // defaultShaper returns the shaper every golden here draws with: the default

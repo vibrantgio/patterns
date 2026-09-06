@@ -395,7 +395,7 @@ func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, t
 	raise := tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
 	paint.FillShape(gtx.Ops, raise.Fill, rrect.Op(gtx.Ops))
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, raise.Fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, outline.Color(tok.color, raise.Fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
 
 	offX := (w - labelDims.Size.X) / 2
 	offY := (h - labelDims.Size.Y) / 2

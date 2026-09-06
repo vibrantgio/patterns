@@ -273,7 +273,7 @@ func drawPopover(
 	st *popoverState,
 	openNow, live bool,
 ) layout.Dimensions {
-	canvas := gtx.Constraints.Max
+	frame := gtx.Constraints.Max
 	r := gtx.Dp(unit.Dp(tok.radius.Md))
 	pad := gtx.Dp(unit.Dp(tok.spacing.S3))
 	gap := gtx.Dp(unit.Dp(tok.spacing.S2))
@@ -284,13 +284,13 @@ func drawPopover(
 	//    basis for the surface's position and for where the tail points.
 	anchorMacro := op.Record(gtx.Ops)
 	anchorGtx := gtx
-	anchorGtx.Constraints = layout.Constraints{Max: canvas}
+	anchorGtx.Constraints = layout.Constraints{Max: frame}
 	var anchorDims layout.Dimensions
 	if props.Anchor != nil {
 		anchorDims = props.Anchor(anchorGtx)
 	}
 	anchorOps := anchorMacro.Stop()
-	anchorPos := image.Pt(alignX(props.Align, canvas.X, anchorDims.Size.X), (canvas.Y-anchorDims.Size.Y)/2)
+	anchorPos := image.Pt(alignX(props.Align, frame.X, anchorDims.Size.X), (frame.Y-anchorDims.Size.Y)/2)
 	anchorRect := image.Rectangle{Min: anchorPos, Max: anchorPos.Add(anchorDims.Size)}
 
 	// 2. If open, record the content into a macro to measure its dims;
@@ -303,7 +303,7 @@ func drawPopover(
 	if openNow {
 		contentMacro := op.Record(gtx.Ops)
 		contentGtx := gtx
-		contentGtx.Constraints = layout.Constraints{Max: image.Pt(canvas.X/2, canvas.Y/2)}
+		contentGtx.Constraints = layout.Constraints{Max: image.Pt(frame.X/2, frame.Y/2)}
 		if props.Content != nil {
 			contentDims = props.Content(contentGtx)
 		}
@@ -340,7 +340,7 @@ func drawPopover(
 			y := anchorMidY - surfH/2
 			surfaceRect = image.Rect(x, y, x+surfW, y+surfH)
 		}
-		surfaceRect = clampToCanvas(surfaceRect, canvas, props.Placement)
+		surfaceRect = clampToFrame(surfaceRect, frame, props.Placement)
 	}
 
 	// 3. Outside-press absorber. The frame is the room this popover may
@@ -352,7 +352,7 @@ func drawPopover(
 		margin := gtx.Dp(outsideMargin)
 		outsideClip := clip.Rect{
 			Min: image.Pt(-margin, -margin),
-			Max: image.Pt(canvas.X+margin, canvas.Y+margin),
+			Max: image.Pt(frame.X+margin, frame.Y+margin),
 		}.Push(gtx.Ops)
 		event.Op(gtx.Ops, &st.outsideTag)
 		outsideClip.Pop()
@@ -383,7 +383,7 @@ func drawPopover(
 		// The surface's edge is derived against the level it circles — the
 		// same Level3 the fill is painted at, named once for both, and the
 		// tail's own edge is the same stroke colour for the same reason.
-		edge := outline.Ink(tok.color, tok.color.SurfaceAt(tokens.Level3))
+		edge := outline.Color(tok.color, tok.color.SurfaceAt(tokens.Level3))
 		stroke := float32(gtx.Dp(strokeWidth))
 		surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
 		surfRRect := clip.RRect{
@@ -412,15 +412,15 @@ func drawPopover(
 		processInput(gtx, props, st)
 	}
 
-	return layout.Dimensions{Size: canvas}
+	return layout.Dimensions{Size: frame}
 }
 
-// alignX is where across a frame of width canvasW a shape of width shapeW
+// alignX is where across a frame of width frameW a shape of width shapeW
 // stands, for each Alignment. A shape wider than the frame starts at the
 // leading edge whatever the alignment says, because there is no room to
 // stand it anywhere else.
-func alignX(a Alignment, canvasW, shapeW int) int {
-	slack := canvasW - shapeW
+func alignX(a Alignment, frameW, shapeW int) int {
+	slack := frameW - shapeW
 	if slack <= 0 {
 		return 0
 	}
@@ -434,7 +434,7 @@ func alignX(a Alignment, canvasW, shapeW int) int {
 	}
 }
 
-// clampToCanvas nudges the surface back inside the frame along the axis the
+// clampToFrame nudges the surface back inside the frame along the axis the
 // placement does not travel on — the axis on which leaving the frame is an
 // overflow rather than the point. The placement axis is left alone: a
 // Bottom-placed surface is meant to hang below the frame.
@@ -444,27 +444,27 @@ func alignX(a Alignment, canvasW, shapeW int) int {
 // the other, and the caller that cut its frame to the anchor has said
 // nothing about the room it has. The tail is aimed at the anchor rather than
 // at the surface, so it keeps pointing where it did through the nudge.
-func clampToCanvas(surface image.Rectangle, canvas image.Point, p Placement) image.Rectangle {
+func clampToFrame(surface image.Rectangle, frame image.Point, p Placement) image.Rectangle {
 	switch p {
 	case Top, Bottom:
-		if surface.Dx() > canvas.X {
+		if surface.Dx() > frame.X {
 			return surface
 		}
 		if surface.Min.X < 0 {
 			return surface.Add(image.Pt(-surface.Min.X, 0))
 		}
-		if surface.Max.X > canvas.X {
-			return surface.Add(image.Pt(canvas.X-surface.Max.X, 0))
+		if surface.Max.X > frame.X {
+			return surface.Add(image.Pt(frame.X-surface.Max.X, 0))
 		}
 	case Left, Right:
-		if surface.Dy() > canvas.Y {
+		if surface.Dy() > frame.Y {
 			return surface
 		}
 		if surface.Min.Y < 0 {
 			return surface.Add(image.Pt(0, -surface.Min.Y))
 		}
-		if surface.Max.Y > canvas.Y {
-			return surface.Add(image.Pt(0, canvas.Y-surface.Max.Y))
+		if surface.Max.Y > frame.Y {
+			return surface.Add(image.Pt(0, frame.Y-surface.Max.Y))
 		}
 	}
 	return surface

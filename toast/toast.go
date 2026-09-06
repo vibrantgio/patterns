@@ -442,12 +442,12 @@ func paintStack(
 	tok resolvedTokens,
 	items []placed,
 ) layout.Dimensions {
-	canvas := gtx.Constraints.Max
+	frame := gtx.Constraints.Max
 	edgePad := gtx.Dp(unit.Dp(tok.spacing.S4))
 	gap := gtx.Dp(unit.Dp(tok.spacing.S2))
 	width := gtx.Dp(unit.Dp(toastWidthDp))
-	if width > canvas.X-2*edgePad {
-		width = canvas.X - 2*edgePad
+	if width > frame.X-2*edgePad {
+		width = frame.X - 2*edgePad
 		if width < 0 {
 			width = 0
 		}
@@ -467,9 +467,9 @@ func paintStack(
 		// clamped to the space between the two edge margins, so a
 		// frame too narrow for the full width centres what is left
 		// rather than overhanging either edge.
-		x = (canvas.X - width) / 2
+		x = (frame.X - width) / 2
 	default:
-		x = canvas.X - edgePad - width
+		x = frame.X - edgePad - width
 	}
 
 	// Render order: newest nearest the anchored edge. items[len-1] is
@@ -495,7 +495,7 @@ func paintStack(
 		toastGtx := gtx
 		toastGtx.Constraints = layout.Constraints{
 			Min: image.Pt(width, gtx.Dp(unit.Dp(toastMinHDp))),
-			Max: image.Pt(width, canvas.Y),
+			Max: image.Pt(width, frame.Y),
 		}
 		dims := paintToast(toastGtx, shaper, tok, items[idx])
 		macros[vis] = macro.Stop()
@@ -513,7 +513,7 @@ func paintStack(
 				total += gap
 			}
 		}
-		y = canvas.Y - edgePad - total
+		y = frame.Y - edgePad - total
 	}
 
 	for vis := range order {
@@ -523,7 +523,7 @@ func paintStack(
 		y += heights[vis] + gap
 	}
 
-	return layout.Dimensions{Size: canvas}
+	return layout.Dimensions{Size: frame}
 }
 
 // paintToast paints one inverse chip sized to its content: a Level3 cast

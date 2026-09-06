@@ -97,7 +97,7 @@ func TestHiddenTakesNoWidth(t *testing.T) {
 	img := golden.Capture(t, windowSize, scene(w, backdrop))
 	for x := 0; x < windowW; x++ {
 		for y := 0; y < windowH; y++ {
-			if got := img.RGBAAt(x, y); !sameInk(got, backdrop) {
+			if got := img.RGBAAt(x, y); !sameColor(got, backdrop) {
 				t.Fatalf("a dismissed pane painted %v at (%d,%d); the window shows the bare backdrop", got, x, y)
 			}
 		}
@@ -190,7 +190,7 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 			lo, hi := -1, -1
 			y := pane.StripDp / 2
 			for x := 0; x < size.X; x++ {
-				if sameInk(img.RGBAAt(x, y), mark) {
+				if sameColor(img.RGBAAt(x, y), mark) {
 					if lo < 0 {
 						lo = x
 					}
@@ -204,7 +204,7 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 	}
 }
 
-// TestSeamInkIsThePlatformsWhisper pins the derivation of the pane's own
+// TestSeamColorIsThePlatformsWhisper pins the derivation of the pane's own
 // edge: how far it stands from the fill it is drawn on, which way it goes,
 // and that it is a whisper rather than a mark.
 //
@@ -214,21 +214,21 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 // lands on that ratio against the fill in BOTH schemes, and it lands
 // nowhere near the 3:1 graphic floor an object's outline is derived to
 // elsewhere in the system.
-func TestSeamInkIsThePlatformsWhisper(t *testing.T) {
+func TestSeamColorIsThePlatformsWhisper(t *testing.T) {
 	const tolerance = 0.02 // eight bits' worth of slack, no more
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fill := pane.Surface(tc.colors)
-			ink := pane.SeamInk(tc.colors)
-			got := vgcolor.ContrastRatio(ink, fill)
+			seam := pane.SeamColor(tc.colors)
+			got := vgcolor.ContrastRatio(seam, fill)
 			if got < pane.SeamRatio-tolerance || got > pane.SeamRatio+tolerance {
 				t.Errorf("the pane's edge stands %.3f:1 off its fill (%v on %v), want the measured %.2f:1",
-					got, ink, fill, pane.SeamRatio)
+					got, seam, fill, pane.SeamRatio)
 			}
-			towardInk := lightness(tc.colors.Text) > lightness(fill)
-			if lighter := lightness(ink) > lightness(fill); lighter != towardInk {
+			towardForeground := lightness(tc.colors.Text) > lightness(fill)
+			if lighter := lightness(seam) > lightness(fill); lighter != towardForeground {
 				t.Errorf("the pane's edge is %v against a fill of %v and a foreground of %v; the edge steps toward the foreground",
-					ink, fill, tc.colors.Text)
+					seam, fill, tc.colors.Text)
 			}
 			if got >= 3.0 {
 				t.Errorf("the pane's edge reads %.2f:1, at or over the graphic floor — this is a seam, not a mark", got)
@@ -270,7 +270,7 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 			}
 			backdrop := tc.colors.SurfaceAt(tokens.LevelBackdrop)
 			img := golden.Capture(t, windowSize, scene(w, backdrop))
-			ink, fill := pane.SeamInk(tc.colors), pane.Surface(tc.colors)
+			seam, fill := pane.SeamColor(tc.colors), pane.Surface(tc.colors)
 			// A row clear of the corners' arcs: the middle of the strip.
 			y := bounds.Min.Y + pane.StripDp/2
 			for _, probe := range []struct {
@@ -280,10 +280,10 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 				{"leading", bounds.Min.X, bounds.Min.X + pane.SeamDp},
 				{"trailing", bounds.Max.X - pane.SeamDp, bounds.Max.X - pane.SeamDp - 1},
 			} {
-				if got := img.RGBAAt(probe.edge, y); !sameInk(got, ink) {
-					t.Errorf("the pane's %s edge at x=%d draws %v, want the seam %v", probe.what, probe.edge, got, ink)
+				if got := img.RGBAAt(probe.edge, y); !sameColor(got, seam) {
+					t.Errorf("the pane's %s edge at x=%d draws %v, want the seam %v", probe.what, probe.edge, got, seam)
 				}
-				if got := img.RGBAAt(probe.in, y); !sameInk(got, fill) {
+				if got := img.RGBAAt(probe.in, y); !sameColor(got, fill) {
 					t.Errorf("one pixel inside the pane's %s edge draws %v, want the chrome level %v — the hairline is wider than a hairline",
 						probe.what, got, fill)
 				}
@@ -291,7 +291,7 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 			// The gap the pane is set into, its whole height: bare backdrop.
 			for x := 0; x < bounds.Min.X; x++ {
 				for y := 0; y < windowH; y++ {
-					if got := img.RGBAAt(x, y); !sameInk(got, backdrop) {
+					if got := img.RGBAAt(x, y); !sameColor(got, backdrop) {
 						t.Fatalf("the gap at (%d,%d) draws %v, want the backdrop %v — the pane is casting something onto the plane it stands on",
 							x, y, got, backdrop)
 					}
@@ -301,9 +301,9 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 	}
 }
 
-// sameInk compares two colours with one step of slack per channel, which
+// sameColor compares two colours with one step of slack per channel, which
 // is what a rounded fill's straight runs come back as.
-func sameInk(got color.RGBA, want color.NRGBA) bool {
+func sameColor(got color.RGBA, want color.NRGBA) bool {
 	d := func(a, b uint8) int {
 		if a > b {
 			return int(a) - int(b)

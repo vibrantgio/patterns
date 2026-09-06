@@ -222,7 +222,7 @@ func drawTooltip(
 	st *tooltipState,
 	live bool,
 ) layout.Dimensions {
-	canvas := gtx.Constraints.Max
+	frame := gtx.Constraints.Max
 
 	// 1. Record the trigger into a macro to measure its dims; centre it
 	//    on the frame. The trigger's centred rect is the basis for both
@@ -230,13 +230,13 @@ func drawTooltip(
 	//    positioning math below.
 	triggerMacro := op.Record(gtx.Ops)
 	triggerGtx := gtx
-	triggerGtx.Constraints = layout.Constraints{Max: canvas}
+	triggerGtx.Constraints = layout.Constraints{Max: frame}
 	var triggerDims layout.Dimensions
 	if props.Trigger != nil {
 		triggerDims = props.Trigger(triggerGtx)
 	}
 	triggerOps := triggerMacro.Stop()
-	triggerPos := image.Pt((canvas.X-triggerDims.Size.X)/2, (canvas.Y-triggerDims.Size.Y)/2)
+	triggerPos := image.Pt((frame.X-triggerDims.Size.X)/2, (frame.Y-triggerDims.Size.Y)/2)
 	triggerRect := image.Rectangle{Min: triggerPos, Max: triggerPos.Add(triggerDims.Size)}
 
 	// 2. Drain hover and focus events. The drains must happen before the
@@ -309,7 +309,7 @@ func drawTooltip(
 		drawSurface(gtx, shaper, props, tok, triggerRect)
 	}
 
-	return layout.Dimensions{Size: canvas}
+	return layout.Dimensions{Size: frame}
 }
 
 // drawStatic is the input-free variant used by Render: skips event
@@ -322,16 +322,16 @@ func drawStatic(
 	tok resolvedTokens,
 	shown bool,
 ) layout.Dimensions {
-	canvas := gtx.Constraints.Max
+	frame := gtx.Constraints.Max
 	triggerMacro := op.Record(gtx.Ops)
 	triggerGtx := gtx
-	triggerGtx.Constraints = layout.Constraints{Max: canvas}
+	triggerGtx.Constraints = layout.Constraints{Max: frame}
 	var triggerDims layout.Dimensions
 	if props.Trigger != nil {
 		triggerDims = props.Trigger(triggerGtx)
 	}
 	triggerOps := triggerMacro.Stop()
-	triggerPos := image.Pt((canvas.X-triggerDims.Size.X)/2, (canvas.Y-triggerDims.Size.Y)/2)
+	triggerPos := image.Pt((frame.X-triggerDims.Size.X)/2, (frame.Y-triggerDims.Size.Y)/2)
 	triggerRect := image.Rectangle{Min: triggerPos, Max: triggerPos.Add(triggerDims.Size)}
 
 	triggerOff := op.Offset(triggerPos).Push(gtx.Ops)
@@ -341,7 +341,7 @@ func drawStatic(
 	if shown {
 		drawSurface(gtx, shaper, props, tok, triggerRect)
 	}
-	return layout.Dimensions{Size: canvas}
+	return layout.Dimensions{Size: frame}
 }
 
 // drawSurface paints the rounded tooltip bubble with the Text label
@@ -356,7 +356,7 @@ func drawSurface(
 	tok resolvedTokens,
 	triggerRect image.Rectangle,
 ) {
-	canvas := gtx.Constraints.Max
+	frame := gtx.Constraints.Max
 	r := gtx.Dp(unit.Dp(tok.radius.Sm))
 	padH := gtx.Dp(unit.Dp(tok.spacing.S2))
 	padV := gtx.Dp(unit.Dp(tok.spacing.S1))
@@ -368,7 +368,7 @@ func drawSurface(
 	paint.ColorOp{Color: tok.color.Surface}.Add(gtx.Ops)
 	material := mColor.Stop()
 	labelGtx := gtx
-	labelGtx.Constraints = layout.Constraints{Max: image.Pt(canvas.X*3/4, canvas.Y/4)}
+	labelGtx.Constraints = layout.Constraints{Max: image.Pt(frame.X*3/4, frame.Y/4)}
 	labelGtx.Constraints.Min = image.Point{}
 	// Shape with the LabelSmall role's typeface, weight, size and line
 	// height. Zero fields (the legacy Render path synthesizes a size-only

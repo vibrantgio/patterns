@@ -24,9 +24,9 @@ import (
 // — so the equivalent inspection happens here, against an Arbiter the test
 // owns.
 
-const intCanvasW, intCanvasH = 320, 240
+const intFrameW, intFrameH = 320, 240
 
-var intCanvas = image.Pt(intCanvasW, intCanvasH)
+var intFrame = image.Pt(intFrameW, intFrameH)
 
 func intTrigger() layout.Widget {
 	c := color.NRGBA{R: 80, G: 160, B: 220, A: 255}
@@ -83,18 +83,18 @@ func TestHoverEntryAfterDelayShows(t *testing.T) {
 	t0 := time.Unix(1700000000, 0)
 
 	// Frame 1: register the hover and focus tags. Nothing in the queue yet.
-	driveFrameAt(w, ops, r, intCanvas, t0)
+	driveFrameAt(w, ops, r, intFrame, t0)
 	if arb.isTop(st) {
 		t.Fatalf("tooltip visible before any hover event; want hidden")
 	}
 
 	// Queue a pointer.Move at the frame centre (inside the trigger). The
 	// router synthesizes pointer.Enter into the hover gesture next frame.
-	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intCanvasW/2, intCanvasH/2), Source: pointer.Mouse})
+	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intFrameW/2, intFrameH/2), Source: pointer.Mouse})
 
 	// Frame 2 at t0: hover Enter consumed, st.entryAt = t0, delay not
 	// elapsed → still hidden.
-	driveFrameAt(w, ops, r, intCanvas, t0)
+	driveFrameAt(w, ops, r, intFrame, t0)
 	if st.entryAt.IsZero() {
 		t.Fatalf("hover Enter did not start the dwell")
 	}
@@ -103,7 +103,7 @@ func TestHoverEntryAfterDelayShows(t *testing.T) {
 	}
 
 	// Frame 3 at t0+delay+1ms: delay elapsed → the tooltip claims top.
-	driveFrameAt(w, ops, r, intCanvas, t0.Add(delay).Add(time.Millisecond))
+	driveFrameAt(w, ops, r, intFrame, t0.Add(delay).Add(time.Millisecond))
 	if !arb.isTop(st) {
 		t.Fatalf("tooltip did not take arbitration top after the delay elapsed")
 	}
@@ -122,10 +122,10 @@ func TestHoverExitHides(t *testing.T) {
 	tShown := t0.Add(delay).Add(time.Millisecond)
 
 	// Bring up the tooltip via the same sequence as (a).
-	driveFrameAt(w, ops, r, intCanvas, t0)
-	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intCanvasW/2, intCanvasH/2), Source: pointer.Mouse})
-	driveFrameAt(w, ops, r, intCanvas, t0)
-	driveFrameAt(w, ops, r, intCanvas, tShown)
+	driveFrameAt(w, ops, r, intFrame, t0)
+	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intFrameW/2, intFrameH/2), Source: pointer.Mouse})
+	driveFrameAt(w, ops, r, intFrame, t0)
+	driveFrameAt(w, ops, r, intFrame, tShown)
 	if !arb.isTop(st) {
 		t.Fatalf("precondition failed: tooltip not shown after entry+delay")
 	}
@@ -133,7 +133,7 @@ func TestHoverExitHides(t *testing.T) {
 	// Move the pointer outside the trigger. The router emits Leave; the
 	// gesture flips to !hovered → active goes false → top is released.
 	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(4, 4), Source: pointer.Mouse})
-	driveFrameAt(w, ops, r, intCanvas, tShown.Add(time.Millisecond))
+	driveFrameAt(w, ops, r, intFrame, tShown.Add(time.Millisecond))
 	if arb.isTop(st) {
 		t.Fatalf("tooltip still holds arbitration top after hover exit")
 	}
@@ -158,10 +158,10 @@ func TestSecondTooltipDismissesFirst(t *testing.T) {
 	tShown := t0.Add(delay).Add(time.Millisecond)
 
 	// Bring A up the same way.
-	driveFrameAt(w, ops, r, intCanvas, t0)
-	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intCanvasW/2, intCanvasH/2), Source: pointer.Mouse})
-	driveFrameAt(w, ops, r, intCanvas, t0)
-	driveFrameAt(w, ops, r, intCanvas, tShown)
+	driveFrameAt(w, ops, r, intFrame, t0)
+	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intFrameW/2, intFrameH/2), Source: pointer.Mouse})
+	driveFrameAt(w, ops, r, intFrame, t0)
+	driveFrameAt(w, ops, r, intFrame, tShown)
 	if !arb.isTop(st) {
 		t.Fatalf("precondition failed: tooltip A not shown after entry+delay")
 	}
@@ -180,7 +180,7 @@ func TestSecondTooltipDismissesFirst(t *testing.T) {
 	now := tShown
 	for i := 0; i < 3; i++ {
 		now = now.Add(time.Millisecond)
-		driveFrameAt(w, ops, r, intCanvas, now)
+		driveFrameAt(w, ops, r, intFrame, now)
 		if arb.isTop(st) {
 			t.Fatalf("A took arbitration top back on frame %d while still hovered; the dwell latch did not hold", i+1)
 		}
@@ -190,11 +190,11 @@ func TestSecondTooltipDismissesFirst(t *testing.T) {
 	// only for this dwell.
 	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(4, 4), Source: pointer.Mouse})
 	now = now.Add(time.Millisecond)
-	driveFrameAt(w, ops, r, intCanvas, now)
-	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intCanvasW/2, intCanvasH/2), Source: pointer.Mouse})
+	driveFrameAt(w, ops, r, intFrame, now)
+	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intFrameW/2, intFrameH/2), Source: pointer.Mouse})
 	now = now.Add(time.Millisecond)
-	driveFrameAt(w, ops, r, intCanvas, now)
-	driveFrameAt(w, ops, r, intCanvas, now.Add(delay).Add(time.Millisecond))
+	driveFrameAt(w, ops, r, intFrame, now)
+	driveFrameAt(w, ops, r, intFrame, now.Add(delay).Add(time.Millisecond))
 	if !arb.isTop(st) {
 		t.Fatalf("a fresh hover entry did not rearm the dwell; A never showed again")
 	}
@@ -217,10 +217,10 @@ func TestOvertakenTooltipDoesNotStealBackInTheSameFrame(t *testing.T) {
 	t0 := time.Unix(1700000000, 0)
 	tShown := t0.Add(delay).Add(time.Millisecond)
 
-	driveFrameAt(w, ops, r, intCanvas, t0)
-	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intCanvasW/2, intCanvasH/2), Source: pointer.Mouse})
-	driveFrameAt(w, ops, r, intCanvas, t0)
-	driveFrameAt(w, ops, r, intCanvas, tShown)
+	driveFrameAt(w, ops, r, intFrame, t0)
+	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(intFrameW/2, intFrameH/2), Source: pointer.Mouse})
+	driveFrameAt(w, ops, r, intFrame, t0)
+	driveFrameAt(w, ops, r, intFrame, tShown)
 	if !arb.isTop(st) {
 		t.Fatalf("precondition failed: tooltip A not shown after entry+delay")
 	}
@@ -234,7 +234,7 @@ func TestOvertakenTooltipDoesNotStealBackInTheSameFrame(t *testing.T) {
 			arb.claim(&other)
 			return w(gtx)
 		}
-		driveFrameAt(frame, ops, r, intCanvas, now)
+		driveFrameAt(frame, ops, r, intFrame, now)
 		if arb.isTop(st) {
 			t.Fatalf("frame %d: A took top back in the same frame the claimant took it; both would paint", i)
 		}

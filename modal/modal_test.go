@@ -30,11 +30,11 @@ import (
 )
 
 const (
-	canvasW, canvasH = 320, 240
+	frameW, frameH = 320, 240
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism.
 	sharpRadius = tokens.RadiusScale{}
@@ -147,7 +147,7 @@ func TestModalGolden(t *testing.T) {
 				Shaper:   shaper,
 			}
 			w := modal.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -163,8 +163,8 @@ func TestModalOpenAndClosedDiffer(t *testing.T) {
 	open := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	closed := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, false, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
-	imgOpen := golden.Capture(t, canvasSize, scene(open, bg))
-	imgClosed := golden.Capture(t, canvasSize, scene(closed, bg))
+	imgOpen := golden.Capture(t, frameSize, scene(open, bg))
+	imgClosed := golden.Capture(t, frameSize, scene(closed, bg))
 	if n := golden.PixelDiff(imgOpen, imgClosed); n == 0 {
 		t.Error("open and closed modal render identically; expected scrim + surface in open")
 	}
@@ -205,7 +205,7 @@ func TestModalCompactGolden(t *testing.T) {
 	if w == nil {
 		t.Fatal("Modal did not emit an initial layout.Widget")
 	}
-	golden.Render(t, "light-compact-open", canvasSize, scene(w, lightBG))
+	golden.Render(t, "light-compact-open", frameSize, scene(w, lightBG))
 }
 
 // ---- Interaction tests ----
@@ -289,12 +289,12 @@ func TestEscapeInvokesOnClose(t *testing.T) {
 	ops := new(op.Ops)
 
 	// Frame 1: register the tags and request initial focus.
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	// Frame 2: focus has been applied; the close button now holds focus.
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	if closed != 1 {
 		t.Errorf("OnClose call count after Escape = %d, want 1", closed)
@@ -319,8 +319,8 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 
 	// Frame 1 registers the tags + requests initial focus; frame 2 applies it,
 	// leaving the close button focused (same setup as the Escape test).
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// widget.Clickable registers a click on Return/Space release after a
 	// matching press while focused — queue both in one frame.
@@ -328,7 +328,7 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 		key.Event{Name: key.NameReturn, State: key.Press},
 		key.Event{Name: key.NameReturn, State: key.Release},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	if closed != 1 {
 		t.Errorf("OnClose call count after close-button activation = %d, want 1", closed)
@@ -352,8 +352,8 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// (1) Press near the top-left corner — guaranteed scrim, never surface.
 	corner := f32.Pt(4, 4)
@@ -361,7 +361,7 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if closed == 0 {
 		t.Fatalf("scrim click did not invoke OnClose; closed = %d", closed)
 	}
@@ -369,12 +369,12 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 
 	// (2) Press at the frame centre — guaranteed inside the surface — must
 	// not invoke OnClose.
-	centre := f32.Pt(canvasW/2, canvasH/2)
+	centre := f32.Pt(frameW/2, frameH/2)
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: centre, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: centre, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if closed != scrimClicks {
 		t.Errorf("surface click bled through to scrim; OnClose went from %d to %d", scrimClicks, closed)
 	}
@@ -425,20 +425,20 @@ func TestTabTrapsFocusWithinModal(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	driveFrame(composed, ops, r, canvasSize)
-	driveFrame(composed, ops, r, canvasSize) // initial focus is applied.
+	driveFrame(composed, ops, r, frameSize)
+	driveFrame(composed, ops, r, frameSize) // initial focus is applied.
 
 	// At this point the modal's close button holds focus. Press Tab N+1
 	// times — far more than the number of focus stops in the modal — and
 	// assert focus is still NOT on the background tag.
 	for i := 0; i < 12; i++ {
 		r.Queue(key.Event{Name: key.NameTab, State: key.Press})
-		driveFrame(composed, ops, r, canvasSize)
+		driveFrame(composed, ops, r, frameSize)
 	}
 
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(canvasSize),
+		Constraints: layout.Exact(frameSize),
 		Ops:         ops,
 		Source:      r.Source(),
 	}
@@ -482,17 +482,17 @@ func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	driveFrame(composed, ops, r, canvasSize)
-	driveFrame(composed, ops, r, canvasSize)
+	driveFrame(composed, ops, r, frameSize)
+	driveFrame(composed, ops, r, frameSize)
 
 	for i := 0; i < 12; i++ {
 		r.Queue(key.Event{Name: key.NameTab, Modifiers: key.ModShift, State: key.Press})
-		driveFrame(composed, ops, r, canvasSize)
+		driveFrame(composed, ops, r, frameSize)
 	}
 
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(canvasSize),
+		Constraints: layout.Exact(frameSize),
 		Ops:         ops,
 		Source:      r.Source(),
 	}
@@ -520,15 +520,15 @@ func TestActionOwnsFocusTag(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveFrame(w, ops, r, canvasSize) // register the tags + request initial focus
-	driveFrame(w, ops, r, canvasSize) // initial focus → close button
+	driveFrame(w, ops, r, frameSize) // register the tags + request initial focus
+	driveFrame(w, ops, r, frameSize) // initial focus → close button
 
 	r.Queue(key.Event{Name: key.NameTab, State: key.Press})
-	driveFrame(w, ops, r, canvasSize) // focus → action's own clickable
+	driveFrame(w, ops, r, frameSize) // focus → action's own clickable
 
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(canvasSize),
+		Constraints: layout.Exact(frameSize),
 		Ops:         ops,
 		Source:      r.Source(),
 	}
@@ -563,7 +563,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 		OnClose:         func(_ layout.Context) {},
 	})
 
-	win, err := headless.NewWindow(canvasW, canvasH)
+	win, err := headless.NewWindow(frameW, frameH)
 	if err != nil {
 		t.Skipf("headless rendering not supported: %v", err)
 		return
@@ -577,7 +577,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 		ops.Reset()
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvasSize),
+			Constraints: layout.Exact(frameSize),
 			Ops:         &ops,
 			Source:      r.Source(),
 		}
@@ -592,7 +592,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 	}
 	shoot := func() *image.RGBA {
 		render(true)
-		img := image.NewRGBA(image.Rectangle{Max: canvasSize})
+		img := image.NewRGBA(image.Rectangle{Max: frameSize})
 		if err := win.Screenshot(img); err != nil {
 			t.Fatalf("Screenshot: %v", err)
 		}
@@ -601,7 +601,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 	isFocused := func(tag event.Tag) bool {
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvasSize),
+			Constraints: layout.Exact(frameSize),
 			Ops:         new(op.Ops),
 			Source:      r.Source(),
 		}
@@ -640,7 +640,7 @@ func scrimPress(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 }
 
 // pressReturn queues a Return press-and-release and drives one frame. Both
@@ -653,14 +653,14 @@ func pressReturn(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 		key.Event{Name: key.NameReturn, State: key.Press},
 		key.Event{Name: key.NameReturn, State: key.Release},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 }
 
 // openFrames drives the two frames an opening modal needs: the first
 // registers the tags and requests initial focus, the second applies it.
 func openFrames(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 }
 
 // TestBackdropClickOnDecisionIsInert is the decision half of the scrim
@@ -713,11 +713,11 @@ func TestBackdropClickOnPanelCloses(t *testing.T) {
 	}
 }
 
-// TestEscapeWorksOnBothIntents pins the clause that survives the split:
-// whatever the archetype, Escape leaves. On a panel it invokes OnClose; on a
+// TestEscapeWorksOnBothPurposes pins the clause that survives the split:
+// whatever the purpose, Escape leaves. On a panel it invokes OnClose; on a
 // decision dialog it invokes Cancel, which is Apple's binding and the reason a
 // decision needs no X.
-func TestEscapeWorksOnBothIntents(t *testing.T) {
+func TestEscapeWorksOnBothPurposes(t *testing.T) {
 	t.Run("panel", func(t *testing.T) {
 		var closed int
 		w := liveModal(t, modal.Props{
@@ -730,7 +730,7 @@ func TestEscapeWorksOnBothIntents(t *testing.T) {
 		ops := new(op.Ops)
 		openFrames(w, ops, r)
 		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
-		driveFrame(w, ops, r, canvasSize)
+		driveFrame(w, ops, r, frameSize)
 		if closed != 1 {
 			t.Errorf("Escape on a panel: OnClose called %d times, want 1", closed)
 		}
@@ -755,7 +755,7 @@ func TestEscapeWorksOnBothIntents(t *testing.T) {
 		ops := new(op.Ops)
 		openFrames(w, ops, r)
 		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
-		driveFrame(w, ops, r, canvasSize)
+		driveFrame(w, ops, r, frameSize)
 		if cancelled != 1 {
 			t.Errorf("Escape on a decision dialog: Cancel called %d times, want 1", cancelled)
 		}
@@ -783,7 +783,7 @@ func TestEscapeWorksOnBothIntents(t *testing.T) {
 		ops := new(op.Ops)
 		openFrames(w, ops, r)
 		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
-		driveFrame(w, ops, r, canvasSize)
+		driveFrame(w, ops, r, frameSize)
 		if closed != 1 {
 			t.Errorf("Escape on a Cancel-less decision: OnClose called %d times, want 1", closed)
 		}
@@ -942,9 +942,9 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 			tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	}
 
-	panel := golden.Capture(t, canvasSize, scene(render(modal.Props{}), bg))
-	decision := golden.Capture(t, canvasSize, scene(render(modal.Props{Decision: &modal.Decision{}}), bg))
-	hidden := golden.Capture(t, canvasSize, scene(render(modal.Props{HideClose: true}), bg))
+	panel := golden.Capture(t, frameSize, scene(render(modal.Props{}), bg))
+	decision := golden.Capture(t, frameSize, scene(render(modal.Props{Decision: &modal.Decision{}}), bg))
+	hidden := golden.Capture(t, frameSize, scene(render(modal.Props{HideClose: true}), bg))
 
 	if n := golden.PixelDiff(panel, decision); n == 0 {
 		t.Error("a decision dialog renders identically to a panel; it must drop the close X")
@@ -956,7 +956,7 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 }
 
 // TestHideCloseStillWorksOnAPanel is the deprecation window: the field keeps
-// compiling AND keeps its meaning for the archetype it belongs to, so an
+// compiling AND keeps its meaning for the purpose it belongs to, so an
 // existing caller is not silently changed underneath.
 func TestHideCloseStillWorksOnAPanel(t *testing.T) {
 	shaper := defaultShaper(t)
@@ -968,7 +968,7 @@ func TestHideCloseStillWorksOnAPanel(t *testing.T) {
 	without := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper, HideClose: true},
 		true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
-	if n := golden.PixelDiff(golden.Capture(t, canvasSize, scene(with, bg)), golden.Capture(t, canvasSize, scene(without, bg))); n == 0 {
+	if n := golden.PixelDiff(golden.Capture(t, frameSize, scene(with, bg)), golden.Capture(t, frameSize, scene(without, bg))); n == 0 {
 		t.Error("HideClose no longer hides a panel's close button; the deprecation window must keep it working")
 	}
 }
@@ -1009,20 +1009,20 @@ func TestDefaultActionDerivation(t *testing.T) {
 	}
 }
 
-// TestIntentIsDerivedFromDecision pins the single source of truth: there is no
+// TestPurposeIsDerivedFromDecision pins the single source of truth: there is no
 // purpose field to fall out of step with the callbacks.
-func TestIntentIsDerivedFromDecision(t *testing.T) {
-	if got := (modal.Props{}).Intent(); got != modal.IntentPanel {
-		t.Errorf("zero Props derive %v, want %v", got, modal.IntentPanel)
+func TestPurposeIsDerivedFromDecision(t *testing.T) {
+	if got := (modal.Props{}).Purpose(); got != modal.PurposePanel {
+		t.Errorf("zero Props derive %v, want %v", got, modal.PurposePanel)
 	}
-	if got := (modal.Props{HideClose: true}).Intent(); got != modal.IntentPanel {
-		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, modal.IntentPanel)
+	if got := (modal.Props{HideClose: true}).Purpose(); got != modal.PurposePanel {
+		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, modal.PurposePanel)
 	}
-	if got := (modal.Props{Decision: &modal.Decision{}}).Intent(); got != modal.IntentDecision {
-		t.Errorf("Props with a Decision derive %v, want %v", got, modal.IntentDecision)
+	if got := (modal.Props{Decision: &modal.Decision{}}).Purpose(); got != modal.PurposeDecision {
+		t.Errorf("Props with a Decision derive %v, want %v", got, modal.PurposeDecision)
 	}
-	if got, want := modal.IntentPanel.String()+"/"+modal.IntentDecision.String(), "panel/decision"; got != want {
-		t.Errorf("the archetype names pair = %q, want %q", got, want)
+	if got, want := modal.PurposePanel.String()+"/"+modal.PurposeDecision.String(), "panel/decision"; got != want {
+		t.Errorf("the purpose names pair = %q, want %q", got, want)
 	}
 }
 
@@ -1073,16 +1073,16 @@ func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
 
 	// Frame 1: only the first panel is in the tree, so it is the front one
 	// and asks for initial focus on its close button.
-	driveFrame(back, ops, r, canvasSize)
+	driveFrame(back, ops, r, frameSize)
 	// Frame 2: that focus request lands.
-	driveFrame(back, ops, r, canvasSize)
+	driveFrame(back, ops, r, frameSize)
 	// Frame 3: the second panel joins and covers it. It declares no focus
 	// tags, so focus stays where it is — on the covered panel.
-	driveFrame(both, ops, r, canvasSize)
-	driveFrame(both, ops, r, canvasSize)
+	driveFrame(both, ops, r, frameSize)
+	driveFrame(both, ops, r, frameSize)
 
 	r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
-	driveFrame(both, ops, r, canvasSize)
+	driveFrame(both, ops, r, frameSize)
 	if backClosed != 0 {
 		t.Errorf("Escape reached a covered modal that still held focus: backClosed = %d, want 0", backClosed)
 	}
@@ -1094,7 +1094,7 @@ func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
 		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(both, ops, r, canvasSize)
+	driveFrame(both, ops, r, frameSize)
 	if frontClosed != 1 {
 		t.Errorf("the backdrop press did not reach the modal in front: frontClosed = %d, want 1", frontClosed)
 	}
@@ -1124,14 +1124,14 @@ func TestACoveredModalIsStillPainted(t *testing.T) {
 		Arbiter: arb,
 	})
 
-	imgBoth := golden.Capture(t, canvasSize, scene(func(gtx layout.Context) layout.Dimensions {
+	imgBoth := golden.Capture(t, frameSize, scene(func(gtx layout.Context) layout.Dimensions {
 		back(gtx)
 		return front(gtx)
 	}, bg))
 	// The covered panel keeps its place on the stack across this second
 	// capture — nothing pops it — so the only difference between the two
 	// images is the pixels it contributes.
-	imgFront := golden.Capture(t, canvasSize, scene(front, bg))
+	imgFront := golden.Capture(t, frameSize, scene(front, bg))
 
 	if n := golden.PixelDiff(imgBoth, imgFront); n == 0 {
 		t.Fatal("the covered modal painted nothing; it must stay visible and only go inert")

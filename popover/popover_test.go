@@ -26,11 +26,11 @@ import (
 )
 
 const (
-	canvasW, canvasH = 320, 240
+	frameW, frameH = 320, 240
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism.
 	sharpRadius = tokens.RadiusScale{}
@@ -134,7 +134,7 @@ func TestPopoverGolden(t *testing.T) {
 				Placement: tc.placement,
 			}
 			w := popover.Render(props, true, tc.colors, tokens.Spacing, sharpRadius)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -150,8 +150,8 @@ func TestPopoverOpenAndClosedDiffer(t *testing.T) {
 	open := popover.Render(props, true, tokens.DefaultLight, tokens.Spacing, sharpRadius)
 	closed := popover.Render(props, false, tokens.DefaultLight, tokens.Spacing, sharpRadius)
 
-	imgOpen := golden.Capture(t, canvasSize, scene(open, bg))
-	imgClosed := golden.Capture(t, canvasSize, scene(closed, bg))
+	imgOpen := golden.Capture(t, frameSize, scene(open, bg))
+	imgClosed := golden.Capture(t, frameSize, scene(closed, bg))
 	if n := golden.PixelDiff(imgOpen, imgClosed); n == 0 {
 		t.Error("open and closed popover render identically; expected the surface + tail to appear when open")
 	}
@@ -216,8 +216,8 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// (1) Press at the frame corner — guaranteed outside both the anchor
 	// (centred ~30 dp around frame centre) and the surface (above it for
@@ -227,7 +227,7 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if dismissed == 0 {
 		t.Fatalf("outside click did not invoke OnDismiss; dismissed = %d", dismissed)
 	}
@@ -235,24 +235,24 @@ func TestOutsideClickInvokesOnDismiss(t *testing.T) {
 
 	// (2) Press at the frame centre — guaranteed inside the anchor — must
 	// not bleed through to the outside-absorber and dismiss.
-	centre := f32.Pt(canvasW/2, canvasH/2)
+	centre := f32.Pt(frameW/2, frameH/2)
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: centre, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: centre, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if dismissed != outsideHits {
 		t.Errorf("anchor click bled through to outside-absorber; OnDismiss went from %d to %d", outsideHits, dismissed)
 	}
 }
 
-// TestOutsideClickDismissesWithChipSizedCanvas replicates the popover-
+// TestOutsideClickDismissesWithChipSizedFrame replicates the popover-
 // frame coupling (mindchat's model picker): the caller hands the popover
 // an Exact anchor-sized box, so the anchor covers the whole frame and an
 // outside press can only land beyond it. OnDismiss must still fire for a
 // press elsewhere in the window, and an anchor press must still be
 // absorbed silently.
-func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
+func TestOutsideClickDismissesWithChipSizedFrame(t *testing.T) {
 	var dismissed int
 	chip := image.Pt(60, 28)
 	anchor := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
@@ -281,17 +281,17 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveFrame(coupled, ops, r, canvasSize)
-	driveFrame(coupled, ops, r, canvasSize)
+	driveFrame(coupled, ops, r, frameSize)
+	driveFrame(coupled, ops, r, frameSize)
 
 	// (1) Press far from the chip and from the surface hanging below it —
 	// outside the chip-sized frame entirely. OnDismiss must fire.
-	far := f32.Pt(8, float32(canvasH-8))
+	far := f32.Pt(8, float32(frameH-8))
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: far, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: far, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(coupled, ops, r, canvasSize)
+	driveFrame(coupled, ops, r, frameSize)
 	if dismissed == 0 {
 		t.Fatalf("press outside the chip-sized frame did not invoke OnDismiss; dismissed = %d", dismissed)
 	}
@@ -303,7 +303,7 @@ func TestOutsideClickDismissesWithChipSizedCanvas(t *testing.T) {
 		pointer.Event{Kind: pointer.Press, Position: centre, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		pointer.Event{Kind: pointer.Release, Position: centre, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 	)
-	driveFrame(coupled, ops, r, canvasSize)
+	driveFrame(coupled, ops, r, frameSize)
 	if dismissed != outsideHits {
 		t.Errorf("anchor press bled through to the outside-absorber; OnDismiss went from %d to %d", outsideHits, dismissed)
 	}
@@ -362,7 +362,7 @@ func TestArbitrationDismissesPriorPopover(t *testing.T) {
 			ops := new(op.Ops)
 
 			// Frame 1: only A is in the tree, so only A has claimed top.
-			driveFrame(aWidget, ops, r, canvasSize)
+			driveFrame(aWidget, ops, r, frameSize)
 			if aDismissed != 0 {
 				t.Fatalf("A dismissed before B entered the tree; aDismissed = %d", aDismissed)
 			}
@@ -378,7 +378,7 @@ func TestArbitrationDismissesPriorPopover(t *testing.T) {
 				}
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			driveFrame(frame, ops, r, canvasSize)
+			driveFrame(frame, ops, r, frameSize)
 			if aDismissed != 1 {
 				t.Fatalf("B's claim did not dismiss A in the same frame; aDismissed = %d, want 1", aDismissed)
 			}
@@ -388,7 +388,7 @@ func TestArbitrationDismissesPriorPopover(t *testing.T) {
 
 			// Frame 3: A has not yet been closed by its caller, so it is
 			// still drawn and still not top — and must not be told again.
-			driveFrame(frame, ops, r, canvasSize)
+			driveFrame(frame, ops, r, frameSize)
 			if aDismissed != 1 {
 				t.Fatalf("dismissal re-fired on a later frame; aDismissed = %d, want 1 (it is an event, not a poll)", aDismissed)
 			}
@@ -424,23 +424,23 @@ func TestOpenNowIsReadEveryFrame(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if contentDraws != 0 {
 		t.Fatalf("closed popover laid out its content; contentDraws = %d, want 0", contentDraws)
 	}
 
 	open = true
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if contentDraws != 1 {
 		t.Fatalf("OpenNow flipped true but the same layout.Widget did not open; contentDraws = %d, want 1", contentDraws)
 	}
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if contentDraws != 2 {
 		t.Fatalf("popover did not stay open; contentDraws = %d, want 2", contentDraws)
 	}
 
 	open = false
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	if contentDraws != 2 {
 		t.Fatalf("OpenNow flipped false but the popover stayed open; contentDraws = %d, want 2", contentDraws)
 	}
@@ -483,7 +483,7 @@ func TestOpenNowArbitratesOnTheEdge(t *testing.T) {
 	ops := new(op.Ops)
 
 	aOpen = true
-	driveFrame(frame, ops, r, canvasSize)
+	driveFrame(frame, ops, r, frameSize)
 	if aDismissed != 0 {
 		t.Fatalf("A dismissed with nobody to dismiss it; aDismissed = %d", aDismissed)
 	}
@@ -491,7 +491,7 @@ func TestOpenNowArbitratesOnTheEdge(t *testing.T) {
 	// B opens. A is dismissed inside B's layout pass, which closes A's own
 	// flag — the caller-owned bool is the only copy of the state.
 	bOpen = true
-	driveFrame(frame, ops, r, canvasSize)
+	driveFrame(frame, ops, r, frameSize)
 	if aDismissed != 1 || bDismissed != 0 {
 		t.Fatalf("B's claim: aDismissed = %d, bDismissed = %d; want 1, 0", aDismissed, bDismissed)
 	}
@@ -499,7 +499,7 @@ func TestOpenNowArbitratesOnTheEdge(t *testing.T) {
 	// Several idle frames: B's flag is still true, so a level-guarded claim
 	// would re-take top every frame and the two would trade it forever.
 	for i := 0; i < 3; i++ {
-		driveFrame(frame, ops, r, canvasSize)
+		driveFrame(frame, ops, r, frameSize)
 	}
 	if aDismissed != 1 || bDismissed != 0 {
 		t.Fatalf("a level-guarded claim re-fired: aDismissed = %d, bDismissed = %d; want 1, 0", aDismissed, bDismissed)
@@ -521,7 +521,7 @@ func TestOpenNowWinsOverOpen(t *testing.T) {
 		},
 		Arbiter: popover.NewArbiter(),
 	})
-	driveFrame(w, new(op.Ops), new(gioinput.Router), canvasSize)
+	driveFrame(w, new(op.Ops), new(gioinput.Router), frameSize)
 	if contentDraws != 0 {
 		t.Fatalf("Open won over OpenNow; contentDraws = %d, want 0", contentDraws)
 	}
@@ -539,7 +539,7 @@ const roomW = 200
 // drawn, which is what makes the clamp assertions mean anything.
 func inRoom(w layout.Widget, width int) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		gtx.Constraints = layout.Exact(image.Pt(width, canvasH))
+		gtx.Constraints = layout.Exact(image.Pt(width, frameH))
 		return w(gtx)
 	}
 }
@@ -560,9 +560,9 @@ func fillRun(img *image.RGBA, y int, c color.NRGBA) (lo, hi int, ok bool) {
 	return lo, hi, ok
 }
 
-// inkRun reports the leftmost and rightmost x on row y that is not the
+// drawnRun reports the leftmost and rightmost x on row y that is not the
 // scene's background, so an anti-aliased tip counts as drawn.
-func inkRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
+func drawnRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
 	b := img.Bounds()
 	for x := b.Min.X; x < b.Max.X; x++ {
 		r, g, bl, _ := img.At(x, y).RGBA()
@@ -590,17 +590,17 @@ func placementScene(t *testing.T, align popover.Alignment, contentW float32, roo
 	}
 	w := popover.Render(props, true, colors, tokens.Spacing, sharpRadius)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	return golden.Capture(t, canvasSize, scene(inRoom(w, room), bg)), colors.SurfaceAt(tokens.Level3)
+	return golden.Capture(t, frameSize, scene(inRoom(w, room), bg)), colors.SurfaceAt(tokens.Level3)
 }
 
-// TestSurfaceIsNudgedBackInsideTheCanvas is the reflow contract: a surface
+// TestSurfaceIsNudgedBackInsideTheFrame is the reflow contract: a surface
 // centred on an anchor standing at the frame's trailing edge would run off
 // that edge, and the popover moves it back rather than letting it clip.
 //
 // The anchor is 60 wide against a 200-wide frame, so trailing-aligned it
 // spans [140, 200] with its midline at 170; the surface is 160 + 2*S3 = 184
 // wide, which centred on 170 would run to 262. Clamped it ends on 200.
-func TestSurfaceIsNudgedBackInsideTheCanvas(t *testing.T) {
+func TestSurfaceIsNudgedBackInsideTheFrame(t *testing.T) {
 	img, fill := placementScene(t, popover.AlignTrailing, 160, roomW)
 	// A row between the surface's top edge and its content: the anchor's
 	// foot is at 134, the gap is S2, so the surface starts at 142.
@@ -619,11 +619,11 @@ func TestSurfaceIsNudgedBackInsideTheCanvas(t *testing.T) {
 	}
 }
 
-// TestSurfaceWiderThanItsCanvasIsLeftAlone documents the escape hatch: a
+// TestSurfaceWiderThanItsFrameIsLeftAlone documents the escape hatch: a
 // caller that cut its frame to the anchor has said nothing about the room
 // it has, and shoving an over-wide surface against one edge would only move
 // the overflow to the other.
-func TestSurfaceWiderThanItsCanvasIsLeftAlone(t *testing.T) {
+func TestSurfaceWiderThanItsFrameIsLeftAlone(t *testing.T) {
 	const room = 60
 	img, fill := placementScene(t, popover.AlignTrailing, 160, room)
 	lo, hi, ok := fillRun(img, 148, fill)
@@ -664,7 +664,7 @@ func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 		edge     = 142 // and the surface stands S2 below it
 		drawnMid = roomW - 30
 	)
-	lo, hi, ok := inkRun(img, foot, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
+	lo, hi, ok := drawnRun(img, foot, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
 	if !ok {
 		t.Fatalf("the row at the anchor's foot (y=%d) is bare; the tail floats above the anchor", foot)
 	}

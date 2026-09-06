@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	canvasW, canvasH = 320, 240
+	frameW, frameH = 320, 240
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism.
 	sharpRadius = tokens.RadiusScale{}
@@ -88,7 +88,7 @@ func TestTooltipGolden(t *testing.T) {
 				Shaper:    shaper,
 			}
 			w := tooltip.Render(shaper, props, true, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelSmall)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -105,8 +105,8 @@ func TestTooltipShownAndHiddenDiffer(t *testing.T) {
 	shown := tooltip.Render(shaper, props, true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelSmall)
 	hidden := tooltip.Render(shaper, props, false, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelSmall)
 
-	imgShown := golden.Capture(t, canvasSize, scene(shown, bg))
-	imgHidden := golden.Capture(t, canvasSize, scene(hidden, bg))
+	imgShown := golden.Capture(t, frameSize, scene(shown, bg))
+	imgHidden := golden.Capture(t, frameSize, scene(hidden, bg))
 	if n := golden.PixelDiff(imgShown, imgHidden); n == 0 {
 		t.Error("shown and hidden tooltip render identically; expected the bubble + label to appear when shown")
 	}

@@ -27,12 +27,12 @@ import (
 const (
 	expandedW  = 192
 	collapsedW = 48
-	canvasH    = 256
+	frameH     = 256
 )
 
 var (
-	expandedSize  = image.Pt(expandedW, canvasH)
-	collapsedSize = image.Pt(collapsedW, canvasH)
+	expandedSize  = image.Pt(expandedW, frameH)
+	collapsedSize = image.Pt(collapsedW, frameH)
 )
 
 // defaultShaper returns the shaper every golden here draws with: the default
@@ -275,9 +275,9 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	const n = 12
 	const rowH = 36 // tokens.Comfortable.ControlHeight at PxPerDp=1
-	if top := rowH + rowH*(n-1); top <= canvasH {
+	if top := rowH + rowH*(n-1); top <= frameH {
 		t.Fatalf("item %d starts at y=%d, inside the %d px frame; this test needs it to be unlaid-out",
-			n-1, top, canvasH)
+			n-1, top, frameH)
 	}
 
 	fired := make([]int, n)

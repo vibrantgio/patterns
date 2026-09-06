@@ -185,14 +185,14 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 	outerW := mk(outerProps, outerSt, &outerOpen)
 	innerW := mk(innerProps, innerSt, &innerOpen)
 
-	canvas := image.Pt(320, 240)
+	frameSize := image.Pt(320, 240)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 	frame := func() {
 		ops.Reset()
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvas),
+			Constraints: layout.Exact(frameSize),
 			Ops:         ops,
 			Source:      r.Source(),
 		}
@@ -288,14 +288,14 @@ func TestACoveredModalDrawnLastTakesNoPointerInput(t *testing.T) {
 	frontW := mk(frontProps, frontSt, &frontOpen)         // earlier in the tree
 	coveredW := mk(coveredProps, coveredSt, &coveredOpen) // later in the tree
 
-	canvas := image.Pt(320, 240)
+	frameSize := image.Pt(320, 240)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 	frame := func() {
 		ops.Reset()
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvas),
+			Constraints: layout.Exact(frameSize),
 			Ops:         ops,
 			Source:      r.Source(),
 		}

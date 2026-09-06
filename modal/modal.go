@@ -18,13 +18,13 @@
 //
 // # The dialog grammar
 //
-// Desktop dialogs come in two archetypes, and this package has exactly two.
+// Desktop dialogs serve two purposes, and this package has exactly two.
 // Which one you get is derived from [Props.Decision] — nil or not — and
-// reported by `Props.Intent`. Everything below follows from that one word;
+// reported by `Props.Purpose`. Everything below follows from that one word;
 // none of it is separately configurable, because the wrong combinations are
 // what a boolean per affordance would let you write down.
 //
-// A PANEL ([IntentPanel], the zero value) is a place you opened and can
+// A PANEL ([PurposePanel], the zero value) is a place you opened and can
 // leave. It MANDATES a ghost close X top-right, a backdrop click that
 // invokes Props.OnClose, and Escape likewise: leaving costs nothing, so
 // every cheap exit is offered. It FORBIDS claiming Return, which belongs to
@@ -32,7 +32,7 @@
 // changes apply live, which is the reason it can be left at any moment. If
 // you find yourself adding a Save button to a panel, you have a decision.
 //
-// A DECISION ([IntentDecision], [Props.Decision] non-nil) is a question you
+// A DECISION ([PurposeDecision], [Props.Decision] non-nil) is a question you
 // must answer. It MANDATES right-aligned footer actions ending in a default
 // that answers Return ([Decision.DefaultAction]), and Escape bound to
 // [Decision.Cancel]. It FORBIDS an X anywhere and an active backdrop: the
@@ -119,8 +119,8 @@ import (
 	"github.com/vibrantgio/theme/typeset"
 )
 
-// `Intent` names the archetype a modal belongs to. Desktop dialogs come in
-// two, and their affordances travel together rather than varying
+// `Purpose` names what a modal is for. Desktop dialogs serve two, and
+// their affordances travel together rather than varying
 // independently:
 //
 //   - A PANEL is a place you opened and can leave. Obsidian's and
@@ -138,35 +138,35 @@ import (
 // Exposing those affordances as independent booleans would permit every
 // wrong combination — e.g. a "Discard changes?" dialog wearing a panel's X
 // over a backdrop that dismisses it. So there are no such booleans. The
-// the purpose is declared once, by supplying [Props.Decision] or leaving it nil,
+// purpose is declared once, by supplying [Props.Decision] or leaving it nil,
 // and every affordance is derived from it — which is why a decision dialog
 // with a dismissing backdrop cannot be written down in this API at all.
 //
-// The purpose is a derived value, not a field: `Props.Intent` reports it. There
+// The purpose is a derived value, not a field: `Props.Purpose` reports it. There
 // is nothing to keep in sync and nothing that can contradict the callbacks.
-type Intent int
+type Purpose int
 
 const (
-	// IntentPanel is the dismissable panel: a ghost close X, a dismissing
+	// PurposePanel is the dismissable panel: a ghost close X, a dismissing
 	// backdrop, Escape closes, Return unclaimed. It is the zero value, so
 	// every Props written before this axis existed keeps its behaviour.
-	IntentPanel Intent = iota
+	PurposePanel Purpose = iota
 
-	// IntentDecision is the decision dialog: no X, an inert backdrop,
+	// PurposeDecision is the decision dialog: no X, an inert backdrop,
 	// Escape invokes Cancel, Return activates the default action.
-	IntentDecision
+	PurposeDecision
 )
 
-// String returns the archetype's name in the vocabulary the design system
+// String returns the purpose's name in the vocabulary the design system
 // uses everywhere else.
-func (i Intent) String() string {
+func (i Purpose) String() string {
 	switch i {
-	case IntentPanel:
+	case PurposePanel:
 		return "panel"
-	case IntentDecision:
+	case PurposeDecision:
 		return "decision"
 	}
-	return fmt.Sprintf("archetype(%d)", int(i))
+	return fmt.Sprintf("purpose(%d)", int(i))
 }
 
 // Decision turns a modal into a decision dialog. Set it on [Props.Decision]
@@ -245,8 +245,8 @@ type Props struct {
 
 	// Decision, when non-nil, makes this a decision dialog rather than a
 	// dismissable panel: no close X, an inert backdrop, Escape to Cancel and
-	// Return to the default action. Leave it nil for a panel. See `Intent`
-	// for the two archetypes and [Decision] for the destructive-default rule.
+	// Return to the default action. Leave it nil for a panel. See `Purpose`
+	// for the two purposes and [Decision] for the destructive-default rule.
 	Decision *Decision
 
 	// Arbiter is the stack this modal joins while it is open: the modal in
@@ -308,26 +308,26 @@ type Props struct {
 	Shaper *text.Shaper
 }
 
-// `Intent` reports which archetype these Props describe. It is derived from
+// `Purpose` reports the purpose these Props describe. It is derived from
 // Decision alone, so it can never disagree with the callbacks.
-func (p Props) Intent() Intent {
+func (p Props) Purpose() Purpose {
 	if p.Decision != nil {
-		return IntentDecision
+		return PurposeDecision
 	}
-	return IntentPanel
+	return PurposePanel
 }
 
 // showsClose reports whether the header draws the close X. A decision dialog
 // never does; a panel does unless HideClose says otherwise.
 func (p Props) showsClose() bool {
-	return p.Intent() == IntentPanel && !p.HideClose
+	return p.Purpose() == PurposePanel && !p.HideClose
 }
 
 // dismissOnBackdrop reports whether a press on the scrim invokes OnClose.
 // Only a panel dismisses that way: on a decision dialog dismissal is one of
 // the answers, and a stray click must not give it.
 func (p Props) dismissOnBackdrop() bool {
-	return p.Intent() == IntentPanel
+	return p.Purpose() == PurposePanel
 }
 
 // onEscape returns the callback Escape invokes: Decision.Cancel on a decision
@@ -566,7 +566,7 @@ func drawModal(
 	live bool,
 	closeWidget layout.Widget,
 ) layout.Dimensions {
-	canvas := gtx.Constraints.Max
+	frame := gtx.Constraints.Max
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	gap := gtx.Dp(unit.Dp(tok.spacing.S3))
 
@@ -584,7 +584,7 @@ func drawModal(
 	// Scrim — full-frame dimmer. Pointer events that miss the surface
 	// hit the scrim tag and trigger OnClose.
 	scrimColor := scrimColor(tok.color)
-	scrimRect := image.Rectangle{Max: canvas}
+	scrimRect := image.Rectangle{Max: frame}
 	scrimClip := clip.Rect(scrimRect).Push(gtx.Ops)
 	paint.FillShape(gtx.Ops, scrimColor, clip.Rect(scrimRect).Op())
 	if live {
@@ -598,15 +598,15 @@ func drawModal(
 	// sized to the recorded dims, and the macro is replayed inside the
 	// positioned surface. maxH caps the surface at the old 75%-of-frame
 	// bound; overflowing content is clipped to the surface.
-	surfW := clampInt(canvas.X*3/4, gtx.Dp(unit.Dp(180)), gtx.Dp(unit.Dp(560)))
-	if surfW > canvas.X {
-		surfW = canvas.X
+	surfW := clampInt(frame.X*3/4, gtx.Dp(unit.Dp(180)), gtx.Dp(unit.Dp(560)))
+	if surfW > frame.X {
+		surfW = frame.X
 	}
 	// 560dp (not the historical 420) so tall forms — e.g. an alert plus
 	// four fields plus actions — fit before the overflow clip engages.
-	maxH := clampInt(canvas.Y*3/4, gtx.Dp(unit.Dp(120)), gtx.Dp(unit.Dp(560)))
-	if maxH > canvas.Y {
-		maxH = canvas.Y
+	maxH := clampInt(frame.Y*3/4, gtx.Dp(unit.Dp(120)), gtx.Dp(unit.Dp(560)))
+	if maxH > frame.Y {
+		maxH = frame.Y
 	}
 	inset := gtx.Dp(unit.Dp(tok.spacing.S5))
 
@@ -620,7 +620,7 @@ func drawModal(
 	content := contentMacro.Stop()
 
 	surfH := clampInt(contentDims.Size.Y+2*inset, gtx.Dp(unit.Dp(120)), maxH)
-	surfPos := image.Pt((canvas.X-surfW)/2, (canvas.Y-surfH)/2)
+	surfPos := image.Pt((frame.X-surfW)/2, (frame.Y-surfH)/2)
 
 	// Surface — rounded rectangle, registered as a pointer absorber so
 	// presses on its area do not reach the scrim and dismiss the modal.
@@ -632,7 +632,7 @@ func drawModal(
 	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level2), surfRRect.Op(gtx.Ops))
 	// The surface's edge is derived against the level it circles — the same
 	// Level2 the fill above is painted at, named once for both.
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tok.color.SurfaceAt(tokens.Level2)), clip.Stroke{
+	paint.FillShape(gtx.Ops, outline.Color(tok.color, tok.color.SurfaceAt(tokens.Level2)), clip.Stroke{
 		Path:  surfRRect.Path(gtx.Ops),
 		Width: float32(gtx.Dp(unit.Dp(1))),
 	}.Op())
@@ -657,7 +657,7 @@ func drawModal(
 		processInput(gtx, props, st)
 	}
 
-	return layout.Dimensions{Size: canvas}
+	return layout.Dimensions{Size: frame}
 }
 
 // drawSurfaceContents lays out the header row, the body, and the footer

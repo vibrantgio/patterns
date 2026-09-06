@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	canvasW, canvasH = 320, 96
+	frameW, frameH = 320, 96
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism.
 	sharpRadius = tokens.RadiusScale{}
@@ -109,7 +109,7 @@ func TestAlertGolden(t *testing.T) {
 				Shaper:  shaper,
 			}
 			w := alert.Render(shaper, props, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -125,7 +125,7 @@ func TestAlertVariantsDiffer(t *testing.T) {
 	render := func(v alert.Variant) *image.RGBA {
 		props := alert.Props{Variant: v, Title: variantTitle(v), Body: body, Shaper: shaper}
 		w := alert.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium)
-		return golden.Capture(t, canvasSize, scene(w, bg))
+		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
 	variants := []struct {
@@ -163,8 +163,8 @@ func TestAlertLightDarkDiffer(t *testing.T) {
 		light := alert.Render(shaper, propsL, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium)
 		dark := alert.Render(shaper, propsD, tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium)
 
-		imgLight := golden.Capture(t, canvasSize, scene(light, bg))
-		imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
+		imgLight := golden.Capture(t, frameSize, scene(light, bg))
+		imgDark := golden.Capture(t, frameSize, scene(dark, bg))
 		if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 			t.Errorf("variant %v: light and dark render identically; expected colour differences", v)
 		}

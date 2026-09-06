@@ -56,7 +56,7 @@ func markOnly() modal.Props {
 // Both are found by colour rather than by arithmetic. The surface is the
 // bounding box of every pixel holding its own fill token; the mark is
 // whatever inside that box, clear of the 1 dp edge stroke, departs from it.
-func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rectangle, ink color.NRGBA, contrast float64) {
+func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rectangle, markColor color.NRGBA, contrast float64) {
 	at := func(x, y int) color.NRGBA {
 		p := img.RGBAAt(x, y)
 		return color.NRGBA{R: p.R, G: p.G, B: p.B, A: 255}
@@ -75,7 +75,7 @@ func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rect
 		}
 	}
 	if surface.Empty() {
-		return surface, image.Rectangle{}, ink, 0
+		return surface, image.Rectangle{}, markColor, 0
 	}
 
 	// Two pixels in from the surface's own bounds: one for the edge stroke,
@@ -95,11 +95,11 @@ func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rect
 			mark.Max.X = max(mark.Max.X, x+1)
 			mark.Max.Y = max(mark.Max.Y, y+1)
 			if cr := themecolor.ContrastRatio(px, fill); cr > contrast {
-				contrast, ink = cr, px
+				contrast, markColor = cr, px
 			}
 		}
 	}
-	return surface, mark, ink, contrast
+	return surface, mark, markColor, contrast
 }
 
 func absDiffU8(a, b uint8) int {
@@ -120,7 +120,7 @@ func capturePanel(t *testing.T, c tokens.ColorTokens, bg color.NRGBA) (*image.RG
 	// shape keeps the two halves talking about one dialog.
 	w := modal.Render(shaper, markOnly(), true, c, tokens.Spacing, tokens.Radius,
 		tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-	return golden.Capture(t, canvasSize, scene(w, bg)), c.SurfaceAt(tokens.Level2)
+	return golden.Capture(t, frameSize, scene(w, bg)), c.SurfaceAt(tokens.Level2)
 }
 
 // TestCloseMarkContrast measures the close mark against the surface behind
@@ -140,7 +140,7 @@ func TestCloseMarkContrast(t *testing.T) {
 	} {
 		t.Run(sc.name, func(t *testing.T) {
 			img, fill := capturePanel(t, sc.c, sc.bg)
-			surface, mark, ink, contrast := surfaceAndMark(img, fill)
+			surface, mark, markColor, contrast := surfaceAndMark(img, fill)
 			if surface.Empty() {
 				t.Fatal("no surface found: nothing in the frame holds the level-2 fill")
 			}
@@ -148,7 +148,7 @@ func TestCloseMarkContrast(t *testing.T) {
 				t.Fatal("no close mark found: the panel's surface is bare")
 			}
 			t.Logf("surface %v, mark %v (%d×%d px), colour %v on fill %v, %.2f:1",
-				surface, mark, mark.Dx(), mark.Dy(), ink, fill, contrast)
+				surface, mark, mark.Dx(), mark.Dy(), markColor, fill, contrast)
 
 			if contrast < closeMarkFloor {
 				t.Errorf("close mark on the dialog surface = %.2f:1, want at least %.1f:1",
@@ -207,8 +207,8 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	ops := new(op.Ops)
 	// Frame 1 registers the areas, frame 2 settles the focus the modal takes
 	// on opening. Presses land from frame 3 on.
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	press := func(x, y int) bool {
 		before := closed
@@ -217,7 +217,7 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 			pointer.Event{Kind: pointer.Press, Position: pt, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 			pointer.Event{Kind: pointer.Release, Position: pt, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
 		)
-		driveFrame(w, ops, r, canvasSize)
+		driveFrame(w, ops, r, frameSize)
 		return closed > before
 	}
 
@@ -261,7 +261,7 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	}
 }
 
-// TestCloseMarkWashClearsThePerceptibilityFloor pins the third of the
+// TestCloseMarkStateFillClearsThePerceptibilityFloor pins the third of the
 // ghost affordances at the floor the other two are gated at in
 // components/button: the close mark is a ghost naming tokens.Level2, so
 // the state fill it paints under the pointer is that level's own, and a dialog's
@@ -272,7 +272,7 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 // bounding box is found by looking for the level-2 fill, so a panel that
 // stopped standing at level 2 would leave nothing to measure against and
 // fail here rather than measure the wrong pairing.
-func TestCloseMarkWashClearsThePerceptibilityFloor(t *testing.T) {
+func TestCloseMarkStateFillClearsThePerceptibilityFloor(t *testing.T) {
 	for _, sc := range []struct {
 		name string
 		c    tokens.ColorTokens
@@ -293,15 +293,15 @@ func TestCloseMarkWashClearsThePerceptibilityFloor(t *testing.T) {
 			hover := sc.c.StateAt(tokens.Level2, tokens.StateHover)
 			press := sc.c.StateAt(tokens.Level2, tokens.StatePressed)
 			for _, w := range []struct {
-				name string
-				wash color.NRGBA
+				name      string
+				stateFill color.NRGBA
 			}{{"hover", hover}, {"press", press}} {
-				got := themecolor.ContrastRatio(w.wash, fill)
+				got := themecolor.ContrastRatio(w.stateFill, fill)
 				if got < tokens.StateFloor {
 					t.Errorf("%s state fill %v on the panel surface %v measures %.3f:1, under the %.2f:1 floor",
-						w.name, w.wash, fill, got, tokens.StateFloor)
+						w.name, w.stateFill, fill, got, tokens.StateFloor)
 				}
-				t.Logf("%s state fill %v on the panel surface %v: %.3f:1", w.name, w.wash, fill, got)
+				t.Logf("%s state fill %v on the panel surface %v: %.3f:1", w.name, w.stateFill, fill, got)
 			}
 			if step := themecolor.ContrastRatio(press, hover); step <= 1 {
 				t.Errorf("press %v does not lie beyond hover %v", press, hover)

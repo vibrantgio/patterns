@@ -19,7 +19,7 @@
 // lighter than the backdrop it is set into. A pane does not climb the levels
 // by leaving the window's edge, and the chrome level's elevation is zero dp:
 // chrome lies flat on the backdrop and has nothing to cast onto, so there is
-// no shadow here. [Surface] is the fill and [SeamInk] the edge, both derived
+// no shadow here. [Surface] is the fill and [SeamColor] the edge, both derived
 // from the palette rather than named as steps.
 //
 // WHY THE HAIRLINE IS DRAWN AT ALL. An inset object needs no seam where the
@@ -158,7 +158,7 @@ func Surface(c tokens.ColorTokens) color.NRGBA {
 	return c.SurfaceAt(tokens.LevelChrome)
 }
 
-// `SeamInk` is the colour of the pane's own edge, resolved against the fill it
+// `SeamColor` is the colour of the pane's own edge, resolved against the fill it
 // is drawn on rather than named as a step.
 //
 // Two things are derived and neither names a scheme. The DISTANCE is
@@ -174,11 +174,11 @@ func Surface(c tokens.ColorTokens) color.NRGBA {
 // On the default palettes it answers #BEBEBE on the light fill, 1.52:1, and
 // #363636 on the dark one, 1.51:1 — the dark pairing within a level of the
 // platform's own #3A3A3A on #1B1B1B.
-func SeamInk(c tokens.ColorTokens) color.NRGBA {
+func SeamColor(c tokens.ColorTokens) color.NRGBA {
 	fill := Surface(c)
 	y := vgcolor.RelativeLuminance(fill)
 	target := SeamRatio*(y+0.05) - 0.05
-	if inkL, fillL := lightness(c.Text), lightness(fill); inkL < fillL {
+	if foregroundL, fillL := lightness(c.Text), lightness(fill); foregroundL < fillL {
 		target = (y+0.05)/SeamRatio - 0.05
 	}
 	target = min(max(target, 0), 1)
@@ -186,7 +186,7 @@ func SeamInk(c tokens.ColorTokens) color.NRGBA {
 	return vgcolor.NRGBAFromToneChromaHue(tone(target), chroma, hue)
 }
 
-// lightness is a colour's CIELAB L*, which is what "toward the ink"
+// lightness is a colour's CIELAB L*, which is what "toward the foreground"
 // compares: the seam's direction is a question about lightness and nothing
 // else.
 func lightness(c color.NRGBA) float64 {
@@ -256,7 +256,7 @@ func Layout(gtx layout.Context, c tokens.ColorTokens, bounds image.Rectangle, co
 	// down every straight run, with the corners' arcs antialiased against
 	// each other the way a fence's rim is drawn.
 	rr := clip.RRect{Rect: bounds, NE: r, NW: r, SE: r, SW: r}
-	paint.FillShape(gtx.Ops, SeamInk(c), rr.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, SeamColor(c), rr.Op(gtx.Ops))
 	inner := clip.RRect{Rect: bounds.Inset(w), NE: max(r-w, 0), NW: max(r-w, 0), SE: max(r-w, 0), SW: max(r-w, 0)}
 	paint.FillShape(gtx.Ops, Surface(c), inner.Op(gtx.Ops))
 	if contents == nil {

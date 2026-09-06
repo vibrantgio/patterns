@@ -70,13 +70,13 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	canvas := image.Pt(320, 240)
+	frameSize := image.Pt(320, 240)
 
 	drive := func() {
 		ops.Reset()
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvas),
+			Constraints: layout.Exact(frameSize),
 			Ops:         ops,
 			Source:      r.Source(),
 		}
@@ -90,7 +90,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 	focusedIdx := func() int {
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvas),
+			Constraints: layout.Exact(frameSize),
 			Ops:         new(op.Ops),
 			Source:      r.Source(),
 		}
@@ -192,38 +192,38 @@ func TestFocusTagsIncludesDynamicBeforeStatic(t *testing.T) {
 	}
 }
 
-// TestAffordancesAreDerivedFromIntent is the dialog grammar as one table: the
-// four cells the two archetypes fill, read straight off the predicates the
+// TestAffordancesAreDerivedFromPurpose is the dialog grammar as one table: the
+// four cells the two purposes fill, read straight off the predicates the
 // component uses. The row that matters most is the last one — there is no
 // Props anywhere in this table with a decision's purpose and a dismissing
 // backdrop, because there is no field that could produce one.
-func TestAffordancesAreDerivedFromIntent(t *testing.T) {
+func TestAffordancesAreDerivedFromPurpose(t *testing.T) {
 	onClose := func(layout.Context) {}
 	cancel := func(layout.Context) {}
 
 	cases := []struct {
 		name             string
 		props            Props
-		wantIntent       Intent
+		wantPurpose      Purpose
 		wantClose        bool
 		wantDismiss      bool
 		wantEscapeCancel bool // Escape routes to Decision.Cancel rather than OnClose
 	}{
 		{"a bare panel", Props{OnClose: onClose},
-			IntentPanel, true, true, false},
+			PurposePanel, true, true, false},
 		{"a panel that hides its X", Props{OnClose: onClose, HideClose: true},
-			IntentPanel, false, true, false},
+			PurposePanel, false, true, false},
 		{"a decision", Props{OnClose: onClose, Decision: &Decision{Cancel: cancel}},
-			IntentDecision, false, false, true},
+			PurposeDecision, false, false, true},
 		{"a decision that asked for its X back", Props{OnClose: onClose, HideClose: false, Decision: &Decision{Cancel: cancel}},
-			IntentDecision, false, false, true},
+			PurposeDecision, false, false, true},
 		{"a decision with no Cancel", Props{OnClose: onClose, Decision: &Decision{}},
-			IntentDecision, false, false, false},
+			PurposeDecision, false, false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.props.Intent(); got != tc.wantIntent {
-				t.Errorf("the derived archetype = %v, want %v", got, tc.wantIntent)
+			if got := tc.props.Purpose(); got != tc.wantPurpose {
+				t.Errorf("the derived purpose = %v, want %v", got, tc.wantPurpose)
 			}
 			if got := tc.props.showsClose(); got != tc.wantClose {
 				t.Errorf("showsClose() = %v, want %v", got, tc.wantClose)

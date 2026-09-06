@@ -250,7 +250,7 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	fill := tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill
 	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
 	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
+	paint.FillShape(gtx.Ops, outline.Color(tok.color, fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
 
 	off := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
 	contentCall.Add(gtx.Ops)
@@ -377,7 +377,7 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 	r := size / 2
 	stroke := float32(gtx.Dp(unit.Dp(1)))
 	circle := clip.RRect{Rect: image.Rectangle{Max: image.Pt(size, size)}, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, outline.Ink(tok.color, tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, outline.Color(tok.color, tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
 	if name == "" {
 		return
 	}

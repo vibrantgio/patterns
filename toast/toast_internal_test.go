@@ -19,9 +19,9 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-const intCanvasW, intCanvasH = 320, 240
+const intFrameW, intFrameH = 320, 240
 
-var intCanvas = image.Pt(intCanvasW, intCanvasH)
+var intFrame = image.Pt(intFrameW, intFrameH)
 
 func intTok() resolvedTokens {
 	return resolvedTokens{
@@ -217,7 +217,7 @@ func TestStackWithNoToastsRendersEmpty(t *testing.T) {
 	case w := <-got:
 		r := new(gioinput.Router)
 		ops := new(op.Ops)
-		driveFrameAt(w, ops, r, intCanvas, time.Unix(1700000000, 0))
+		driveFrameAt(w, ops, r, intFrame, time.Unix(1700000000, 0))
 	case <-time.After(2 * time.Second):
 		t.Fatal("Stack did not emit within 2s")
 	}
@@ -274,8 +274,8 @@ func TestAnExpiredToastPaintsNothing(t *testing.T) {
 			return drawStackLive(gtx, shaper, props, intTok(), queued)
 		}
 	}
-	empty := golden.Capture(t, intCanvas, frame(nil))
-	gone := golden.Capture(t, intCanvas, frame(expired))
+	empty := golden.Capture(t, intFrame, frame(nil))
+	gone := golden.Capture(t, intFrame, frame(expired))
 	if n := golden.PixelDiff(empty, gone); n != 0 {
 		t.Errorf("an expired toast still painted %d pixels; it must wait for Expired invisibly", n)
 	}
@@ -283,7 +283,7 @@ func TestAnExpiredToastPaintsNothing(t *testing.T) {
 	// The same toast, still inside its lifetime, does paint — otherwise the
 	// assertion above would pass for a stack that never draws anything.
 	live := []Toast{{ID: 1, Level: Warning, Text: "Connection is slow", At: now, Lifetime: DefaultLifetime}}
-	up := golden.Capture(t, intCanvas, frame(live))
+	up := golden.Capture(t, intFrame, frame(live))
 	if n := golden.PixelDiff(empty, up); n == 0 {
 		t.Error("a live toast painted nothing; the expiry assertion above proves nothing")
 	}
@@ -373,15 +373,15 @@ func TestAnchorsPlaceTheColumn(t *testing.T) {
 		x    int  // where the surface's leading edge lands
 		top  bool // hugs the top edge; otherwise the bottom
 	}{
-		{"top right", TopRight, intCanvasW - edge - toastWidthDp, true},
-		{"bottom right", BottomRight, intCanvasW - edge - toastWidthDp, false},
+		{"top right", TopRight, intFrameW - edge - toastWidthDp, true},
+		{"bottom right", BottomRight, intFrameW - edge - toastWidthDp, false},
 		{"top left", TopLeft, edge, true},
 		{"bottom left", BottomLeft, edge, false},
-		{"bottom center", BottomCenter, (intCanvasW - toastWidthDp) / 2, false},
+		{"bottom center", BottomCenter, (intFrameW - toastWidthDp) / 2, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			box := toastBounds(golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
+			box := toastBounds(golden.Capture(t, intFrame, func(gtx layout.Context) layout.Dimensions {
 				return drawStackStatic(gtx, shaper, Props{Position: tc.pos}, tok, queued)
 			}), fill, lead)
 			if box.Empty() {
@@ -397,9 +397,9 @@ func TestAnchorsPlaceTheColumn(t *testing.T) {
 				}
 				return
 			}
-			if box.Max.Y != intCanvasH-edge {
+			if box.Max.Y != intFrameH-edge {
 				t.Errorf("the surface ends at y=%d; want one %d dp margin above the bottom edge at y=%d",
-					box.Max.Y, edge, intCanvasH-edge)
+					box.Max.Y, edge, intFrameH-edge)
 			}
 		})
 	}
@@ -425,7 +425,7 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 		{ID: 1, Level: Info, Text: "Rescanned: 2 notes"},
 		{ID: 2, Level: Error, Text: "Vault is unreadable"},
 	}
-	img := golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
+	img := golden.Capture(t, intFrame, func(gtx layout.Context) layout.Dimensions {
 		return drawStackStatic(gtx, shaper, Props{Position: BottomCenter}, tok, queued)
 	})
 	older, newest := toastBounds(img, levelEdge(Info, tok)), toastBounds(img, levelEdge(Error, tok))
@@ -434,14 +434,14 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 		t.Fatalf("one of the two toasts painted nothing: older=%v newest=%v", older, newest)
 	}
 
-	if newest.Max.Y != intCanvasH-edge {
+	if newest.Max.Y != intFrameH-edge {
 		t.Errorf("the newest toast ends at y=%d; want it against the anchored edge, one %d dp margin up at y=%d",
-			newest.Max.Y, edge, intCanvasH-edge)
+			newest.Max.Y, edge, intFrameH-edge)
 	}
 	if older.Min.X != newest.Min.X {
 		t.Errorf("the two toasts lead at x=%d and x=%d; a column stands on one line", older.Min.X, newest.Min.X)
 	}
-	if lead, trail := column.Min.X, intCanvasW-column.Max.X; lead != trail {
+	if lead, trail := column.Min.X, intFrameW-column.Max.X; lead != trail {
 		t.Errorf("the column has %d dp of air leading and %d trailing; a centred anchor has the same on both sides", lead, trail)
 	}
 	// Both labels are one line of the same style, so the older surface is
@@ -477,7 +477,7 @@ func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
 
 	for _, l := range []Level{Info, Success, Warning, Error} {
 		queued := []Toast{{ID: 1, Level: l, Text: "Rescanned: 2 notes"}}
-		img := golden.Capture(t, intCanvas, func(gtx layout.Context) layout.Dimensions {
+		img := golden.Capture(t, intFrame, func(gtx layout.Context) layout.Dimensions {
 			return drawStackStatic(gtx, shaper, Props{Position: TopLeft}, tok, queued)
 		})
 		edge := toastBounds(img, levelEdge(l, tok))
@@ -497,24 +497,24 @@ func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
 		// of the edge carrying anything that is neither the fill nor the
 		// edge, which is the message's first drawn pixel.
 		fill := surfaceFill(tok)
-		firstInk := -1
-		for x := edge.Max.X; x < edge.Max.X+4*air && firstInk < 0; x++ {
+		firstDrawn := -1
+		for x := edge.Max.X; x < edge.Max.X+4*air && firstDrawn < 0; x++ {
 			for y := edge.Min.Y; y < edge.Max.Y; y++ {
 				got := img.RGBAAt(x, y)
 				if !nearColor(got, fill) && !nearColor(got, levelEdge(l, tok)) {
-					firstInk = x
+					firstDrawn = x
 					break
 				}
 			}
 		}
-		if firstInk < 0 {
+		if firstDrawn < 0 {
 			t.Fatalf("level %d: no message pixels found beside the edge", l)
 		}
-		if gap := firstInk - edge.Max.X; gap <= edge.Dx() {
+		if gap := firstDrawn - edge.Max.X; gap <= edge.Dx() {
 			t.Errorf("level %d: %d px of air between the edge and the message against a %d px edge; the mark must not out-measure the space it keeps",
 				l, gap, edge.Dx())
 		}
-		t.Logf("level %d: edge %d px wide, message starts %d px past it", l, edge.Dx(), firstInk-edge.Max.X)
+		t.Logf("level %d: edge %d px wide, message starts %d px past it", l, edge.Dx(), firstDrawn-edge.Max.X)
 	}
 }
 
@@ -568,7 +568,7 @@ func TestNotifyOutsideAFrameIsHarmless(t *testing.T) {
 	ops := new(op.Ops)
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(intCanvas),
+		Constraints: layout.Exact(intFrame),
 		Now:         time.Unix(1700000000, 0),
 		Ops:         ops,
 	}

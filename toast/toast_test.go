@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	canvasW, canvasH = 320, 240
+	frameW, frameH = 320, 240
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism.
 	sharpRadius = tokens.RadiusScale{}
@@ -122,7 +122,7 @@ func TestStackGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := toast.Render(shaper, tc.props, tc.items, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -137,8 +137,8 @@ func TestStackEmptyAndPopulatedDiffer(t *testing.T) {
 	empty := toast.Render(shaper, props, nil, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
 	full := toast.Render(shaper, props, []toast.Toast{item(1, toast.Info)}, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
 
-	imgE := golden.Capture(t, canvasSize, scene(empty, bg))
-	imgF := golden.Capture(t, canvasSize, scene(full, bg))
+	imgE := golden.Capture(t, frameSize, scene(empty, bg))
+	imgF := golden.Capture(t, frameSize, scene(full, bg))
 	if n := golden.PixelDiff(imgE, imgF); n == 0 {
 		t.Error("empty and populated stacks render identically; expected the surface to appear when populated")
 	}
@@ -155,8 +155,8 @@ func TestStackPositionAnchoring(t *testing.T) {
 	tr := toast.Render(shaper, toast.Props{Position: toast.TopRight, Shaper: shaper}, items, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
 	bl := toast.Render(shaper, toast.Props{Position: toast.BottomLeft, Shaper: shaper}, items, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
 
-	imgTR := golden.Capture(t, canvasSize, scene(tr, bg))
-	imgBL := golden.Capture(t, canvasSize, scene(bl, bg))
+	imgTR := golden.Capture(t, frameSize, scene(tr, bg))
+	imgBL := golden.Capture(t, frameSize, scene(bl, bg))
 	if n := golden.PixelDiff(imgTR, imgBL); n == 0 {
 		t.Error("TopRight and BottomLeft stacks render identically; expected corner anchoring")
 	}
