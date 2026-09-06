@@ -3,15 +3,15 @@
 The pattern layer of [Vibrant Gio](https://github.com/vibrantgio), a design
 system for native desktop applications on macOS, Windows and Linux, written in
 pure Go on [Gio](https://gioui.org). Where components gives you a button, patterns
-gives you the nineteen composed things an application is actually made of — an
+gives you the eighteen composed things an application is actually made of — an
 application shell, a navbar, a sidebar, a virtualised data table, a modal, a
 column of notifications, a hero section.
 
 Every one of them is the part you would otherwise write by hand and get subtly
 wrong: the modal that knows a question from a place and so refuses to let a
 stray backdrop click answer the question, the popover that dismisses
-when you open another one, the tooltip that is the only tooltip on screen, the
-table that lays out only the rows you can see. Each pattern reads its visual
+when you open another one, the column that stacks and times its
+notifications, the table that lays out only the rows you can see. Each pattern reads its visual
 values from [theme](https://github.com/vibrantgio/theme)'s theme
 observable, and the theme carries the whole look: colour, typography, density,
 elevation and motion. A window follows the OS between light and dark with no
@@ -48,7 +48,7 @@ Every package has the same two entry points, and the split is deliberate:
   and picks its own roles, as it does live. And a `tokens.Density` follows
   only where the pattern sizes a control: `navbar`, `sidebar`, `tabs`,
   `table`, `pagination`, `shell`, `hero`, `pricing` and `modal` take one;
-  `accordion`, `breadcrumb`, `group`, `tooltip`, `notifications`,
+  `accordion`, `breadcrumb`, `group`, `notifications`,
   `feature`, `testimonial` and `table.RenderTextCell` do not, because
   nothing in them has a control height. Until v0.3.0 these signatures took a
   `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
@@ -110,9 +110,8 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 
 | Package | |
 | --- | --- |
-| `modal` | A centred dialog over a full-window scrim, its surface a level-2 fill on the elevation: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's and tooltip's single arbiter it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the modal a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
+| `modal` | A centred dialog over a full-window scrim, its surface a level-2 fill on the elevation: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's single arbiter it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the modal a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
 | `popover` | An anchored floating surface with a triangular tail pointing at a caller-supplied anchor. Outside-click dismissal and popover-vs-popover arbitration are frame state, not a bus: `Props.Arbiter` names the set a popover arbitrates within — one per window — and opening a second popover in that set dismisses the first, in the same frame, from inside the claimant's own layout pass. A nil `Arbiter` gets the popover one of its own, so sharing one is the explicit act. `Props.Open` carries open-ness on a stream; `Props.OpenNow` reads it during layout, for a caller that owns it as frame state. |
-| `tooltip` | A hover/focus annotation next to a trigger after a delay. `DefaultDelay` resolves from the token motion scale's `DurXSlow` stop (500 ms), and the live form re-times from the theme's `Motion` observable. Arbitration keeps exactly one tooltip visible, and is frame state rather than a bus: `Props.Arbiter` names the set — one per window — and a tooltip is visible exactly while it holds that set's top, so the claim a finished dwell makes *is* the previous tooltip's dismissal. A nil `Arbiter` gets the tooltip one of its own, so sharing one is the explicit act. |
 | `notifications` | The position-anchored column that receives the application's notifications, places them, stacks them against each other, times them, and presents each one as a [`components/toast`](https://github.com/vibrantgio/components). The pattern owns the queue, the placement and the timing, not the presentation: the toast's inverse fill and its status-role leading edge are the component's, and what the column adds under each is the `effects/depth` cast shadow, because only the placement knows where the surface landed — and a shadow is what says it floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `notifications.Queue` in the model, `Props.Notifications` carries that queue back to the `Column`, and `Expire` brings the removal back as `Expired` at the end of the notification's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
@@ -124,7 +123,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `pricing` | A row of tier groups — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally `Recommended`, which draws that tier as a card raised on the content and puts a "Popular" badge on its name row. A row of tiers divides the page; the tier that must stand apart from it is the one card. |
 | `testimonial` | Quote cards with an author block and an avatar (or an initial in a circular placeholder), as a single centred card or a row of them. |
 
-`modal/gallery` is a `main` inside this module, not a twenty-first pattern: it
+`modal/gallery` is a `main` inside this module, not a nineteenth pattern: it
 demonstrates a decision dialog — its Tab cycle, its focus-ring ownership, its
 Return-bound default and its inert backdrop. Run it with `go run
 ./modal/gallery`.
@@ -293,7 +292,7 @@ Honest about what does not work yet:
   `rx.SwitchMap`. `accordion`, `modal`, `popover`, `sidebar`, `tabs` and
   `table` all take their dynamic state as observables; pagination is the
   outlier.
-- **Overlays open and close instantly.** `modal`, `popover` and `tooltip` have
+- **Overlays open and close instantly.** `modal` and `popover` have
   no entrance or exit transition; only `notifications` animates, and only the
   toast's fade-out
   (whose duration does at least resolve from the theme's motion scale now).
