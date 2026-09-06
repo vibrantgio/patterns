@@ -5,7 +5,7 @@ system for native desktop applications on macOS, Windows and Linux, written in
 pure Go on [Gio](https://gioui.org). Where components gives you a button, patterns
 gives you the nineteen composed things an application is actually made of — an
 application shell, a navbar, a sidebar, a virtualised data table, a modal, a
-toast stack, a hero section.
+column of notifications, a hero section.
 
 Every one of them is the part you would otherwise write by hand and get subtly
 wrong: the modal that knows a question from a place and so refuses to let a
@@ -19,9 +19,9 @@ application code; switching an app to Compact density resizes the navbar,
 sidebar items, tabs, pagination and table rows as a theme change, not a sweep;
 overlay surfaces name their level on the elevation and fill from
 `SurfaceAt` — the modal at level 2, the popover at level 3, tonal in both
-modes — except the toast, which takes no level and inverts instead; cast
-shadows are reserved, per ADR-005, for the surfaces that float and can leave
-(the toast; not the card).
+modes — except the toast the notifications column presents, which is filled
+inverse instead; cast shadows are reserved, per ADR-005, for the surfaces
+that float and can leave (the toast; not the card).
 
 Every package has the same two entry points, and the split is deliberate:
 
@@ -48,7 +48,7 @@ Every package has the same two entry points, and the split is deliberate:
   and picks its own roles, as it does live. And a `tokens.Density` follows
   only where the pattern sizes a control: `navbar`, `sidebar`, `tabs`,
   `table`, `pagination`, `shell`, `hero`, `pricing` and `modal` take one;
-  `accordion`, `breadcrumb`, `group`, `tooltip`, `toast`,
+  `accordion`, `breadcrumb`, `group`, `tooltip`, `notifications`,
   `feature`, `testimonial` and `table.RenderTextCell` do not, because
   nothing in them has a control height. Until v0.3.0 these signatures took a
   `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
@@ -113,7 +113,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `modal` | A centred dialog over a full-window scrim, its surface a level-2 fill on the elevation: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's and tooltip's single arbiter it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the modal a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
 | `popover` | An anchored floating surface with a triangular tail pointing at a caller-supplied anchor. Outside-click dismissal and popover-vs-popover arbitration are frame state, not a bus: `Props.Arbiter` names the set a popover arbitrates within — one per window — and opening a second popover in that set dismisses the first, in the same frame, from inside the claimant's own layout pass. A nil `Arbiter` gets the popover one of its own, so sharing one is the explicit act. `Props.Open` carries open-ness on a stream; `Props.OpenNow` reads it during layout, for a caller that owns it as frame state. |
 | `tooltip` | A hover/focus annotation next to a trigger after a delay. `DefaultDelay` resolves from the token motion scale's `DurXSlow` stop (500 ms), and the live form re-times from the theme's `Motion` observable. Arbitration keeps exactly one tooltip visible, and is frame state rather than a bus: `Props.Arbiter` names the set — one per window — and a tooltip is visible exactly while it holds that set's top, so the claim a finished dwell makes *is* the previous tooltip's dismissal. A nil `Arbiter` gets the tooltip one of its own, so sharing one is the explicit act. |
-| `toast` | A position-anchored column of transient notifications, each an inverse chip — the token set's `InverseSurface` under its `OnInverseSurface`, so the message is dark on a light scheme and light on a dark one and separates from every surface it can appear over — with a `effects/depth` cast shadow, because a toast floats and can leave, which is exactly what ADR-005 reserves shadows for, and a leading edge in the level's own ramp. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `toast.Queue` in the model, `Props.Toasts` carries that queue back to the `Stack`, and `Expire` brings the removal back as `Expired` at the end of the toast's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
+| `notifications` | The position-anchored column that receives the application's notifications, places them, stacks them against each other, times them, and presents each one as a [`components/toast`](https://github.com/vibrantgio/components). The pattern owns the queue, the placement and the timing, not the presentation: the toast's inverse fill and its status-role leading edge are the component's, and what the column adds under each is the `effects/depth` cast shadow, because only the placement knows where the surface landed — and a shadow is what says it floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `notifications.Queue` in the model, `Props.Notifications` carries that queue back to the `Column`, and `Expire` brings the removal back as `Expired` at the end of the notification's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
 
@@ -200,23 +200,26 @@ checkboxCell := func(r symbolRow) layout.Widget {
 ```
 
 Overlays are folded onto the shell stream and drawn after it, reporting the
-shell's dimensions — the modal scrim and the toast column both need the whole
-window. Both `feeds` and `watchlist` do exactly this:
+shell's dimensions — the modal scrim and the notifications column both need
+the whole window. Both `feeds` and `watchlist` do exactly this:
 
 ```go
-toastsObs := rx.Map(modelObs, func(m Model) []toast.Toast { return m.toasts.Items() })
-toastObs := toast.Stack(th, toast.Props{Position: toast.TopRight, Toasts: toastsObs})
+notesObs := rx.Map(modelObs, func(m Model) []notifications.Notification { return m.notes.Items() })
+notesColumnObs := notifications.Column(th, notifications.Props{
+	Position:      notifications.TopRight,
+	Notifications: notesObs,
+})
 
-return rx.Map(rx.CombineLatest3(shellObs, modalObs, toastObs),
+return rx.Map(rx.CombineLatest3(shellObs, modalObs, notesColumnObs),
 	func(n rx.Tuple3[layout.Widget, layout.Widget, layout.Widget]) layout.Widget {
-		shellW, modalW, toastW := n.First, n.Second, n.Third
+		shellW, modalW, notesW := n.First, n.Second, n.Third
 		return func(gtx layout.Context) layout.Dimensions {
 			dims := shellW(gtx)
 			if modalW != nil {
 				modalW(gtx)
 			}
-			if toastW != nil {
-				toastW(gtx)
+			if notesW != nil {
+				notesW(gtx)
 			}
 			return dims
 		}
@@ -224,23 +227,25 @@ return rx.Map(rx.CombineLatest3(shellObs, modalObs, toastObs),
 )
 ```
 
-A toast request is an event, so it is a message. Inside a frame,
-`toast.Notify(gtx, toast.Success, "Feed added")` lands `toast.Requested` on the
-ops queue; from a command goroutine, `toast.Request(toast.Success, "Saved")` is
-the message to return. The application reduces both onto a `toast.Queue` it
-holds in its model, and the expiry comes back the same way:
+A notification is raised by message, never drawn in place. Inside a frame,
+`notifications.Notify(gtx, toast.Success, "Feed added")` lands
+`notifications.Requested` on the ops queue; from a command goroutine,
+`notifications.Request(toast.Success, "Saved")` is the message to return. The
+status role is `components/toast`'s, because the toast is what speaks it. The
+application reduces both onto a `notifications.Queue` it holds in its model,
+and the expiry comes back the same way:
 
 ```go
-case toast.Requested:
-	queue, t := model.toasts.Add(m)
-	model.toasts = queue
-	return model, toast.Expire(t.ID, t.Lifetime)
-case toast.Expired:
-	model.toasts = model.toasts.Remove(m.ID)
+case notifications.Requested:
+	queue, n := model.notes.Add(m)
+	model.notes = queue
+	return model, notifications.Expire(n.ID, n.Lifetime)
+case notifications.Expired:
+	model.notes = model.notes.Remove(m.ID)
 ```
 
 Until v0.4.1 the entry point was a package-scoped `Notify(level, text)`
-publishing to a process-global subject that every `Stack` subscribed. That is
+publishing to a process-global subject that every column subscribed. That is
 gone: a message needs the frame's `*op.Ops` and the old signature had no way to
 reach one, so there is no shim — every call site takes a `gtx` now.
 
@@ -289,7 +294,8 @@ Honest about what does not work yet:
   `table` all take their dynamic state as observables; pagination is the
   outlier.
 - **Overlays open and close instantly.** `modal`, `popover` and `tooltip` have
-  no entrance or exit transition; only `toast` animates, and only its fade-out
+  no entrance or exit transition; only `notifications` animates, and only the
+  toast's fade-out
   (whose duration does at least resolve from the theme's motion scale now).
   Integrating effects' motion primitives across the overlays is still deferred.
 - **No responsive behaviour.** `feature`, `pricing` and `testimonial` do not
