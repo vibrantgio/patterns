@@ -3,7 +3,7 @@ package tabs
 // This file is an internal test (package tabs, not tabs_test) so it can
 // exercise underlineForeground directly, the way theme/tokens/foreground_test.go
 // exercises ColorTokens.ForegroundOnAtFloor and
-// components/richtext/link_test.go exercises richtext.FromTokens's
+// components/paragraph/link_test.go exercises paragraph.FromTokens's
 // LinkColor field. tabCell has no exported field to read the drawn colour
 // back off of, so the derivation itself is the seam this file measures.
 
@@ -19,7 +19,7 @@ import (
 
 // underlineSweepSeeds is the seed population this file reads the tab
 // underline's colour claims against, the same one theme/tokens and
-// components/richtext sweep their derivations with: the default seed, the
+// components/paragraph sweep their derivations with: the default seed, the
 // nine macOS system accents, both ends of the tonal axis, three pastels
 // stated at a dark scheme's tone, and four hundred random colours from a
 // fixed source.
