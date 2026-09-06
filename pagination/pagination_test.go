@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	canvasW, canvasH = 360, 48
+	frameW, frameH = 360, 48
 )
 
-var canvasSize = image.Pt(canvasW, canvasH)
+var frameSize = image.Pt(frameW, frameH)
 
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
@@ -69,7 +69,7 @@ func TestPaginationGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := pagination.Props{Page: tc.page, PageCount: tc.pageCount, Shaper: shaper}
 			w := pagination.Render(shaper, props, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -85,7 +85,7 @@ func TestPaginationCurrentPagePositionDiffers(t *testing.T) {
 	render := func(page int) *image.RGBA {
 		props := pagination.Props{Page: page, PageCount: 5, Shaper: shaper}
 		w := pagination.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-		return golden.Capture(t, canvasSize, scene(w, bg))
+		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
 	one := render(1)
@@ -106,8 +106,8 @@ func TestPaginationLightDarkDiffer(t *testing.T) {
 	light := pagination.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 	dark := pagination.Render(shaper, props, tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 
-	imgLight := golden.Capture(t, canvasSize, scene(light, bg))
-	imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
+	imgLight := golden.Capture(t, frameSize, scene(light, bg))
+	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Error("light and dark render identically; expected token-pair colour differences")
 	}
@@ -135,7 +135,7 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 	gap := int(tokens.Spacing.S2)
 	cellAt := func(n int) image.Point {
 		x := side + gap + (n-1)*(side+gap)
-		y := (canvasH - side) / 2
+		y := (frameH - side) / 2
 		return image.Pt(x+3, y+3)
 	}
 
@@ -150,7 +150,7 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := pagination.Props{Page: page, PageCount: pageCount, Shaper: shaper}
 			w := pagination.Render(shaper, props, tc.c, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-			img := golden.Capture(t, canvasSize, scene(w, tc.bg))
+			img := golden.Capture(t, frameSize, scene(w, tc.bg))
 
 			at := func(p image.Point) color.NRGBA {
 				r, g, b, _ := img.At(p.X, p.Y).RGBA()
@@ -171,9 +171,9 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 			// The digit's colour comes from the fill's own ramp; OnPrimary is
 			// derived against the ramp's pin and does not clear WCAG AA over
 			// the tinted step used here.
-			ink := tc.c.Ramps.Primary.Step(700)
-			if got := tcolor.ContrastRatio(ink, tint); got < aaBodyText {
-				t.Errorf("current page digit %v over %v = %.2f:1, below WCAG AA body text %.1f:1", ink, tint, got, aaBodyText)
+			foreground := tc.c.Ramps.Primary.Step(700)
+			if got := tcolor.ContrastRatio(foreground, tint); got < aaBodyText {
+				t.Errorf("current page digit %v over %v = %.2f:1, below WCAG AA body text %.1f:1", foreground, tint, got, aaBodyText)
 			}
 			if got := tcolor.ContrastRatio(tc.c.OnPrimary, tint); got >= aaBodyText {
 				t.Errorf("OnPrimary %v now reads %.2f:1 over %v; this test's premise has moved", tc.c.OnPrimary, got, tint)
@@ -183,7 +183,7 @@ func TestTheCurrentPageWearsTheChosenItemStep(t *testing.T) {
 			// current page is the coloured cell rather than the strongest or the
 			// faintest one.
 			resting := tcolor.ContrastRatio(tc.c.Ramps.Neutral.Step(700), tc.c.Ramps.Neutral.Step(300))
-			current := tcolor.ContrastRatio(ink, tint)
+			current := tcolor.ContrastRatio(foreground, tint)
 			if d := current / resting; d < 0.75 || d > 1.35 {
 				t.Errorf("current digit reads %.2f:1 against the resting cells' %.2f:1; one cell in the row is a different weight from the others", current, resting)
 			}
@@ -229,5 +229,5 @@ func TestPaginationCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := pagination.Props{Page: 3, PageCount: 5, Shaper: defaultShaper(t)}
 	w := liveWidget(t, pagination.Pagination(rx.Of(densityTheme(tokens.Compact)), props))
-	golden.Render(t, "light-compact-page-3-of-5", canvasSize, scene(w, lightBG))
+	golden.Render(t, "light-compact-page-3-of-5", frameSize, scene(w, lightBG))
 }

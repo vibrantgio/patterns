@@ -28,7 +28,7 @@ func BenchmarkTableLayout(b *testing.B) {
 		{Header: "Name", Sortable: true, Cell: nameCell(shaper)},
 		{Header: "Value", Width: unit.Dp(120), Cell: valueCell(shaper)},
 	}
-	canvas := image.Pt(viewW, viewH)
+	frame := image.Pt(viewW, viewH)
 
 	for _, n := range []int{10, 100, 1000, 10000} {
 		items := makeRows(n)
@@ -41,7 +41,7 @@ func BenchmarkTableLayout(b *testing.B) {
 				var ops op.Ops
 				gtx := layout.Context{
 					Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-					Constraints: layout.Exact(canvas),
+					Constraints: layout.Exact(frame),
 					Ops:         &ops,
 				}
 				w(gtx)

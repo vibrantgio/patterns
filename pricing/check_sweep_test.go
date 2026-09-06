@@ -1,7 +1,7 @@
 package pricing
 
 // This file is an internal test (package pricing, not pricing_test) so it
-// can exercise checkInk directly, the way theme/tokens/foreground_test.go
+// can exercise checkForeground directly, the way theme/tokens/foreground_test.go
 // exercises ColorTokens.ForegroundOnAtFloor and
 // components/richtext/link_test.go exercises richtext.FromTokens's
 // LinkColor field. checkmarkWidget has no exported field to read the drawn
@@ -22,7 +22,7 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// tierInkSweepSeeds is the seed population this file reads the feature
+// checkSweepSeeds is the seed population this file reads the feature
 // checkmarks' colour claims against, the same one
 // theme/tokens and components/richtext sweep their derivations with: the
 // default seed, the nine macOS system accents, both ends of the tonal
@@ -33,7 +33,7 @@ import (
 // tonal axis, and a brand seeded with one of them derives a light scheme
 // whose primary pin can sit a whisper off the surface it stands on — the shape the
 // three pastels exercise.
-func tierInkSweepSeeds() []stdcolor.NRGBA {
+func checkSweepSeeds() []stdcolor.NRGBA {
 	rng := rand.New(rand.NewSource(20260827))
 	seeds := []stdcolor.NRGBA{
 		tokens.DefaultSeed,
@@ -50,7 +50,7 @@ func tierInkSweepSeeds() []stdcolor.NRGBA {
 	return seeds
 }
 
-func tierInkHex(c stdcolor.NRGBA) string { return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B) }
+func checkHex(c stdcolor.NRGBA) string { return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B) }
 
 // tierKinds is the pair of tiers a row holds: the group every ordinary tier
 // is, and the card the recommended one is. They stand at different levels,
@@ -63,9 +63,9 @@ var tierKinds = []struct {
 	{"recommended card", Tier{Recommended: true}},
 }
 
-// tierInkSweepSchemes yields every palette the sweep reads a seed as: both
+// checkSweepSchemes yields every palette the sweep reads a seed as: both
 // derivations, both schemes.
-func tierInkSweepSchemes(seed stdcolor.NRGBA) []struct {
+func checkSweepSchemes(seed stdcolor.NRGBA) []struct {
 	name  string
 	tok   tokens.ColorTokens
 	light bool
@@ -84,40 +84,40 @@ func tierInkSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// TestCheckInkClearsTheGraphicFloorForEverySeed holds the invariant that
+// TestCheckForegroundClearsTheGraphicFloorForEverySeed holds the invariant that
 // whatever a caller seeds the palette with, the colour drawn directly on a
 // tier — the feature checkmarks — reaches WCAG 1.4.11 against that tier's
 // own fill, on the group and on the recommended card alike.
-func TestCheckInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
+func TestCheckForegroundClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string
-	for _, seed := range tierInkSweepSeeds() {
-		for _, s := range tierInkSweepSchemes(seed) {
+	for _, seed := range checkSweepSeeds() {
+		for _, s := range checkSweepSchemes(seed) {
 			for _, k := range tierKinds {
 				fill := tierFill(s.tok, k.tier)
-				ink := checkInk(s.tok, fill)
-				got := color.ContrastRatio(ink, fill)
+				foreground := checkForeground(s.tok, fill)
+				got := color.ContrastRatio(foreground, fill)
 				if got < tokens.GraphicFloor {
 					t.Errorf("seed %s: %s: %s: check colour %s on %s measures %.2f:1, under the %.1f:1 graphic floor",
-						tierInkHex(seed), s.name, k.name, tierInkHex(ink), tierInkHex(fill), got, tokens.GraphicFloor)
+						checkHex(seed), s.name, k.name, checkHex(foreground), checkHex(fill), got, tokens.GraphicFloor)
 				}
 				if s.light && got < worstLight {
-					worstLight, worstLightAt = got, tierInkHex(seed)
+					worstLight, worstLightAt = got, checkHex(seed)
 				}
 				if !s.light && got < worstDark {
-					worstDark, worstDarkAt = got, tierInkHex(seed)
+					worstDark, worstDarkAt = got, checkHex(seed)
 				}
 			}
 		}
 	}
 	t.Logf("over %d seeds: worst light check colour %.2f:1 (%s), worst dark check colour %.2f:1 (%s)",
-		len(tierInkSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
+		len(checkSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
-// TestTheCanonicalSeedsCheckInkIsThePrimaryPin holds the invariant that on
+// TestTheCanonicalSeedsCheckForegroundIsThePrimaryPin holds the invariant that on
 // the seed every golden is rendered from, the brand's own colour clears the
 // floor on both tier surfaces and is what the checkmarks get.
-func TestTheCanonicalSeedsCheckInkIsThePrimaryPin(t *testing.T) {
+func TestTheCanonicalSeedsCheckForegroundIsThePrimaryPin(t *testing.T) {
 	for _, s := range []struct {
 		name string
 		tok  tokens.ColorTokens
@@ -126,19 +126,19 @@ func TestTheCanonicalSeedsCheckInkIsThePrimaryPin(t *testing.T) {
 		{"DefaultDark", tokens.DefaultDark},
 	} {
 		for _, k := range tierKinds {
-			if ink := checkInk(s.tok, tierFill(s.tok, k.tier)); ink != s.tok.Primary {
+			if foreground := checkForeground(s.tok, tierFill(s.tok, k.tier)); foreground != s.tok.Primary {
 				t.Errorf("%s: %s: check colour is %s, not the Primary pin %s — a golden moved",
-					s.name, k.name, tierInkHex(ink), tierInkHex(s.tok.Primary))
+					s.name, k.name, checkHex(foreground), checkHex(s.tok.Primary))
 			}
 		}
 	}
 }
 
-// TestAPastelSeedsCheckInkLeavesThePin holds the invariant on a light
+// TestAPastelSeedsCheckForegroundLeavesThePin holds the invariant on a light
 // scheme seeded with a dark scheme's accent: the bare pin sits under the
 // graphic floor on the recommended card, so the checkmarks there must not
 // be the bare pin.
-func TestAPastelSeedsCheckInkLeavesThePin(t *testing.T) {
+func TestAPastelSeedsCheckForegroundLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)
 	recommended := Tier{Recommended: true}
@@ -147,13 +147,13 @@ func TestAPastelSeedsCheckInkLeavesThePin(t *testing.T) {
 	if bare := color.ContrastRatio(light.Primary, lightFill); bare >= tokens.GraphicFloor {
 		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the card — the test no longer reads the shape it was written for", bare)
 	}
-	if lightInk := checkInk(light, lightFill); lightInk == light.Primary {
-		t.Errorf("light check colour is still the bare pin %s", tierInkHex(light.Primary))
+	if lightForeground := checkForeground(light, lightFill); lightForeground == light.Primary {
+		t.Errorf("light check colour is still the bare pin %s", checkHex(light.Primary))
 	}
 
-	darkInk := checkInk(dark, tierFill(dark, recommended))
-	if darkInk != dark.Primary {
+	darkForeground := checkForeground(dark, tierFill(dark, recommended))
+	if darkForeground != dark.Primary {
 		t.Errorf("dark check colour walked to %s; the dark pin %s clears its card and should stand",
-			tierInkHex(darkInk), tierInkHex(dark.Primary))
+			checkHex(darkForeground), checkHex(dark.Primary))
 	}
 }

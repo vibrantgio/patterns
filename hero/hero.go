@@ -258,8 +258,8 @@ func textColumn(
 // at the text floor, not a named step: the kicker is the smallest type on the
 // block and a step that reads at BodyLarge need not read at LabelSmall.
 func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	ink := tok.color.MarkOn(tokens.RoleNeutral, tok.color.SurfaceAt(tokens.Level0), tokens.TextFloor)
-	return textWidget(shaper, label, ink, tok.eyebrow, font.Normal)
+	foreground := tok.color.MarkOn(tokens.RoleNeutral, tok.color.SurfaceAt(tokens.Level0), tokens.TextFloor)
+	return textWidget(shaper, label, foreground, tok.eyebrow, font.Normal)
 }
 
 // titleWidget renders the DisplaySmall-role title in Text. A zero style

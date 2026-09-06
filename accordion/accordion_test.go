@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	canvasW = 240
-	canvasH = 240
+	frameW = 240
+	frameH = 240
 )
 
-var canvasSize = image.Pt(canvasW, canvasH)
+var frameSize = image.Pt(frameW, frameH)
 
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
@@ -101,7 +101,7 @@ func TestAccordionGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := accordion.Props{Sections: threeSections(), Shaper: shaper}
 			w := accordion.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -190,8 +190,8 @@ func TestAccordionArrowSpaceEnter(t *testing.T) {
 	ops := new(op.Ops)
 	// Two warm-up frames so the router has stable hit-test data for
 	// each header's clip area before pointer events are queued.
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// Click header 0 → OnToggle(0) and focus moves to header 0.
 	hit := f32.Pt(96, 24)
@@ -199,36 +199,36 @@ func TestAccordionArrowSpaceEnter(t *testing.T) {
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// Arrow-Down to header 1, then Enter (Press+Release) → OnToggle(1).
 	r.Queue(key.Event{Name: key.NameDownArrow, State: key.Press})
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	r.Queue(
 		key.Event{Name: key.NameReturn, State: key.Press},
 		key.Event{Name: key.NameReturn, State: key.Release},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// Arrow-Down to header 2, then Space (Press+Release) → OnToggle(2).
 	r.Queue(key.Event{Name: key.NameDownArrow, State: key.Press})
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	r.Queue(
 		key.Event{Name: key.NameSpace, State: key.Press},
 		key.Event{Name: key.NameSpace, State: key.Release},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// Two Arrow-Ups → focus moves back to header 0; Enter → OnToggle(0).
 	r.Queue(key.Event{Name: key.NameUpArrow, State: key.Press})
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	r.Queue(key.Event{Name: key.NameUpArrow, State: key.Press})
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	r.Queue(
 		key.Event{Name: key.NameReturn, State: key.Press},
 		key.Event{Name: key.NameReturn, State: key.Release},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	want := []int{0, 1, 2, 0}
 	if !equalInts(calls, want) {
@@ -268,15 +268,15 @@ func TestAccordionSingleOpenCollapsesPrior(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	hit := f32.Pt(96, 168)
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	want := []int{0, 1}
 	if !equalInts(calls, want) {

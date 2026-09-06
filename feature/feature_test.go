@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	canvasW, canvasH = 720, 320
+	frameW, frameH = 720, 320
 	// scene leaves a small margin around the grid so the outer cells
 	// retain breathing room from the frame edge.
 	marginPx = 16
 )
 
-var canvasSize = image.Pt(canvasW, canvasH)
+var frameSize = image.Pt(frameW, frameH)
 
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
@@ -112,13 +112,13 @@ func TestFeatureGolden(t *testing.T) {
 		items   []feature.Item
 		size    image.Point
 	}{
-		{"light-3-up", tokens.DefaultLight, lightBG, 3, three, canvasSize},
-		{"dark-3-up", tokens.DefaultDark, darkBG, 3, three, canvasSize},
-		{"light-2-up", tokens.DefaultLight, lightBG, 2, two, canvasSize},
+		{"light-3-up", tokens.DefaultLight, lightBG, 3, three, frameSize},
+		{"dark-3-up", tokens.DefaultDark, darkBG, 3, three, frameSize},
+		{"light-2-up", tokens.DefaultLight, lightBG, 2, two, frameSize},
 		// Two rows of real text do not fit the one-row frame; the taller
 		// frame keeps the second row's bodies on screen rather than cut
 		// off at the edge.
-		{"light-6-items-3-up", tokens.DefaultLight, lightBG, 3, six, image.Pt(canvasW, 2*canvasH)},
+		{"light-6-items-3-up", tokens.DefaultLight, lightBG, 3, six, image.Pt(frameW, 2*frameH)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -139,8 +139,8 @@ func TestFeatureColumnsDefaultsToThree(t *testing.T) {
 	zero := feature.Render(shaper, feature.Props{Columns: 0, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography)
 	three := feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography)
 
-	a := golden.Capture(t, canvasSize, scene(zero, bg))
-	b := golden.Capture(t, canvasSize, scene(three, bg))
+	a := golden.Capture(t, frameSize, scene(zero, bg))
+	b := golden.Capture(t, frameSize, scene(three, bg))
 	if n := golden.PixelDiff(a, b); n != 0 {
 		t.Errorf("Columns=0 default-to-3 contract broken: %d pixel(s) differ from Columns=3", n)
 	}
@@ -176,7 +176,7 @@ func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 // whose natural line draws 17 px: the run is 60 px at line height 20 and 96
 // px at 32, so the +12 this test applies lengthens it by 36 px.
 func TestFeatureLineHeightGolden(t *testing.T) {
-	golden.Render(t, "light-3-up-tall-body-lines", canvasSize,
+	golden.Render(t, "light-3-up-tall-body-lines", frameSize,
 		featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight+12))
 }
 
@@ -186,8 +186,8 @@ func TestFeatureLineHeightGolden(t *testing.T) {
 // widget.Label the two renders would be identical, and this test — not a stale
 // image — says so.
 func TestFeatureLineHeightIsDetectable(t *testing.T) {
-	base := golden.Capture(t, canvasSize, featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight))
-	tall := golden.Capture(t, canvasSize, featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight+12))
+	base := golden.Capture(t, frameSize, featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight))
+	tall := golden.Capture(t, frameSize, featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight+12))
 	if n := golden.PixelDiff(base, tall); n == 0 {
 		t.Error("raising BodyMedium's line height changed no pixels; the role's line height never reaches the shaper")
 	}
@@ -209,7 +209,7 @@ func TestFeatureWrappedTitleSharesHeight(t *testing.T) {
 		allLong[i].Title = wrappingTitle
 	}
 
-	size := image.Pt(canvasW, 1<<16)
+	size := image.Pt(frameW, 1<<16)
 	render := func(cells []feature.Item) layout.Dimensions {
 		return drawOnce(t, size, feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography))
 	}

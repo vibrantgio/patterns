@@ -21,14 +21,14 @@ const (
 	// The frame must be tall enough that the shared CTA row is not clipped
 	// when every card stretches to the tallest tier — the recommended Team
 	// with four feature lines plus the Popular chip.
-	canvasW, canvasH = 720, 400
+	frameW, frameH = 720, 400
 	// scene leaves an S5-equivalent margin around the pricing row so
 	// the row's outer cards retain breathing room from the frame edge.
 	marginPx = 20
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius keeps the goldens deterministic — anti-aliased
 	// rounded corners and the card radii both vary
 	// slightly between GPU contexts, breaking pixel-exact diffs.
@@ -124,7 +124,7 @@ func TestPricingGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := pricing.Props{Tiers: tc.tiers, Shaper: shaper}
 			w := pricing.Render(shaper, props, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -139,8 +139,8 @@ func TestPricingRecommendedDiffers(t *testing.T) {
 	plain := pricing.Props{Tiers: threeTiers(false), Shaper: shaper}
 	recommended := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
 
-	a := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, plain, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
-	b := golden.Capture(t, canvasSize, scene(pricing.Render(shaper, recommended, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
+	a := golden.Capture(t, frameSize, scene(pricing.Render(shaper, plain, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
+	b := golden.Capture(t, frameSize, scene(pricing.Render(shaper, recommended, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
 	if n := golden.PixelDiff(a, b); n == 0 {
 		t.Error("plain and recommended pricing render identically; expected the middle tier's raise and its Popular badge to introduce differences")
 	}
@@ -163,13 +163,13 @@ func TestRecommendedTierIsRaisedAndTheRestAreNot(t *testing.T) {
 			page := sc.colors.SurfaceAt(tokens.Level0)
 			raise := sc.colors.RaisedOn(page).Fill
 			props := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
-			img := golden.Capture(t, canvasSize, scene(
+			img := golden.Capture(t, frameSize, scene(
 				pricing.Render(shaper, props, sc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), page))
 			// The row is three equal columns inside the scene's margin;
 			// the sample sits in the middle of each column, a few pixels
 			// under its top edge, which is inside the S5 inset and so
 			// clear of both the hairline and the tier's first row of text.
-			row := canvasSize.X - 2*marginPx
+			row := frameSize.X - 2*marginPx
 			at := func(col int) color.NRGBA {
 				x := marginPx + row*col/3 + row/6
 				r, g, b, _ := img.At(x, marginPx+4).RGBA()
@@ -203,8 +203,8 @@ func TestPricingLightDarkDiffer(t *testing.T) {
 	light := pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 	dark := pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 
-	imgLight := golden.Capture(t, canvasSize, scene(light, bg))
-	imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
+	imgLight := golden.Capture(t, frameSize, scene(light, bg))
+	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Error("light and dark pricing render identically; expected colour differences")
 	}

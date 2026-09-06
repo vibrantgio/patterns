@@ -72,7 +72,7 @@ func driveTrail(w breadcrumb.TrailLayout, ops *op.Ops, r *gioinput.Router, size 
 // clickAt queues a press and a release at x on the row's mid-height, which is
 // what a pointer click is to a widget.Clickable.
 func clickAt(r *gioinput.Router, x int) {
-	hit := f32.Pt(float32(x), float32(canvasH)/2)
+	hit := f32.Pt(float32(x), float32(frameH)/2)
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
@@ -141,10 +141,10 @@ func TestTrailClickRoutesToItsSegment(t *testing.T) {
 
 			r := new(gioinput.Router)
 			ops := new(op.Ops)
-			driveTrail(w, ops, r, canvasSize, segs)
+			driveTrail(w, ops, r, frameSize, segs)
 
 			clickAt(r, centreOf(t, shaper, tc.idx, labels...))
-			driveTrail(w, ops, r, canvasSize, segs)
+			driveTrail(w, ops, r, frameSize, segs)
 
 			if len(fired) != len(tc.want) {
 				t.Fatalf("fired=%v, want %v", fired, tc.want)
@@ -184,10 +184,10 @@ func TestTrailClickRoutesAfterReshuffle(t *testing.T) {
 	w := newTrail(t)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveTrail(w, ops, r, canvasSize, first)
+	driveTrail(w, ops, r, frameSize, first)
 
 	clickAt(r, centreOf(t, shaper, 1, before...))
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 
 	if fired[designKey] != 1 {
 		t.Errorf("click on Design fired %d time(s) for %q, want 1 (all: %v)", fired[designKey], designKey, fired)
@@ -223,16 +223,16 @@ func TestTrailClickSurvivesSegmentLeavingTrail(t *testing.T) {
 	w := newTrail(t)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveTrail(w, ops, r, canvasSize, first)
+	driveTrail(w, ops, r, frameSize, first)
 
 	clickAt(r, centreOf(t, shaper, 1, before...))
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 	if fired[designKey] != 1 {
 		t.Fatalf("Design fired %d time(s) after leaving the trail, want 1 (all: %v)", fired[designKey], fired)
 	}
 
-	driveTrail(w, ops, r, canvasSize, second)
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 	if fired[designKey] != 1 {
 		t.Errorf("Design fired %d time(s) over three frames, want 1", fired[designKey])
 	}
@@ -271,23 +271,23 @@ func TestTrailKeyboardFocusFollowsTheSegment(t *testing.T) {
 	w := newTrail(t)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveTrail(w, ops, r, canvasSize, first)
+	driveTrail(w, ops, r, frameSize, first)
 
 	// Tab to the second focus stop. Only clickable segments take one, so the
 	// stops are Home then Design; the current location has none.
 	r.MoveFocus(key.FocusForward)
-	driveTrail(w, ops, r, canvasSize, first)
+	driveTrail(w, ops, r, frameSize, first)
 	r.MoveFocus(key.FocusForward)
-	driveTrail(w, ops, r, canvasSize, first)
+	driveTrail(w, ops, r, frameSize, first)
 
 	// The trail is reshuffled under the focus, then Enter is pressed.
 	// widget.Clickable requires a matched Press and Release to register a click.
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 	r.Queue(
 		key.Event{Name: key.NameReturn, State: key.Press},
 		key.Event{Name: key.NameReturn, State: key.Release},
 	)
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 
 	if fired[designKey] != 1 {
 		t.Errorf("Enter on the focused segment fired Design %d time(s), want 1 (all: %v)", fired[designKey], fired)
@@ -317,14 +317,14 @@ func TestTrailHeldPressDoesNotNavigateSomewhereElse(t *testing.T) {
 	w := newTrail(t)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveTrail(w, ops, r, canvasSize, first)
+	driveTrail(w, ops, r, frameSize, first)
 
-	hit := f32.Pt(float32(centreOf(t, shaper, 1, before...)), float32(canvasH)/2)
+	hit := f32.Pt(float32(centreOf(t, shaper, 1, before...)), float32(frameH)/2)
 	r.Queue(pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch})
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 	r.Queue(pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch})
-	driveTrail(w, ops, r, canvasSize, second)
-	driveTrail(w, ops, r, canvasSize, second)
+	driveTrail(w, ops, r, frameSize, second)
+	driveTrail(w, ops, r, frameSize, second)
 
 	if len(fired) != 0 {
 		t.Errorf("a press held across a reshuffle navigated: %v; want nothing", fired)
@@ -355,11 +355,11 @@ func TestTrailGrowsAndShrinks(t *testing.T) {
 		[2]string{designKey, shallow[1]},
 	)
 
-	driveTrail(w, ops, r, canvasSize, shallowSegs)
+	driveTrail(w, ops, r, frameSize, shallowSegs)
 	clickAt(r, centreOf(t, shaper, 0, shallow...))
-	driveTrail(w, ops, r, canvasSize, deepSegs)
+	driveTrail(w, ops, r, frameSize, deepSegs)
 	clickAt(r, centreOf(t, shaper, 1, deep...))
-	driveTrail(w, ops, r, canvasSize, shallowSegs)
+	driveTrail(w, ops, r, frameSize, shallowSegs)
 
 	if fired[homeKey] != 1 || fired[designKey] != 1 {
 		t.Errorf("fired=%v, want one click each on %q and %q", fired, homeKey, designKey)
@@ -403,10 +403,10 @@ func TestTrailLiveRoutesAcrossTokenChange(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	driveTrail(emitted[0], ops, r, canvasSize, segs)
+	driveTrail(emitted[0], ops, r, frameSize, segs)
 
 	clickAt(r, centreOf(t, shaper, 1, labels...))
-	driveTrail(emitted[1], ops, r, canvasSize, segs)
+	driveTrail(emitted[1], ops, r, frameSize, segs)
 
 	if fired[designKey] != 1 {
 		t.Errorf("across a colour change, Design fired %d time(s), want 1 (all: %v)", fired[designKey], fired)
@@ -431,8 +431,8 @@ func TestTrailDrawsTheSameRowAsRender(t *testing.T) {
 		tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
 	live := newTrail(t)
 
-	fromRender := golden.Capture(t, canvasSize, scene(static, bg))
-	fromTrail := golden.Capture(t, canvasSize, scene(func(gtx layout.Context) layout.Dimensions {
+	fromRender := golden.Capture(t, frameSize, scene(static, bg))
+	fromTrail := golden.Capture(t, frameSize, scene(func(gtx layout.Context) layout.Dimensions {
 		return live(gtx, segs)
 	}, bg))
 	if n := golden.PixelDiff(fromRender, fromTrail); n != 0 {
@@ -446,7 +446,7 @@ func TestTrailEmptyRendersZero(t *testing.T) {
 	w := newTrail(t)
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	if dims := driveTrail(w, ops, r, canvasSize, nil); dims.Size != (image.Point{}) {
+	if dims := driveTrail(w, ops, r, frameSize, nil); dims.Size != (image.Point{}) {
 		t.Errorf("empty trail measured %v, want zero Dimensions", dims.Size)
 	}
 }

@@ -308,12 +308,12 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 	return &clicks[i]
 }
 
-// activeUnderlineInk is the colour an active link's underline is drawn in:
+// activeUnderlineForeground is the colour an active link's underline is drawn in:
 // the primary pin while it clears the graphic floor against the bar's own
 // fill — the surface the underline stands on, since the bar is furniture
 // filled at tokens.LevelChrome (see drawNavbar) — and otherwise the step of
 // the primary ramp that does ([tokens.ColorTokens.ForegroundOnAtFloor]).
-func activeUnderlineInk(colors tokens.ColorTokens) color.NRGBA {
+func activeUnderlineForeground(colors tokens.ColorTokens) color.NRGBA {
 	return colors.ForegroundOnAtFloor(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelChrome), tokens.GraphicFloor)
 }
 
@@ -324,7 +324,7 @@ func activeUnderlineInk(colors tokens.ColorTokens) color.NRGBA {
 // rasterises to zero width, which an empty Link.Label does. Links are
 // adjacent cells in a row, so their hit area stays the cell bounds
 // (extension would steal a neighbour's slop). The underline itself is
-// [activeUnderlineInk].
+// [activeUnderlineForeground].
 func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		inner := func(gtx layout.Context) layout.Dimensions {
@@ -362,7 +362,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tok
 
 			if l.Active {
 				underline := image.Rect(0, cellH-underlineH, cellW, cellH)
-				paint.FillShape(gtx.Ops, activeUnderlineInk(colors), clip.Rect(underline).Op())
+				paint.FillShape(gtx.Ops, activeUnderlineForeground(colors), clip.Rect(underline).Op())
 			}
 			return layout.Dimensions{Size: image.Pt(cellW, cellH)}
 		}

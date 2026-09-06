@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	canvasW, canvasH = 480, 64
+	frameW, frameH = 480, 64
 )
 
-var canvasSize = image.Pt(canvasW, canvasH)
+var frameSize = image.Pt(frameW, frameH)
 
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
@@ -88,7 +88,7 @@ func TestNavbarGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := navbar.Props{Links: tc.links, Shaper: shaper}
 			w := navbar.Render(shaper, props, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -102,7 +102,7 @@ func TestNavbarActiveVsDefaultDiffer(t *testing.T) {
 	render := func(links []navbar.Link) *image.RGBA {
 		props := navbar.Props{Links: links, Shaper: shaper}
 		w := navbar.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-		return golden.Capture(t, canvasSize, scene(w, bg))
+		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
 	def := render(links(-1))
@@ -185,14 +185,14 @@ func TestNavbarTabTraversal(t *testing.T) {
 	ops := new(op.Ops)
 
 	// Frame 0: register the tags.
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// Drain any synthetic focus events for the externally-owned tags so
 	// the router retains focus when set, matching the FocusGroup idiom.
 	drainFocus := func() {
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvasSize),
+			Constraints: layout.Exact(frameSize),
 			Ops:         ops,
 			Source:      r.Source(),
 		}
@@ -209,18 +209,18 @@ func TestNavbarTabTraversal(t *testing.T) {
 	// Focus the brand explicitly.
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(canvasSize),
+		Constraints: layout.Exact(frameSize),
 		Ops:         ops,
 		Source:      r.Source(),
 	}
 	gtx.Execute(key.FocusCmd{Tag: &brandClick})
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	check := func(stage string, wantBrand, wantAction bool) {
 		t.Helper()
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(canvasSize),
+			Constraints: layout.Exact(frameSize),
 			Ops:         ops,
 			Source:      r.Source(),
 		}
@@ -236,32 +236,32 @@ func TestNavbarTabTraversal(t *testing.T) {
 
 	// Tab → expected stop is link 0 (neither brand nor action).
 	r.MoveFocus(key.FocusForward)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	check("Tab #1 (→ link 0)", false, false)
 
 	// Tab → expected stop is link 1.
 	r.MoveFocus(key.FocusForward)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	check("Tab #2 (→ link 1)", false, false)
 
 	// Tab → expected stop is action.
 	r.MoveFocus(key.FocusForward)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	check("Tab #3 (→ action)", false, true)
 
 	// Now reverse the traversal. Shift+Tab from action: back to link 1.
 	r.MoveFocus(key.FocusBackward)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	check("Shift+Tab #1 (→ link 1)", false, false)
 
 	// Shift+Tab → link 0.
 	r.MoveFocus(key.FocusBackward)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	check("Shift+Tab #2 (→ link 0)", false, false)
 
 	// Shift+Tab → brand.
 	r.MoveFocus(key.FocusBackward)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 	check("Shift+Tab #3 (→ brand)", true, false)
 }
 
@@ -288,15 +288,15 @@ func TestNavbarLinkClickFiresOnClick(t *testing.T) {
 
 	// Two warm-up frames so the router has stable hit-test data for the
 	// link clip areas before pointer events are queued.
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	hit := f32.Pt(180, 32)
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	if fired0 != 1 {
 		t.Errorf("link 0 OnClick call count = %d, want 1", fired0)
@@ -349,12 +349,12 @@ func TestNavbarCompactGolden(t *testing.T) {
 	}
 	w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(tokens.Compact)), props))
 	h := barHeight(tokens.Compact, tokens.DefaultTypography.LabelLarge)
-	golden.Render(t, "light-compact", image.Pt(canvasW, h), scene(w, lightBG))
+	golden.Render(t, "light-compact", image.Pt(frameW, h), scene(w, lightBG))
 }
 
-// inkBand reports the first and last row of img holding the colour c, or
+// colorBand reports the first and last row of img holding the colour c, or
 // (-1, -1) when it holds none.
-func inkBand(img *image.RGBA, c color.NRGBA) (int, int) {
+func colorBand(img *image.RGBA, c color.NRGBA) (int, int) {
 	b := img.Bounds()
 	first, last := -1, -1
 	for y := b.Min.Y; y < b.Max.Y; y++ {
@@ -392,9 +392,9 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	style := tokens.DefaultTypography.LabelLarge
 	d := tokens.Comfortable
 
-	brandInk := color.NRGBA{R: 0, G: 0, B: 255, A: 255}
-	actionInk := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
-	const brandInkH, actionH = 10, 20
+	brandColor := color.NRGBA{R: 0, G: 0, B: 255, A: 255}
+	actionColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
+	const brandH, actionH = 10, 20
 	// cellH is a link cell as linkWidget builds one: the label's line box,
 	// the density's padding above and below, and the Active underline.
 	cellH := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
@@ -402,8 +402,8 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	// A brand that fills the height it is offered and paints only the top of
 	// it, which is what a run of text in a column does.
 	brand := func(gtx layout.Context) layout.Dimensions {
-		paint.FillShape(gtx.Ops, brandInk, clip.Rect{Max: image.Pt(60, brandInkH)}.Op())
-		return layout.Dimensions{Size: image.Pt(60, max(gtx.Constraints.Min.Y, brandInkH))}
+		paint.FillShape(gtx.Ops, brandColor, clip.Rect{Max: image.Pt(60, brandH)}.Op())
+		return layout.Dimensions{Size: image.Pt(60, max(gtx.Constraints.Min.Y, brandH))}
 	}
 
 	// The bar at its own height, and at two heights a caller might pin it to.
@@ -411,15 +411,15 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 		props := navbar.Props{
 			Brand:   brand,
 			Links:   []navbar.Link{{Label: linkLabels[0], Active: true}, {Label: linkLabels[1]}},
-			Actions: []layout.Widget{fillRect(actionInk, 30, actionH)},
+			Actions: []layout.Widget{fillRect(actionColor, 30, actionH)},
 			Shaper:  shaper,
 		}
 		w := navbar.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, style, d)
-		img := golden.Capture(t, image.Pt(canvasW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
+		img := golden.Capture(t, image.Pt(frameW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
 
-		brandTop, brandBottom := inkBand(img, brandInk)
-		actionTop, actionBottom := inkBand(img, actionInk)
-		_, underlineBottom := inkBand(img, tokens.DefaultLight.Primary)
+		brandTop, brandBottom := colorBand(img, brandColor)
+		actionTop, actionBottom := colorBand(img, actionColor)
+		_, underlineBottom := colorBand(img, tokens.DefaultLight.Primary)
 		if brandTop < 0 || actionTop < 0 || underlineBottom < 0 {
 			t.Fatalf("bar %d px: brand, action or underline did not draw (%d, %d, %d); this proves nothing",
 				h, brandTop, actionTop, underlineBottom)
@@ -428,10 +428,10 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 		// its bottom edge — the cell itself draws no border to measure.
 		cellTop := underlineBottom + 1 - cellH
 		for _, c := range []struct {
-			what     string
-			centre2  int
-			inkFirst int
-			inkLast  int
+			what       string
+			centre2    int
+			firstDrawn int
+			lastDrawn  int
 		}{
 			{"brand", brandTop + brandBottom, brandTop, brandBottom},
 			{"links", 2*cellTop + cellH - 1, cellTop, cellTop + cellH - 1},
@@ -439,7 +439,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 		} {
 			if c.centre2 != h-1 {
 				t.Errorf("bar %d px: the %s slot occupies rows %d..%d and is centred on %.1f, want the bar's own middle %.1f",
-					h, c.what, c.inkFirst, c.inkLast, float64(c.centre2)/2, float64(h-1)/2)
+					h, c.what, c.firstDrawn, c.lastDrawn, float64(c.centre2)/2, float64(h-1)/2)
 			}
 		}
 	}
@@ -463,11 +463,11 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 		}
 		w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(d)), props))
 		h := barHeight(d, style)
-		img := golden.Capture(t, image.Pt(canvasW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
+		img := golden.Capture(t, image.Pt(frameW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
 
 		lowest := -1
 		for y := 0; y < h; y++ {
-			for x := 0; x < canvasW; x++ {
+			for x := 0; x < frameW; x++ {
 				r, g, b, _ := img.At(x, y).RGBA()
 				if uint8(r>>8) == primary.R && uint8(g>>8) == primary.G && uint8(b>>8) == primary.B {
 					lowest = y

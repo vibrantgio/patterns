@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	canvasW, canvasH = 280, 200
+	frameW, frameH = 280, 200
 	// The group draws into its full constraints, so a golden that must
 	// show the hairline against the surface the group is in insets it by
 	// this margin.
@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism.
 	sharpRadius = tokens.RadiusScale{}
@@ -100,7 +100,7 @@ func TestGroupGolden(t *testing.T) {
 			w := group.Render(defaultShaper(t),
 				group.Props{Label: tc.label, Content: content(t, tc.colors)},
 				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-			golden.Render(t, tc.name, canvasSize, scene(w, marginPx, tc.colors.SurfaceAt(tokens.Level0)))
+			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.SurfaceAt(tokens.Level0)))
 		})
 	}
 }
@@ -121,8 +121,8 @@ func TestGroupPaintsNothingInside(t *testing.T) {
 			want := tc.colors.SurfaceAt(tokens.Level0)
 			w := group.Render(defaultShaper(t), group.Props{}, tc.colors,
 				tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-			img := golden.Capture(t, canvasSize, scene(w, marginPx, want))
-			r, g, b, _ := img.At(canvasW/2, canvasH/2).RGBA()
+			img := golden.Capture(t, frameSize, scene(w, marginPx, want))
+			r, g, b, _ := img.At(frameW/2, frameH/2).RGBA()
 			if uint8(r>>8) != want.R || uint8(g>>8) != want.G || uint8(b>>8) != want.B {
 				t.Errorf("inside the group is #%02x%02x%02x, want the surface's own #%02x%02x%02x",
 					uint8(r>>8), uint8(g>>8), uint8(b>>8), want.R, want.G, want.B)
@@ -147,10 +147,10 @@ func TestGroupHairlineIsTheSeam(t *testing.T) {
 			want := tc.colors.SeamOn(bg)
 			w := group.Render(defaultShaper(t), group.Props{}, tc.colors,
 				tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-			img := golden.Capture(t, canvasSize, scene(w, marginPx, bg))
+			img := golden.Capture(t, frameSize, scene(w, marginPx, bg))
 			// Sharp corners, so the leading edge is exactly one column of
 			// hairline at the margin and nothing is anti-aliased into it.
-			r, g, b, _ := img.At(marginPx, canvasH/2).RGBA()
+			r, g, b, _ := img.At(marginPx, frameH/2).RGBA()
 			if uint8(r>>8) != want.R || uint8(g>>8) != want.G || uint8(b>>8) != want.B {
 				t.Errorf("hairline is #%02x%02x%02x, want the seam #%02x%02x%02x",
 					uint8(r>>8), uint8(g>>8), uint8(b>>8), want.R, want.G, want.B)
@@ -169,8 +169,8 @@ func TestGroupLabelChangesPixels(t *testing.T) {
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 	named := group.Render(shaper, group.Props{Label: "Density", Content: content(t, c)}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-	a := golden.Capture(t, canvasSize, scene(bare, marginPx, c.SurfaceAt(tokens.Level0)))
-	b := golden.Capture(t, canvasSize, scene(named, marginPx, c.SurfaceAt(tokens.Level0)))
+	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.SurfaceAt(tokens.Level0)))
+	b := golden.Capture(t, frameSize, scene(named, marginPx, c.SurfaceAt(tokens.Level0)))
 	if n := golden.PixelDiff(a, b); n == 0 {
 		t.Error("labelled and unlabelled groups render identically; expected the label")
 	}

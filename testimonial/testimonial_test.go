@@ -17,14 +17,14 @@ import (
 )
 
 const (
-	canvasW, canvasH = 720, 280
+	frameW, frameH = 720, 280
 	// scene leaves an S5-equivalent margin around the testimonial so the
 	// outer cards retain breathing room from the frame edge.
 	marginPx = 20
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius keeps the goldens deterministic — anti-aliased
 	// rounded corners can vary slightly between GPU contexts, breaking
 	// pixel-exact diffs.
@@ -105,7 +105,7 @@ func TestTestimonialGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := testimonial.Props{Variant: tc.variant, Items: tc.items, Shaper: shaper}
 			w := testimonial.Render(shaper, props, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -127,8 +127,8 @@ func TestTestimonialVariantsDiffer(t *testing.T) {
 		testimonial.Props{Variant: testimonial.Grid, Items: three, Shaper: shaper},
 		tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
 	)
-	a := golden.Capture(t, canvasSize, scene(single, bg))
-	b := golden.Capture(t, canvasSize, scene(grid, bg))
+	a := golden.Capture(t, frameSize, scene(single, bg))
+	b := golden.Capture(t, frameSize, scene(grid, bg))
 	if n := golden.PixelDiff(a, b); n == 0 {
 		t.Error("Single and Grid testimonials render identically; expected layout differences")
 	}
@@ -151,8 +151,8 @@ func TestTestimonialLightDarkDiffer(t *testing.T) {
 		testimonial.Props{Variant: testimonial.Grid, Items: three, Shaper: shaper},
 		tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
 	)
-	imgLight := golden.Capture(t, canvasSize, scene(light, bg))
-	imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
+	imgLight := golden.Capture(t, frameSize, scene(light, bg))
+	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Error("light and dark testimonials render identically; expected colour differences")
 	}

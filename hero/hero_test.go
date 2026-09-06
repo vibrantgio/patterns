@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	canvasW, canvasH = 480, 240
+	frameW, frameH = 480, 240
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius keeps the goldens deterministic — anti-aliased
 	// rounded corners and the CTA radii both vary slightly
 	// between GPU contexts, breaking pixel-exact diffs.
@@ -144,7 +144,7 @@ func TestHeroGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := hero.Render(shaper, tc.props, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -161,8 +161,8 @@ func TestHeroVisualSlotShiftsLayout(t *testing.T) {
 	textOnly := hero.Render(shaper, heroText(shaper), tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 	split := hero.Render(shaper, withVisual(heroText(shaper), visual), tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 
-	imgA := golden.Capture(t, canvasSize, scene(textOnly, bg))
-	imgB := golden.Capture(t, canvasSize, scene(split, bg))
+	imgA := golden.Capture(t, frameSize, scene(textOnly, bg))
+	imgB := golden.Capture(t, frameSize, scene(split, bg))
 	if n := golden.PixelDiff(imgA, imgB); n == 0 {
 		t.Error("text-only and with-visual hero render identically; expected the Visual slot to introduce a two-column split")
 	}
@@ -178,8 +178,8 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 	light := hero.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 	dark := hero.Render(shaper, props, tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 
-	imgLight := golden.Capture(t, canvasSize, scene(light, bg))
-	imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
+	imgLight := golden.Capture(t, frameSize, scene(light, bg))
+	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Error("light and dark hero render identically; expected colour differences")
 	}
@@ -203,7 +203,7 @@ func TestLongCTALabelGrowsTheButton(t *testing.T) {
 		p := heroText(shaper)
 		p.PrimaryCTA = &hero.CTA{Label: label}
 		w := hero.Render(shaper, p, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
-		img := golden.Capture(t, canvasSize, scene(w, bg))
+		img := golden.Capture(t, frameSize, scene(w, bg))
 		return widestRunOf(img, fill)
 	}
 

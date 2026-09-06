@@ -279,14 +279,14 @@ func layoutTiers(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
-// checkInk is the primary colour a tier draws its feature checkmarks in:
+// checkForeground is the primary colour a tier draws its feature checkmarks in:
 // the primary pin when it clears the graphic floor against the surface the
 // checkmark is drawn on, and otherwise the step of the primary ramp that
 // does ([tokens.ColorTokens.ForegroundOnAtFloor]). A checkmark carries
 // meaning by itself, so it owes the graphic floor and derives against the
 // tier's own fill rather than against the page — the two are different
 // surfaces for the recommended tier, which is raised.
-func checkInk(c tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
+func checkForeground(c tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
 	return c.ForegroundOnAtFloor(tokens.RolePrimary, fill, tokens.GraphicFloor)
 }
 
@@ -493,7 +493,7 @@ func featureRowWidget(shaper *text.Shaper, label string, tier Tier, tok resolved
 }
 
 // checkmarkWidget paints a small check ("✓") inside an S4 box using a
-// clip.Path, in [checkInk] against the tier's own fill. The path is a
+// clip.Path, in [checkForeground] against the tier's own fill. The path is a
 // two-segment polyline traced over the box; the stroke width is 2 dp.
 func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
@@ -506,7 +506,7 @@ func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 		path.MoveTo(f32.Pt(s*0.2, s*0.55))
 		path.LineTo(f32.Pt(s*0.45, s*0.8))
 		path.LineTo(f32.Pt(s*0.8, s*0.25))
-		paint.FillShape(gtx.Ops, checkInk(tok.color, tierFill(tok.color, tier)), clip.Stroke{
+		paint.FillShape(gtx.Ops, checkForeground(tok.color, tierFill(tok.color, tier)), clip.Stroke{
 			Path:  path.End(),
 			Width: stroke,
 		}.Op())

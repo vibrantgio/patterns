@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	canvasW, canvasH = 320, 32
+	frameW, frameH = 320, 32
 )
 
-var canvasSize = image.Pt(canvasW, canvasH)
+var frameSize = image.Pt(frameW, frameH)
 
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
@@ -76,7 +76,7 @@ func TestBreadcrumbGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := breadcrumb.Props{Items: tc.items, Shaper: shaper}
 			w := breadcrumb.Render(shaper, props, tc.colors, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -91,7 +91,7 @@ func TestBreadcrumbThreeVsSingle(t *testing.T) {
 	render := func(items []breadcrumb.Item) *image.RGBA {
 		props := breadcrumb.Props{Items: items, Shaper: shaper}
 		w := breadcrumb.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
-		return golden.Capture(t, canvasSize, scene(w, bg))
+		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
 	three := render(trail())
@@ -113,8 +113,8 @@ func TestBreadcrumbLightDarkDiffer(t *testing.T) {
 	light := breadcrumb.Render(shaper, propsL, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
 	dark := breadcrumb.Render(shaper, propsD, tokens.DefaultDark, tokens.Spacing, tokens.DefaultTypography.TitleSmall)
 
-	imgLight := golden.Capture(t, canvasSize, scene(light, bg))
-	imgDark := golden.Capture(t, canvasSize, scene(dark, bg))
+	imgLight := golden.Capture(t, frameSize, scene(light, bg))
+	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Errorf("light and dark render identically; expected chevron colour differences")
 	}

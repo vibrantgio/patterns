@@ -313,13 +313,13 @@ func drawStrip(
 	}
 	// The underline is drawn on the strip band, one step above the panel
 	// (see drawTabs), so that is the surface its colour is measured against.
-	stripGround := colors.RaisedOn(colors.SurfaceAt(props.Level)).Fill
+	stripFill := colors.RaisedOn(colors.SurfaceAt(props.Level)).Fill
 	children := make([]layout.FlexChild, 0, len(props.Tabs))
 	for i := range props.Tabs {
 		i := i
 		children = append(children, layout.Rigid(tabCell(
 			shaper, props.Tabs[i].Label, clickFor(clicks, i), i == selected,
-			colors, sp, style, stripGround,
+			colors, sp, style, stripFill,
 		)))
 	}
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
@@ -332,20 +332,20 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 	return &clicks[i]
 }
 
-// underlineInk is the colour a selected tab's underline is drawn in: the
-// primary pin while it clears the graphic floor against `ground` — the strip
+// underlineForeground is the colour a selected tab's underline is drawn in: the
+// primary pin while it clears the graphic floor against `fill` — the strip
 // band the underline actually sits on, handed in as the fill it is rather
 // than as a level, because the band is a raise and has no level to name —
 // and otherwise the step of the primary ramp that does
 // ([tokens.ColorTokens.ForegroundOnAtFloor]).
-func underlineInk(colors tokens.ColorTokens, ground color.NRGBA) color.NRGBA {
-	return colors.ForegroundOnAtFloor(tokens.RolePrimary, ground, tokens.GraphicFloor)
+func underlineForeground(colors tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
+	return colors.ForegroundOnAtFloor(tokens.RolePrimary, fill, tokens.GraphicFloor)
 }
 
 // tabCell renders a single tab label centred inside (S3, S2) padding,
 // with a strip-height cell. When selected, an underline of underlineDp px
-// is drawn along the cell's bottom edge in [underlineInk], measured
-// against `ground` — the fill of the strip band the underline actually sits
+// is drawn along the cell's bottom edge in [underlineForeground], measured
+// against `fill` — the fill of the strip band the underline actually sits
 // on, passed in rather than assumed. The cell width is at least 2×S3 so the
 // underline is visible even when the label rasterises to zero width,
 // which an empty Tab.Label does.
@@ -357,7 +357,7 @@ func tabCell(
 	colors tokens.ColorTokens,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
-	ground color.NRGBA,
+	fill color.NRGBA,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		stripH := gtx.Constraints.Max.Y
@@ -398,7 +398,7 @@ func tabCell(
 
 			if selected {
 				underline := image.Rect(0, cellH-underlineH, cellW, cellH)
-				paint.FillShape(gtx.Ops, underlineInk(colors, ground), clip.Rect(underline).Op())
+				paint.FillShape(gtx.Ops, underlineForeground(colors, fill), clip.Rect(underline).Op())
 			}
 			return layout.Dimensions{Size: image.Pt(cellW, cellH)}
 		}

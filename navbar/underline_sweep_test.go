@@ -1,7 +1,7 @@
 package navbar
 
 // This file is an internal test (package navbar, not navbar_test) so it can
-// exercise activeUnderlineInk directly, the way
+// exercise activeUnderlineForeground directly, the way
 // theme/tokens/foreground_test.go exercises ColorTokens.ForegroundOnAtFloor
 // and components/richtext/link_test.go exercises richtext.FromTokens's
 // LinkColor field. linkWidget has no exported field to read the drawn
@@ -69,22 +69,22 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed asserts that
+// TestActiveUnderlineForegroundClearsTheGraphicFloorForEverySeed asserts that
 // whatever a caller seeds the palette with, an active link's underline
 // reaches WCAG 1.4.11 against the bar's own fill — the only surface the
 // navbar ever draws itself on (drawNavbar fills at tokens.LevelChrome
 // unconditionally; Props carries no `Level` field).
-func TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
+func TestActiveUnderlineForegroundClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string
 	for _, seed := range underlineSweepSeeds() {
 		for _, s := range underlineSweepSchemes(seed) {
 			band := s.tok.SurfaceAt(tokens.LevelChrome)
-			ink := activeUnderlineInk(s.tok)
-			got := color.ContrastRatio(ink, band)
+			foreground := activeUnderlineForeground(s.tok)
+			got := color.ContrastRatio(foreground, band)
 			if got < tokens.GraphicFloor {
 				t.Errorf("seed %s: %s: underline colour %s on bar %s measures %.2f:1, under the %.1f:1 graphic floor",
-					underlineHex(seed), s.name, underlineHex(ink), underlineHex(band), got, tokens.GraphicFloor)
+					underlineHex(seed), s.name, underlineHex(foreground), underlineHex(band), got, tokens.GraphicFloor)
 			}
 			if s.light && got < worstLight {
 				worstLight, worstLightAt = got, underlineHex(seed)
@@ -98,11 +98,11 @@ func TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 		len(underlineSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
-// TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin asserts that on
+// TestTheCanonicalSeedsActiveUnderlineForegroundIsThePrimaryPin asserts that on
 // the seed every golden is rendered from, the brand's own colour clears
 // the floor on the bar, so the underline stays the Primary pin and no
 // golden image needs to move.
-func TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin(t *testing.T) {
+func TestTheCanonicalSeedsActiveUnderlineForegroundIsThePrimaryPin(t *testing.T) {
 	for _, s := range []struct {
 		name string
 		tok  tokens.ColorTokens
@@ -110,17 +110,17 @@ func TestTheCanonicalSeedsActiveUnderlineInkIsThePrimaryPin(t *testing.T) {
 		{"DefaultLight", tokens.DefaultLight},
 		{"DefaultDark", tokens.DefaultDark},
 	} {
-		if ink := activeUnderlineInk(s.tok); ink != s.tok.Primary {
+		if foreground := activeUnderlineForeground(s.tok); foreground != s.tok.Primary {
 			t.Errorf("%s: underline colour is %s, not the Primary pin %s — a golden moved",
-				s.name, underlineHex(ink), underlineHex(s.tok.Primary))
+				s.name, underlineHex(foreground), underlineHex(s.tok.Primary))
 		}
 	}
 }
 
-// TestAPastelSeedsActiveUnderlineInkLeavesThePin exercises the shape that
+// TestAPastelSeedsActiveUnderlineForegroundLeavesThePin exercises the shape that
 // risks a sub-floor underline: a light scheme seeded with a dark scheme's
 // accent.
-func TestAPastelSeedsActiveUnderlineInkLeavesThePin(t *testing.T) {
+func TestAPastelSeedsActiveUnderlineForegroundLeavesThePin(t *testing.T) {
 	seed := stdcolor.NRGBA{0x89, 0xb4, 0xfa, 0xff}
 	light, dark := tokens.FromSeed(seed)
 
@@ -128,14 +128,14 @@ func TestAPastelSeedsActiveUnderlineInkLeavesThePin(t *testing.T) {
 	if bare := color.ContrastRatio(light.Primary, lightBand); bare >= tokens.GraphicFloor {
 		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the bar — the test no longer reads the shape it was written for", bare)
 	}
-	lightInk := activeUnderlineInk(light)
-	if lightInk == light.Primary {
+	lightForeground := activeUnderlineForeground(light)
+	if lightForeground == light.Primary {
 		t.Errorf("light underline colour is still the bare pin %s", underlineHex(light.Primary))
 	}
 
-	darkInk := activeUnderlineInk(dark)
-	if darkInk != dark.Primary {
+	darkForeground := activeUnderlineForeground(dark)
+	if darkForeground != dark.Primary {
 		t.Errorf("dark underline colour walked to %s; the dark pin %s clears its bar and should stand",
-			underlineHex(darkInk), underlineHex(dark.Primary))
+			underlineHex(darkForeground), underlineHex(dark.Primary))
 	}
 }

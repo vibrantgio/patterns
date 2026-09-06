@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	canvasW, canvasH = 280, 200
+	frameW, frameH = 280, 200
 	// The card draws into its full constraints, so a golden that must
 	// show the card's edge against the surface it stands on insets it by
 	// this margin.
@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	canvasSize = image.Pt(canvasW, canvasH)
+	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
 	// between GPU contexts, breaking determinism. Sharp edges still
 	// exercise the fill colour, outline stroke, and shadow presence.
@@ -153,7 +153,7 @@ func TestCardGolden(t *testing.T) {
 				props = card.Props{Header: header}
 			}
 			w := card.Render(props, tc.colors, tokens.Spacing, sharpRadius)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.margin, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.margin, tc.bg))
 		})
 	}
 }
@@ -180,8 +180,8 @@ func TestCardEdgeIsNeverAnOutline(t *testing.T) {
 			}
 			w := card.Render(card.Props{Header: fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 24), Level: tc.level},
 				c, tokens.Spacing, sharpRadius)
-			img := golden.Capture(t, canvasSize, scene(w, marginPx, c.SurfaceAt(tc.level)))
-			got := img.At(marginPx, canvasH/2)
+			img := golden.Capture(t, frameSize, scene(w, marginPx, c.SurfaceAt(tc.level)))
+			got := img.At(marginPx, frameH/2)
 			r, g, b, _ := got.RGBA()
 			if uint8(r>>8) != want.R || uint8(g>>8) != want.G || uint8(b>>8) != want.B {
 				t.Errorf("%s: card edge is #%02x%02x%02x, want the raise's own #%02x%02x%02x",
@@ -201,8 +201,8 @@ func TestCardLightDarkDiffer(t *testing.T) {
 	light := card.Render(card.Props{Header: header, Body: body}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
 	dark := card.Render(card.Props{Header: header, Body: body}, tokens.DefaultDark, tokens.Spacing, sharpRadius)
 
-	imgLight := golden.Capture(t, canvasSize, scene(light, 0, bg))
-	imgDark := golden.Capture(t, canvasSize, scene(dark, 0, bg))
+	imgLight := golden.Capture(t, frameSize, scene(light, 0, bg))
+	imgDark := golden.Capture(t, frameSize, scene(dark, 0, bg))
 	if n := golden.PixelDiff(imgLight, imgDark); n == 0 {
 		t.Error("light and dark cards render identically; expected colour differences")
 	}

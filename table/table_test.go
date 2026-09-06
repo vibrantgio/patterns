@@ -295,9 +295,9 @@ func TestLevelPicksTheStepThePlaneFillsAt(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name   string
-		ground tokens.ElevationLevel
-		want   color.NRGBA
+		name  string
+		level tokens.ElevationLevel
+		want  color.NRGBA
 	}{
 		{"default is the window's own content", tokens.Level0, tokens.DefaultLight.SurfaceAt(tokens.Level0)},
 		{"level 1 is the semantic Surface", tokens.Level1, tokens.DefaultLight.SurfaceAt(tokens.Level1)},
@@ -308,7 +308,7 @@ func TestLevelPicksTheStepThePlaneFillsAt(t *testing.T) {
 				Items:   rx.Of([]int{0, 1, 2, 3}),
 				Sort:    rx.Of(table.Sort{Column: -1}),
 				Shaper:  shaper,
-				Level:   tc.ground,
+				Level:   tc.level,
 			}
 			w := liveWidget(t, table.Table(rx.Of(densityTheme(tokens.Comfortable)), props))
 			img := golden.Capture(t, size, scene(w, sentinel))
@@ -351,15 +351,15 @@ func TestCurrentFillsTheChosenRow(t *testing.T) {
 		return pixelAt(img, rowMid.X, rowMid.Y)
 	}
 
-	ground := tokens.DefaultLight.SurfaceAt(tokens.Level0)
-	if got := render(nil); got != ground {
-		t.Errorf("unmarked table row = %v, want the plane %v; a nil Current must mark nothing", got, ground)
+	surface := tokens.DefaultLight.SurfaceAt(tokens.Level0)
+	if got := render(nil); got != surface {
+		t.Errorf("unmarked table row = %v, want the plane %v; a nil Current must mark nothing", got, surface)
 	}
 	want := tokens.DefaultLight.Ramps.Primary.Step(300)
 	if got := render(func(i int) bool { return i == 0 }); got != want {
 		t.Errorf("current row = %v, want the Primary tint %v", got, want)
 	}
-	if got := render(func(i int) bool { return i == 1 }); got != ground {
+	if got := render(func(i int) bool { return i == 1 }); got != surface {
 		t.Errorf("row 0 = %v while row 1 is current; the mark followed the wrong item", got)
 	}
 }

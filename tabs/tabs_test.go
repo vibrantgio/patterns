@@ -25,10 +25,10 @@ import (
 )
 
 const (
-	canvasW, canvasH = 240, 128
+	frameW, frameH = 240, 128
 )
 
-var canvasSize = image.Pt(canvasW, canvasH)
+var frameSize = image.Pt(frameW, frameH)
 
 // defaultShaper returns the shaper every golden here draws with: the default
 // typography's faces pinned, system fonts off, so the stored images are the
@@ -104,7 +104,7 @@ func TestTabsGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := tabs.Props{Tabs: tc.tabs, Shaper: shaper}
 			w := tabs.Render(shaper, props, tc.selected, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-			golden.Render(t, tc.name, canvasSize, scene(w, tc.bg))
+			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
@@ -119,7 +119,7 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	render := func(selected int) *image.RGBA {
 		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper}
 		w := tabs.Render(shaper, props, selected, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-		return golden.Capture(t, canvasSize, scene(w, bg))
+		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
 	none := render(-1)
@@ -145,11 +145,11 @@ func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
 	// An out-of-range selection draws no content, so the whole panel below
 	// the strip is the pattern's own fill and nothing else.
 	stripH := int(tokens.Comfortable.ControlHeight)
-	fills := func(ground tokens.ElevationLevel) (strip, seam, panel [3]uint8) {
-		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Level: ground}
+	fills := func(level tokens.ElevationLevel) (strip, seam, panel [3]uint8) {
+		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Level: level}
 		w := tabs.Render(shaper, props, -1, tokens.DefaultLight, tokens.Spacing,
 			tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-		img := golden.Capture(t, canvasSize, scene(w, bg))
+		img := golden.Capture(t, frameSize, scene(w, bg))
 		at := func(x, y int) [3]uint8 {
 			off := img.PixOffset(x, y)
 			return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
@@ -157,28 +157,28 @@ func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
 		// Right of the last tab cell the strip is bare band; the strip's
 		// last row is where its seam would be; well below it the panel is
 		// bare plane.
-		return at(canvasSize.X-1, stripH/2), at(canvasSize.X-1, stripH-1), at(canvasSize.X-1, stripH+8)
+		return at(frameSize.X-1, stripH/2), at(frameSize.X-1, stripH-1), at(frameSize.X-1, stripH+8)
 	}
 
 	told := func(strip, seam, panel [3]uint8) bool {
 		return strip != panel || (seam != strip && seam != panel)
 	}
 
-	groundStrip, groundSeam, groundPanel := fills(tokens.Level0)
-	if !told(groundStrip, groundSeam, groundPanel) {
-		t.Errorf("strip and panel render the same fill %v on a level-0 surface and no seam parts them; the strip is furniture and owes its panel a step or a seam", groundStrip)
+	level0Strip, level0Seam, level0Panel := fills(tokens.Level0)
+	if !told(level0Strip, level0Seam, level0Panel) {
+		t.Errorf("strip and panel render the same fill %v on a level-0 surface and no seam parts them; the strip is furniture and owes its panel a step or a seam", level0Strip)
 	}
 
 	raisedStrip, raisedSeam, raisedPanel := fills(tokens.Level1)
 	if !told(raisedStrip, raisedSeam, raisedPanel) {
 		t.Errorf("strip and panel render the same fill %v on a level-1 surface and no seam parts them", raisedStrip)
 	}
-	if groundStrip != raisedPanel {
+	if level0Strip != raisedPanel {
 		t.Errorf("the strip over a level-0 panel is %v and a level-1 panel is %v; one step up from level 0 is level 1, so these are the same fill",
-			groundStrip, raisedPanel)
+			level0Strip, raisedPanel)
 	}
-	if groundPanel == raisedPanel {
-		t.Errorf("the panel level did not move: level 0 and level 1 both render %v", groundPanel)
+	if level0Panel == raisedPanel {
+		t.Errorf("the panel level did not move: level 0 and level 1 both render %v", level0Panel)
 	}
 }
 
@@ -241,8 +241,8 @@ func TestTabsArrowAndHomeEndWrapAndFocus(t *testing.T) {
 	ops := new(op.Ops)
 	// Two warm-up frames so the router has stable hit-test data for the
 	// tab cell clip areas before pointer events are queued.
-	driveFrame(w, ops, r, canvasSize)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// Click tab 0 → OnSelect(0) and focus moves to tab 0.
 	hit := f32.Pt(12, 20)
@@ -250,7 +250,7 @@ func TestTabsArrowAndHomeEndWrapAndFocus(t *testing.T) {
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
 	)
-	driveFrame(w, ops, r, canvasSize)
+	driveFrame(w, ops, r, frameSize)
 
 	// pressKey sends a navigation key, drives a frame so the FocusCmd is
 	// applied, then sends Enter Press+Release on the now-focused tab and
@@ -258,12 +258,12 @@ func TestTabsArrowAndHomeEndWrapAndFocus(t *testing.T) {
 	// matched key pair. Two OnSelect calls per step: navigation + Enter.
 	pressKey := func(name key.Name) {
 		r.Queue(key.Event{Name: name, State: key.Press})
-		driveFrame(w, ops, r, canvasSize)
+		driveFrame(w, ops, r, frameSize)
 		r.Queue(
 			key.Event{Name: key.NameReturn, State: key.Press},
 			key.Event{Name: key.NameReturn, State: key.Release},
 		)
-		driveFrame(w, ops, r, canvasSize)
+		driveFrame(w, ops, r, frameSize)
 	}
 
 	pressKey(key.NameRightArrow) // → tab 1, Enter on tab 1
@@ -317,5 +317,5 @@ func TestTabsCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := tabs.Props{Tabs: threeTabs(), Selected: rx.Of(0), Shaper: defaultShaper(t)}
 	w := liveWidget(t, tabs.Tabs(rx.Of(densityTheme(tokens.Compact)), props))
-	golden.Render(t, "light-compact-three-tabs-first-selected", canvasSize, scene(w, lightBG))
+	golden.Render(t, "light-compact-three-tabs-first-selected", frameSize, scene(w, lightBG))
 }
