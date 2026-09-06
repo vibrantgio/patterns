@@ -172,7 +172,7 @@ const (
 	// asideDividerDp is the ThreeColumn aside divider, which paints at
 	// its full width and grabs the same rectangle. It is bounded above
 	// by the full-width navbar and below by the footer, so it separates
-	// two columns of furniture without ever reaching the window's edge.
+	// two columns of chrome without ever reaching the window's edge.
 	asideDividerDp = 6
 
 	// splitSeamDp is what the SplitPane seam paints, and the room it

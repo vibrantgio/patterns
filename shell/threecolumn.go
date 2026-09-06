@@ -278,8 +278,8 @@ func drawThreeColumn(
 		}
 	}
 
-	// Footer. A footer strip is a status bar, which is the window's
-	// furniture, so the frame fills it at the chrome level under whatever
+	// Footer. A footer strip is a status bar, which is chrome,
+	// so the frame fills it at the chrome level under whatever
 	// the caller draws there.
 	if footH > 0 {
 		footRect := image.Rect(0, navH+rowH, size.X, navH+rowH+footH)

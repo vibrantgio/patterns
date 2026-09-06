@@ -231,8 +231,8 @@ func drawAccordion(
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
 	// The stack fills at the chrome level: an accordion is a navigation
-	// construct that lives in the window's furniture, so what shows between
-	// and behind its header rows is that furniture rather than a plane
+	// construct that lives in the window's chrome, so what shows between
+	// and behind its header rows is that chrome rather than a plane
 	// above the document.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect{Max: size}.Op())
 

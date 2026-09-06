@@ -237,7 +237,7 @@ func TestSeamColorIsThePlatformsWhisper(t *testing.T) {
 	}
 }
 
-// TestSurfaceIsTheChromeLevel: a pane is the window's furniture, so its
+// TestSurfaceIsTheChromeLevel: a pane is chrome, so its
 // level is the chrome level, under the content, in both schemes. A pane
 // that read lighter than the document beside it would be claiming a level
 // it does not have.

@@ -277,10 +277,10 @@ func equalInts(a, b []int) bool {
 }
 
 // TestLevelPicksTheStepThePlaneFillsAt pins what the table's level field
-// decides: the paper the grid is printed on. The zero value is the window's own content: a
+// decides: the surface the grid is printed on. The zero value is the window's own content: a
 // table that raised itself one step by default would put the biggest thing
-// in a window level with the furniture framing it. Level1 is the opt-in for
-// a table that really is resting on furniture, or is a specimen lifted off a
+// in a window level with the chrome framing it. Level1 is the opt-in for
+// a table that really is resting on chrome, or is a specimen lifted off a
 // page.
 //
 // The corner sampled is inside the table's rect and outside every cell's

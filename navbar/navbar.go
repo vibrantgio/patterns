@@ -170,7 +170,7 @@ const underlineDp = 2
 
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// A navigation bar is the window's furniture, so it fills at the chrome
+	// A navigation bar is chrome, so it fills at the chrome
 	// level: the level beneath the content, in both schemes. Do not fill
 	// with colors.Surface: it is a neutral-ramp alias, not a level — it
 	// coincides with the chrome level only in the light scheme, not the
@@ -310,7 +310,7 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 
 // activeUnderlineForeground is the colour an active link's underline is drawn in:
 // the primary pin while it clears the graphic floor against the bar's own
-// fill — the surface the underline stands on, since the bar is furniture
+// fill — the surface the underline stands on, since the bar is chrome
 // filled at tokens.LevelChrome (see drawNavbar) — and otherwise the step of
 // the primary ramp that does ([tokens.ColorTokens.ForegroundOnAtFloor]).
 func activeUnderlineForeground(colors tokens.ColorTokens) color.NRGBA {

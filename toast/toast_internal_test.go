@@ -453,7 +453,7 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 	}
 }
 
-// TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir measures the
+// TestLeadingEdgeIsWiderThanTheHairlineBandAndNarrowerThanItsOwnAir measures the
 // level edge on a rendered chip and holds it between the two bounds the
 // width was judged against.
 //
@@ -464,16 +464,16 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 // as a panel the message sits beside rather than as the chip's leading
 // edge. So the
 // assertion is not "8 px" for its own sake — it is that the mark is at
-// least twice the platform's furniture band and still narrower than the air
+// least twice the platform's hairline band and still narrower than the air
 // it holds the text off by, with the pixel value logged so a later change
 // of scale can be read off a test run.
-func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
+func TestLeadingEdgeIsWiderThanTheHairlineBandAndNarrowerThanItsOwnAir(t *testing.T) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	tok := intTok()
 	// The widest band the platform draws when it does not want the mark
 	// looked at: a pane stroke, a separator hairline, a scroll thumb's
 	// inset. A level edge has to clear it by a margin, not by a pixel.
-	const furnitureBand = 3
+	const hairlineBand = 3
 
 	for _, l := range []Level{Info, Success, Warning, Error} {
 		queued := []Toast{{ID: 1, Level: l, Text: "Rescanned: 2 notes"}}
@@ -484,9 +484,9 @@ func TestLeadingEdgeIsWiderThanFurnitureAndNarrowerThanItsOwnAir(t *testing.T) {
 		if edge.Empty() {
 			t.Fatalf("level %d painted no leading edge", l)
 		}
-		if edge.Dx() <= 2*furnitureBand {
-			t.Errorf("level %d edge is %d px wide; a mark read by its colour cannot be drawn at the %d px the platform keeps for furniture",
-				l, edge.Dx(), furnitureBand)
+		if edge.Dx() <= 2*hairlineBand {
+			t.Errorf("level %d edge is %d px wide; a mark read by its colour cannot be drawn at the %d px the platform keeps for hairlines",
+				l, edge.Dx(), hairlineBand)
 		}
 		air := int(tok.spacing.S3) // the message's inset from the edge
 		if edge.Dx() >= air {

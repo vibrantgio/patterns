@@ -130,7 +130,7 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 }
 
 // TestTheStripStandsOneStepOverThePanel guards the pattern's two areas.
-// The panel is content and fills at `Props.Level`; the strip is furniture and
+// The panel is content and fills at `Props.Level`; the strip is trim and
 // is the raise walked from it — told by its own fill, or, where the scheme
 // has no step left, by the seam along the strip's foot.
 //
@@ -166,7 +166,7 @@ func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
 
 	level0Strip, level0Seam, level0Panel := fills(tokens.Level0)
 	if !told(level0Strip, level0Seam, level0Panel) {
-		t.Errorf("strip and panel render the same fill %v on a level-0 surface and no seam parts them; the strip is furniture and owes its panel a step or a seam", level0Strip)
+		t.Errorf("strip and panel render the same fill %v on a level-0 surface and no seam parts them; the strip is trim and owes its panel a step or a seam", level0Strip)
 	}
 
 	raisedStrip, raisedSeam, raisedPanel := fills(tokens.Level1)

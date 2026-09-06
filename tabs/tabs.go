@@ -4,7 +4,7 @@
 //
 // The two are different kinds of area and stand at different levels. The
 // panel is content and fills at the `Level` field of [Props], whose zero
-// value is the window's own content; the strip is furniture and fills exactly
+// value is the window's own content; the strip is trim and fills exactly
 // one step above it. See that field for why the level is the caller's to say.
 //
 // Tabs is a callable Go function consuming a components theme observable,
@@ -55,7 +55,7 @@ type Props struct {
 	// selected tab's content is read on. The zero value is Level0, the window's
 	// own content, because a tab panel holds what the window exists to show rather
 	// than something standing around it. Set Level1 where the panel genuinely
-	// rests on furniture — inside a dialog, on a pane, or as a specimen
+	// rests on chrome — inside a dialog, on a pane, or as a specimen
 	// lifted off a page — and the strip above it moves with it.
 	//
 	// The strip is NOT this level. It is a row of handles on the panel, so
@@ -264,7 +264,7 @@ func drawTabs(
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	// The strip is furniture over the panel it caps, so its band is the raise
+	// The strip is trim over the panel it caps, so its band is the raise
 	// walked from the panel's own fill and not an absolute step
 	// ([tokens.ColorTokens.RaisedOn]). An absolute Surface here would leave
 	// the strip level with its own panel the moment the panel is printed on

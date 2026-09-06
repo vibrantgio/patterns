@@ -97,12 +97,12 @@ type Props[T any] struct {
 	// the clicked column and re-emits Sort and a re-sorted Items slice.
 	OnSort func(gtx layout.Context, col int)
 
-	// `Level` is the level the table's own plane fills at — the paper the
+	// `Level` is the level the table's own plane fills at — the surface the
 	// grid is printed on. The zero value is Level0, the window's own content:
 	// a table is what a window exists to show rather than something standing
 	// around it, and a table that raised itself one step would leave a
-	// window's furniture standing level with its content. Set Level1 where
-	// the table genuinely rests on furniture — inside a dialog, on a panel,
+	// window's chrome standing level with its content. Set Level1 where
+	// the table genuinely rests on chrome — inside a dialog, on a panel,
 	// or as a specimen lifted off a page — and the walks that read from this
 	// field move with it.
 	//
@@ -382,7 +382,7 @@ func drawHeaderRow[T any](
 	tok resolvedTokens,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The header is furniture over the grid's own plane, so its band is the
+	// The header is trim over the grid's own plane, so its band is the
 	// raise walked from the plane's own fill and not an absolute step
 	// ([tokens.ColorTokens.RaisedOn]). An absolute neutral 300 here would
 	// read right only while every table happened to rest on Surface, and

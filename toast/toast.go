@@ -537,7 +537,7 @@ func paintStack(
 // separation, not transience.
 //
 // The leading edge is the only place on the chip that identifies the
-// level, so its width has to clear the desktop's furniture band (the one
+// level, so its width has to clear the desktop's hairline band (the one
 // to three px reserved for hairlines, separators and insets that are not
 // meant to be looked at) while staying inside the horizontal air that
 // holds the message off from it, or it stops reading as an edge and starts
