@@ -130,7 +130,7 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 }
 
 // TestTheStripStandsOneStepOverThePanel guards the pattern's two areas.
-// The panel is content and fills at `Props.Ground`; the strip is furniture and
+// The panel is content and fills at `Props.Level`; the strip is furniture and
 // is the raise walked from it — told by its own fill, or, where the scheme
 // has no step left, by the seam along the strip's foot.
 //
@@ -146,7 +146,7 @@ func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
 	// the strip is the pattern's own fill and nothing else.
 	stripH := int(tokens.Comfortable.ControlHeight)
 	fills := func(ground tokens.ElevationLevel) (strip, seam, panel [3]uint8) {
-		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Ground: ground}
+		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Level: ground}
 		w := tabs.Render(shaper, props, -1, tokens.DefaultLight, tokens.Spacing,
 			tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 		img := golden.Capture(t, canvasSize, scene(w, bg))

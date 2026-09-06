@@ -240,9 +240,9 @@ func TestTableGolden(t *testing.T) {
 				// on, so the grid has an edge in the image. The default
 				// level — the window pin, where a table that IS a window's
 				// content belongs — is pinned by
-				// TestGroundPicksTheRungThePlaneFillsAt instead, which can
+				// TestLevelPicksTheStepThePlaneFillsAt instead, which can
 				// state the rule in tokens rather than in pixels.
-				Ground: tokens.Level1,
+				Level: tokens.Level1,
 			}
 			w := liveWidget(t, table.Table(rx.Of(densityTheme(tc.density)), props))
 			golden.Render(t, tc.name, size, scene(w, lightBG))
@@ -276,7 +276,7 @@ func equalInts(a, b []int) bool {
 	return true
 }
 
-// TestGroundPicksTheRungThePlaneFillsAt pins what the table's level field
+// TestLevelPicksTheStepThePlaneFillsAt pins what the table's level field
 // decides: the paper the grid is printed on. The zero value is the window's own content: a
 // table that raised itself one step by default would put the biggest thing
 // in a window level with the furniture framing it. Level1 is the opt-in for
@@ -286,7 +286,7 @@ func equalInts(a, b []int) bool {
 // The corner sampled is inside the table's rect and outside every cell's
 // text, over a sentinel no fill in this package resolves to, so a plane that
 // went unpainted would be caught as loudly as one painted at the wrong level.
-func TestGroundPicksTheRungThePlaneFillsAt(t *testing.T) {
+func TestLevelPicksTheStepThePlaneFillsAt(t *testing.T) {
 	shaper := defaultShaper(t)
 	sentinel := color.NRGBA{R: 255, G: 0, B: 255, A: 255}
 	size := image.Pt(360, 200)
@@ -308,7 +308,7 @@ func TestGroundPicksTheRungThePlaneFillsAt(t *testing.T) {
 				Items:   rx.Of([]int{0, 1, 2, 3}),
 				Sort:    rx.Of(table.Sort{Column: -1}),
 				Shaper:  shaper,
-				Ground:  tc.ground,
+				Level:   tc.ground,
 			}
 			w := liveWidget(t, table.Table(rx.Of(densityTheme(tokens.Comfortable)), props))
 			img := golden.Capture(t, size, scene(w, sentinel))

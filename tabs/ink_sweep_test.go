@@ -68,14 +68,14 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 	}
 }
 
-// underlinePanels are every panel `Props.Ground` can name. The strip band the
+// underlinePanels are every panel `Props.Level` can name. The strip band the
 // underline sits on is the raise walked from each, which is what
 // underlineBands answers.
 var underlinePanels = []tokens.ElevationLevel{
 	tokens.Level0, tokens.Level1, tokens.Level2, tokens.Level3,
 }
 
-// underlineBands are every strip band `Props.Ground` can actually produce: the
+// underlineBands are every strip band `Props.Level` can actually produce: the
 // raise walked from each panel, clamped where the scheme runs out of steps.
 func underlineBands(c tokens.ColorTokens) []stdcolor.NRGBA {
 	bands := make([]stdcolor.NRGBA, 0, len(underlinePanels))

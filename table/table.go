@@ -97,7 +97,7 @@ type Props[T any] struct {
 	// the clicked column and re-emits Sort and a re-sorted Items slice.
 	OnSort func(gtx layout.Context, col int)
 
-	// `Ground` is the level the table's own plane fills at — the paper the
+	// `Level` is the level the table's own plane fills at — the paper the
 	// grid is printed on. The zero value is Level0, the window's own content:
 	// a table is what a window exists to show rather than something standing
 	// around it, and a table that raised itself one step would leave a
@@ -109,7 +109,7 @@ type Props[T any] struct {
 	// [Render], the static specimen path, keeps the semantic Surface it has
 	// always drawn and takes no Props at all; this field is the observable
 	// path's.
-	Ground tokens.ElevationLevel
+	Level tokens.ElevationLevel
 
 	// Current marks the row the window is currently showing — the record
 	// open in a detail pane beside the table, the item a reader navigated
@@ -163,7 +163,7 @@ type resolvedTokens struct {
 	header  tokens.TextStyle      // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density        // row/header height source
 	shaper  *text.Shaper          // the theme's shaper; nil in the Render path
-	ground  tokens.ElevationLevel // the level the table's plane fills at (`Props.Ground`)
+	level   tokens.ElevationLevel // the level the table's plane fills at (`Props.Level`)
 }
 
 // Table returns an rx.Observable[layout.Widget] that emits a new one
@@ -193,7 +193,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 					header:  typ.LabelLarge,
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
-					ground:  props.Ground,
+					level:   props.Level,
 				}
 			},
 		)
@@ -224,7 +224,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // Its plane is the semantic Surface and its header the level above that,
 // which is a specimen deliberately lifted off the page it is shown on. A
 // table that is a window's own content belongs on the window's own content
-// level instead: that is the `Ground` field of [Props], and it is the
+// level instead: that is the `Level` field of [Props], and it is the
 // observable path's.
 //
 // header is the LabelLarge role's whole text style — typeface, weight, size
@@ -246,7 +246,7 @@ func Render[T any](
 	// Level1 rather than the Props default: this path draws a specimen for a
 	// golden or a gallery page, where the table is deliberately lifted off
 	// whatever it is shown on.
-	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, ground: tokens.Level1}
+	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, level: tokens.Level1}
 	state := list.NewState()
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawTable(gtx, shaper, columns, items, sk, state, nil, tok, nil)
@@ -288,7 +288,7 @@ func drawTable[T any](
 	current func(item T) bool,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.ground), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.level), clip.Rect{Max: size}.Op())
 
 	widths := columnWidths(gtx, columns, size.X)
 	// The header is a row in the grid, so its height is exactly
@@ -392,7 +392,7 @@ func drawHeaderRow[T any](
 	// The seam the raise may owe is already drawn: the header closes with
 	// the same Divider rule every row does, which is the one hairline
 	// between the header band and the body and is more pronounced than a seam.
-	paint.FillShape(gtx.Ops, tok.color.RaisedOn(tok.color.SurfaceAt(tok.ground)).Fill, clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, tok.color.RaisedOn(tok.color.SurfaceAt(tok.level)).Fill, clip.Rect{Max: size}.Op())
 
 	x := 0
 	for i, col := range columns {

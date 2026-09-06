@@ -73,7 +73,7 @@ func underlineSweepSchemes(seed stdcolor.NRGBA) []struct {
 // whatever a caller seeds the palette with, an active link's underline
 // reaches WCAG 1.4.11 against the bar's own fill — the only surface the
 // navbar ever draws itself on (drawNavbar fills at tokens.LevelChrome
-// unconditionally; Props carries no `Ground` field).
+// unconditionally; Props carries no `Level` field).
 func TestActiveUnderlineInkClearsTheGraphicFloorForEverySeed(t *testing.T) {
 	worstLight, worstDark := 99.0, 99.0
 	var worstLightAt, worstDarkAt string

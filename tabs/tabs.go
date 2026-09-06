@@ -3,7 +3,7 @@
 // a content panel rendered below that shows the selected tab's content.
 //
 // The two are different kinds of area and stand at different levels. The
-// panel is content and fills at the `Ground` field of [Props], whose zero
+// panel is content and fills at the `Level` field of [Props], whose zero
 // value is the window's own content; the strip is furniture and fills exactly
 // one step above it. See that field for why the level is the caller's to say.
 //
@@ -51,7 +51,7 @@ type Props struct {
 	// "no tab selected" (no underline, empty content area).
 	Selected rx.Observable[int]
 
-	// `Ground` is the level the content panel fills at — the surface the
+	// `Level` is the level the content panel fills at — the surface the
 	// selected tab's content is read on. The zero value is Level0, the window's
 	// own content, because a tab panel holds what the window exists to show rather
 	// than something standing around it. Set Level1 where the panel genuinely
@@ -70,7 +70,7 @@ type Props struct {
 	// The one difference is [Render]: table's static path takes no Props and
 	// pins its own specimen level, while this one is handed the whole Props
 	// and honours this field like the observable path does.
-	Ground tokens.ElevationLevel
+	Level tokens.ElevationLevel
 
 	// OnSelect is invoked when the user changes the selection via click,
 	// Arrow-Left/Right (wrapping), Home, or End. May be nil.
@@ -165,7 +165,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
 // default desktop look.
 //
-// The `Ground` field of [Props] is read here exactly as the observable path
+// The `Level` field of [Props] is read here exactly as the observable path
 // reads it: this function is handed the whole Props, so a specimen that is
 // deliberately lifted off the page it is shown on says Level1 at its own call
 // site rather than having a level pinned behind its back.
@@ -257,7 +257,7 @@ func drawTabs(
 	size := gtx.Constraints.Max
 	// The panel plane first, at the caller's level, then the strip band one
 	// step over it.
-	panel := colors.SurfaceAt(props.Ground)
+	panel := colors.SurfaceAt(props.Level)
 	paint.FillShape(gtx.Ops, panel, clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
@@ -313,7 +313,7 @@ func drawStrip(
 	}
 	// The underline is drawn on the strip band, one step above the panel
 	// (see drawTabs), so that is the surface its colour is measured against.
-	stripGround := colors.RaisedOn(colors.SurfaceAt(props.Ground)).Fill
+	stripGround := colors.RaisedOn(colors.SurfaceAt(props.Level)).Fill
 	children := make([]layout.FlexChild, 0, len(props.Tabs))
 	for i := range props.Tabs {
 		i := i
