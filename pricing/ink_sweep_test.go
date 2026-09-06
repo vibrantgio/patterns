@@ -1,11 +1,12 @@
 package pricing
 
 // This file is an internal test (package pricing, not pricing_test) so it
-// can exercise checkInk directly, the way theme/tokens/ink_test.go
-// exercises ColorTokens.InkOn and components/richtext/link_test.go
-// exercises richtext.FromTokens's LinkColor field. checkmarkWidget has no
-// exported field to read the drawn colour back off of, so the derivation
-// itself is the seam this file measures.
+// can exercise checkInk directly, the way theme/tokens/foreground_test.go
+// exercises ColorTokens.ForegroundOnAtFloor and
+// components/richtext/link_test.go exercises richtext.FromTokens's
+// LinkColor field. checkmarkWidget has no exported field to read the drawn
+// colour back off of, so the derivation itself is the seam this file
+// measures.
 //
 // A tier's checkmarks are drawn on two different surfaces — the content
 // itself inside a group tier, the raise inside the recommended card — so

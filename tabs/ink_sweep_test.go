@@ -1,11 +1,11 @@
 package tabs
 
 // This file is an internal test (package tabs, not tabs_test) so it can
-// exercise underlineInk directly, the way theme/tokens/ink_test.go
-// exercises ColorTokens.InkOn and components/richtext/link_test.go
-// exercises richtext.FromTokens's LinkColor field. tabCell has no exported
-// field to read the drawn colour back off of, so the derivation itself is the
-// seam this file measures.
+// exercise underlineInk directly, the way theme/tokens/foreground_test.go
+// exercises ColorTokens.ForegroundOnAtFloor and
+// components/richtext/link_test.go exercises richtext.FromTokens's
+// LinkColor field. tabCell has no exported field to read the drawn colour
+// back off of, so the derivation itself is the seam this file measures.
 
 import (
 	"fmt"

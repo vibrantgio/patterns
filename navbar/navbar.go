@@ -312,9 +312,9 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 // the primary pin while it clears the graphic floor against the bar's own
 // fill — the surface the underline stands on, since the bar is furniture
 // filled at tokens.LevelChrome (see drawNavbar) — and otherwise the step of
-// the primary ramp that does ([tokens.ColorTokens.InkOn]).
+// the primary ramp that does ([tokens.ColorTokens.ForegroundOnAtFloor]).
 func activeUnderlineInk(colors tokens.ColorTokens) color.NRGBA {
-	return colors.InkOn(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelChrome), tokens.GraphicFloor)
+	return colors.ForegroundOnAtFloor(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelChrome), tokens.GraphicFloor)
 }
 
 // linkWidget renders a single link as a label centred inside

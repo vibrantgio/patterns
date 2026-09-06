@@ -337,9 +337,9 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 // band the underline actually sits on, handed in as the fill it is rather
 // than as a level, because the band is a raise and has no level to name —
 // and otherwise the step of the primary ramp that does
-// ([tokens.ColorTokens.InkOn]).
+// ([tokens.ColorTokens.ForegroundOnAtFloor]).
 func underlineInk(colors tokens.ColorTokens, ground color.NRGBA) color.NRGBA {
-	return colors.InkOn(tokens.RolePrimary, ground, tokens.GraphicFloor)
+	return colors.ForegroundOnAtFloor(tokens.RolePrimary, ground, tokens.GraphicFloor)
 }
 
 // tabCell renders a single tab label centred inside (S3, S2) padding,

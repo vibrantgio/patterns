@@ -279,15 +279,15 @@ func layoutTiers(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
-// checkInk is the primary colour a tier draws its feature checkmarks in: the
-// primary pin when it clears the graphic floor against the surface the
+// checkInk is the primary colour a tier draws its feature checkmarks in:
+// the primary pin when it clears the graphic floor against the surface the
 // checkmark is drawn on, and otherwise the step of the primary ramp that
-// does ([tokens.ColorTokens.InkOn]). A checkmark carries meaning by itself,
-// so it owes the graphic floor and derives against the tier's own fill
-// rather than against the page — the two are different surfaces for the
-// recommended tier, which is raised.
+// does ([tokens.ColorTokens.ForegroundOnAtFloor]). A checkmark carries
+// meaning by itself, so it owes the graphic floor and derives against the
+// tier's own fill rather than against the page — the two are different
+// surfaces for the recommended tier, which is raised.
 func checkInk(c tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
-	return c.InkOn(tokens.RolePrimary, fill, tokens.GraphicFloor)
+	return c.ForegroundOnAtFloor(tokens.RolePrimary, fill, tokens.GraphicFloor)
 }
 
 // tierLevel is the level a tier's own content stands at: the recommended
