@@ -37,6 +37,7 @@ type harness struct {
 	st    splitter.State
 	axis  layout.Axis
 	at    float32
+	hit   splitter.Span
 	moves []float32
 	size  image.Point
 	ops   op.Ops
@@ -59,6 +60,7 @@ func (h *harness) props() splitter.Props {
 		Min:      boundMin,
 		Max:      boundMax,
 		Colors:   tokens.DefaultLight,
+		HitSpan:  h.hit,
 		OnChange: func(at float32) {
 			h.at = at
 			h.moves = append(h.moves, at)
@@ -89,6 +91,15 @@ func (h *harness) pt(main float32) f32.Point {
 		return f32.Pt(frameShort/2, main)
 	}
 	return f32.Pt(main, frameShort/2)
+}
+
+// ptAt places a pointer at a main-axis position and a cross-axis one, in
+// the frame's own coordinates.
+func (h *harness) ptAt(main, cross float32) f32.Point {
+	if h.axis == layout.Vertical {
+		return f32.Pt(cross, main)
+	}
+	return f32.Pt(main, cross)
 }
 
 // drag presses at from and moves to to, releasing at the end.
@@ -175,6 +186,58 @@ func TestSplitterHitAreaIsWiderThanTheLine(t *testing.T) {
 	h.drag(boundary+2, boundary+42)
 	if got := h.last(t); got != boundary+40 {
 		t.Errorf("boundary after a drag begun two pixels off the line = %v; want %v", got, float32(boundary+40))
+	}
+}
+
+// TestSplitterHitSpanNarrowsTheBandAndNotTheLine verifies the one thing a
+// caller may say about the cross axis: the seam runs the window's whole
+// height and the hand-hold does not, because the bands crossing over it
+// belong to the window rather than to the boundary. A press on the line
+// outside the span moves nothing and falls through to whatever stands
+// there; the same press inside it drags; and the line paints at the
+// cross position the hand could not reach.
+func TestSplitterHitSpanNarrowsTheBandAndNotTheLine(t *testing.T) {
+	// The middle half of the cross extent is what a hand may take, so a
+	// quarter of the way along is outside it and half way is inside.
+	const (
+		outside = frameShort / 8
+		inside  = frameShort / 2
+	)
+	for _, a := range axes() {
+		t.Run(a.name, func(t *testing.T) {
+			h := newHarness(a.axis)
+			h.hit = splitter.Span{Min: frameShort / 4, Max: 3 * frameShort / 4}
+			h.frame()
+			h.frame()
+
+			h.r.Queue(
+				pointer.Event{Kind: pointer.Press, Position: h.ptAt(boundary, outside), Source: pointer.Touch},
+				pointer.Event{Kind: pointer.Move, Position: h.ptAt(boundary-40, outside), Source: pointer.Touch},
+				pointer.Event{Kind: pointer.Release, Position: h.ptAt(boundary-40, outside), Source: pointer.Touch},
+			)
+			h.frame()
+			if len(h.moves) != 0 {
+				t.Errorf("a drag begun outside the span reported %v; want the splitter to have taken no hold at all", h.moves)
+			}
+
+			h.r.Queue(
+				pointer.Event{Kind: pointer.Press, Position: h.ptAt(boundary, inside), Source: pointer.Touch},
+				pointer.Event{Kind: pointer.Move, Position: h.ptAt(boundary-40, inside), Source: pointer.Touch},
+				pointer.Event{Kind: pointer.Release, Position: h.ptAt(boundary-40, inside), Source: pointer.Touch},
+			)
+			h.frame()
+			if got := h.last(t); got != boundary-40 {
+				t.Errorf("boundary after a drag begun inside the span = %v; want %v", got, float32(boundary-40))
+			}
+
+			img := golden.Capture(t, h.size, func(gtx layout.Context) layout.Dimensions {
+				paint.FillShape(gtx.Ops, backdrop, clip.Rect{Max: h.size}.Op())
+				return h.st.Layout(gtx, h.props())
+			})
+			if !painted(img, h.axis, int(h.at), outside) {
+				t.Error("the line stops where the band does; the span cuts back what a hand may take, not the seam")
+			}
+		})
 	}
 }
 
@@ -304,6 +367,17 @@ func lineWidth(t *testing.T, h *harness) int {
 		return h.st.Layout(gtx, h.props())
 	})
 	return paintedRun(img, frameShort/2, frameLong)
+}
+
+// painted reports whether the pixel at a main-axis and cross-axis
+// position carries anything but the backdrop.
+func painted(img *image.RGBA, axis layout.Axis, main, cross int) bool {
+	p := image.Pt(main, cross)
+	if axis == layout.Vertical {
+		p = image.Pt(cross, main)
+	}
+	r, g, b, _ := img.At(p.X, p.Y).RGBA()
+	return uint8(r>>8) != backdrop.R || uint8(g>>8) != backdrop.G || uint8(b>>8) != backdrop.B
 }
 
 // paintedRun counts the longest run of pixels along row y that is not the

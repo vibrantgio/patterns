@@ -17,9 +17,11 @@
 // Everything the package takes and reports along the main axis is in
 // pixels, measured from the origin of the layout.Context it is given. A
 // caller holding dp converts with gtx.Dp on the way in and divides by
-// gtx.Metric.PxPerDp on the way out. The cross axis is not stated at all:
-// the seam runs the whole cross extent of the constraints it is handed,
-// so a caller that wants less constrains a copy of the context.
+// gtx.Metric.PxPerDp on the way out. The cross axis is barely stated at
+// all: the seam runs the whole cross extent of the constraints it is
+// handed, so a caller that wants a shorter line constrains a copy of the
+// context. The one thing said about that axis is [Props.HitSpan], for the
+// boundary whose line runs further than a hand may take hold of it.
 package splitter
 
 import (
@@ -89,6 +91,12 @@ func GrabbedColor(c tokens.ColorTokens) color.NRGBA {
 	return c.Ramps.Neutral.Step(firmStep)
 }
 
+// Span is a range along the cross axis, in pixels from the origin of the
+// context the splitter is laid out in. Its zero value is the whole cross
+// extent rather than an empty range: a splitter that states nothing about
+// the cross axis takes all of it.
+type Span struct{ Min, Max int }
+
 // Props states one splitter for one frame.
 type Props struct {
 	// Axis is the axis the boundary moves along: layout.Horizontal for a
@@ -109,6 +117,17 @@ type Props struct {
 
 	// Colors resolves the line's two colours.
 	Colors tokens.ColorTokens
+
+	// HitSpan is the part of the cross extent a hand may take hold of,
+	// for a boundary whose line runs further than the boundary does: a
+	// seam crossing the bands a window carries above and below its
+	// regions, which are the window's and not the boundary's. The line
+	// still runs the whole extent — a seam that stopped at a band would
+	// say the window is divided in one place and joined in another — and
+	// only the band the pointer is taken by is cut back. The zero value
+	// hands the whole extent over, which is what a splitter between two
+	// plain regions wants.
+	HitSpan Span
 
 	// OnChange is invoked with the new boundary, already clamped, for
 	// every pointer event that moves it. It is called during Update, on
@@ -188,9 +207,9 @@ func (s *State) Update(gtx layout.Context, p Props) {
 
 // Layout draws the line at Boundary and puts the hit area and the resize
 // pointer over it, both running the full cross extent of the context's
-// constraints. It returns the rectangle the line itself paints, which is
-// the only space the splitter takes; the hit area overlaps the regions on
-// either side and takes none.
+// constraints unless [Props.HitSpan] cuts the band back. It returns the
+// rectangle the line itself paints, which is the only space the splitter
+// takes; the hit area overlaps the regions on either side and takes none.
 //
 // The regions are drawn first and the line after them, so a region that
 // overruns its constraints cannot erase it; the hit area comes last,
@@ -234,9 +253,16 @@ func (s *State) Layout(gtx layout.Context, p Props) layout.Dimensions {
 	hitPx := HitWidth(gtx)
 	hitMin := max(at-(hitPx-seamPx)/2, 0)
 	hitMax := min(hitMin+hitPx, total)
+	hitFrom, hitTo := 0, cross
+	if p.HitSpan != (Span{}) {
+		hitFrom, hitTo = max(p.HitSpan.Min, 0), min(p.HitSpan.Max, cross)
+	}
+	if hitTo <= hitFrom {
+		return layout.Dimensions{Size: line.Size()}
+	}
 	hit := image.Rectangle{
-		Min: axis.Convert(image.Pt(hitMin, 0)),
-		Max: axis.Convert(image.Pt(hitMax, cross)),
+		Min: axis.Convert(image.Pt(hitMin, hitFrom)),
+		Max: axis.Convert(image.Pt(hitMax, hitTo)),
 	}
 	area := clip.Rect(hit).Push(gtx.Ops)
 	event.Op(gtx.Ops, &s.tag)
