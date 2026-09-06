@@ -3,7 +3,7 @@
 The pattern layer of [Vibrant Gio](https://github.com/vibrantgio), a design
 system for native desktop applications on macOS, Windows and Linux, written in
 pure Go on [Gio](https://gioui.org). Where components gives you a button, patterns
-gives you the eighteen composed things an application is actually made of — an
+gives you the sixteen composed things an application is actually made of — an
 application shell, a navbar, a sidebar, a virtualised data table, a modal, a
 column of notifications, a hero section.
 
@@ -16,7 +16,7 @@ values from [theme](https://github.com/vibrantgio/theme)'s theme
 observable, and the theme carries the whole look: colour, typography, density,
 elevation and motion. A window follows the OS between light and dark with no
 application code; switching an app to Compact density resizes the navbar,
-sidebar items, tabs, pagination and table rows as a theme change, not a sweep;
+sidebar items, tabs and table rows as a theme change, not a sweep;
 overlay surfaces name their level on the elevation and fill from
 `SurfaceAt` — the modal at level 2, the popover at level 3, tonal in both
 modes — except the toast the notifications column presents, which is filled
@@ -47,8 +47,8 @@ Every package has the same two entry points, and the split is deliberate:
   `pricing`, `feature`, `testimonial`) takes the whole `tokens.Typography`
   and picks its own roles, as it does live. And a `tokens.Density` follows
   only where the pattern sizes a control: `navbar`, `sidebar`, `tabs`,
-  `table`, `pagination`, `shell`, `hero`, `pricing` and `modal` take one;
-  `accordion`, `breadcrumb`, `group`, `notifications`,
+  `table`, `shell`, `hero`, `pricing` and `modal` take one;
+  `accordion`, `group`, `notifications`,
   `feature`, `testimonial` and `table.RenderTextCell` do not, because
   nothing in them has a control height. Until v0.3.0 these signatures took a
   `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
@@ -94,14 +94,12 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `navbar` | A horizontal surface bar with three slots — leading brand, centred links, trailing actions. The active link carries a Primary underline. |
 | `sidebar` | A collapsible vertical column that swaps between an expanded width (icon + label) and a collapsed width (icon only). The active item is tinted Primary. |
 | `tabs` | A tab strip with a Primary underline on the selection, plus the content panel below it. Click, Arrow-Left/Right (wrapping), Home and End all change the selection. |
-| `breadcrumb` | A chevron-separated row of location segments. The last renders as the current location in a deep neutral text step; the ones before it are clickable. `Breadcrumb` takes the trail when the stream is built; `Trail` takes it per frame, for a path that changes as the user navigates, and routes each click by the segment's own key rather than by the position it stood in. |
 
 **Data and content** — the things that hold a screenful of stuff.
 
 | Package | |
 | --- | --- |
 | `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces the click's purpose through `OnSort`. Row heights follow the theme's density. |
-| `pagination` | A row of numbered page buttons flanked by prev/next chevrons, the current page highlighted Primary/OnPrimary. |
 | `card` | The one thing that must stand apart: a rounded surface raised one step above the surface it is in, with optional Header / Body / Footer slots. The raise is the whole of how it singles something out — no hairline of its own, never outlined, never wearing a role, and what the developer wants to say about it is a badge in its header. Where the scheme has no lighter step left the raise is told by the seam at the card's edge, which is the elevation's rule for every raise. A card is raised, not floating, so it casts no shadow (ADR-005). |
 | `group` | The page dividing itself: a hairline around related components, drawn at the level of the surface the group is in and taking that surface's own fill, with an optional label top-leading inside it. It paints nothing inside and raises nothing, so what it holds stands on the surface the group is in and nothing derives against it. The hairline is the seam of two regions sharing one fill (`tokens.ColorTokens.SeamOn`), the understated line the platform draws — not the 3:1 mark a graphic carrying meaning owes. A group may hold a card; it never holds another group, and it wears no role. |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
@@ -123,7 +121,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | `pricing` | A row of tier groups — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally `Recommended`, which draws that tier as a card raised on the content and puts a "Popular" badge on its name row. A row of tiers divides the page; the tier that must stand apart from it is the one card. |
 | `testimonial` | Quote cards with an author block and an avatar (or an initial in a circular placeholder), as a single centred card or a row of them. |
 
-`modal/gallery` is a `main` inside this module, not a nineteenth pattern: it
+`modal/gallery` is a `main` inside this module, not a seventeenth pattern: it
 demonstrates a decision dialog — its Tab cycle, its focus-ring ownership, its
 Return-bound default and its inert backdrop. Run it with `go run
 ./modal/gallery`.
@@ -287,11 +285,6 @@ Honest about what does not work yet:
   plain `layout.Widget`s. A live main pane therefore has to be bridged into the static
   slot through a cell the consumer folds onto another stream — the idiom every
   workbench app repeats. Same for `navbar.Props.Actions`.
-- **`pagination.Props.Page` and `PageCount` are plain ints**, not observables,
-  so a page change means rebuilding the whole pattern through an
-  `rx.SwitchMap`. `accordion`, `modal`, `popover`, `sidebar`, `tabs` and
-  `table` all take their dynamic state as observables; pagination is the
-  outlier.
 - **Overlays open and close instantly.** `modal` and `popover` have
   no entrance or exit transition; only `notifications` animates, and only the
   toast's fade-out
@@ -300,8 +293,7 @@ Honest about what does not work yet:
 - **No responsive behaviour.** `feature`, `pricing` and `testimonial` do not
   collapse to fewer columns or a vertical stack on a narrow window, and
   `popover` does not flip or reflow when the chosen `Placement` would clip the
-  viewport — it just clips. `pagination` renders every page in `[1, PageCount]`
-  with no ellipsis collapse.
+  viewport — it just clips.
 
 ## License
 
