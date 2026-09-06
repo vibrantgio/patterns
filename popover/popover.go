@@ -31,6 +31,20 @@
 // one place the drawn anchor, the surface and the room are all known, so an
 // anchor handed here reports the shape it drew and nothing wider.
 //
+// THE FLOATING SURFACE PAINTS LAST. The anchor is drawn where the caller
+// put it, but the surface, its tail and its input handler go through
+// op.Defer, so they run after every other operation in the frame. A popover
+// opened from a slot laid out early — a navigation bar's action, a table
+// header's control — would otherwise be painted over by every sibling laid
+// out after that slot, and a floating surface stands above everything
+// raised beneath it. Deferral carries the hit order with it: input
+// registered in deferred operations is topmost, so a press on the surface
+// is consumed by the surface rather than by what it covers. Deferral keeps
+// the transform and drops the clip, so the surface is no longer held by
+// whatever clipped the anchor: it is the caller's frame, not an ancestor's
+// scissor, that bounds where a popover may stand. This is the idiom a
+// floating surface in this organization is drawn with.
+//
 // Open/close is instantaneous in this package; entrance/exit transitions
 // are deferred to a later Effects-integration goal. Automatic flip to the
 // opposite side of the anchor is deferred: the clamp is a cross-axis nudge,
@@ -346,8 +360,9 @@ func drawPopover(
 	// 3. Outside-press absorber. The frame is the room this popover may
 	//    use, not the window, so the absorber extends a wide margin beyond
 	//    it on every side to catch presses anywhere in the window.
-	//    Registered first so that anchor- and surface-clip tags (registered
-	//    later) win for presses inside their own bounds.
+	//    Registered first so the anchor's clip tag, added after it, and the
+	//    surface's, deferred past it, both win for presses inside their own
+	//    bounds.
 	if live {
 		margin := gtx.Dp(outsideMargin)
 		outsideClip := clip.Rect{
@@ -372,13 +387,15 @@ func drawPopover(
 		anchorOff.Pop()
 	}
 
-	// 5. Surface + tail + content, only when open. The surface absorbs
-	//    presses; the tail is a triangular path bridging the gap to the
-	//    anchor, drawn in the surface fill colour and carrying the surface's
-	//    own edge around it. Level 3, the highest there is: an unscrimmed,
-	//    shadowless transient overlay separates by fill alone (see the
-	//    package doc).
+	// 5. Surface + tail + content, only when open, recorded and handed to
+	//    op.Defer so they paint and hit-test above every sibling the window
+	//    lays out after this popover's slot (see the package doc). The
+	//    surface absorbs presses; the tail is a triangular path bridging the
+	//    gap to the anchor, drawn in the surface fill colour and carrying the
+	//    surface's own edge around it. Level 3, the highest there is: an
+	//    unscrimmed, shadowless transient overlay separates by fill alone.
 	if openNow {
+		floating := op.Record(gtx.Ops)
 		fill := tok.color.SurfaceAt(tokens.Level3)
 		// The surface's edge is derived against the level it circles — the
 		// same Level3 the fill is painted at, named once for both, and the
@@ -406,6 +423,7 @@ func drawPopover(
 		surfOff.Pop()
 
 		drawTail(gtx, anchorRect, surfaceRect, props.Placement, tailW, r, fill, edge, stroke)
+		op.Defer(gtx.Ops, floating.Stop())
 	}
 
 	if live {

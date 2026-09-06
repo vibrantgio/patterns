@@ -8,6 +8,7 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/font"
+	"gioui.org/io/event"
 	gioinput "gioui.org/io/input"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -680,5 +681,191 @@ func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 	}
 	if lo > drawnMid-4 || hi < drawnMid+4 {
 		t.Errorf("the outline gives way only over [%d,%d]; the tail's base is %d wide about %d", lo, hi, 12, drawnMid)
+	}
+}
+
+// ---- Paint-order tests ----
+//
+// The defect these cover (feeds, 2026-09-06): a popover opened from a slot
+// laid out early in the frame — a navigation bar's action — was painted over
+// by the sibling laid out after it, because the surface was drawn inline in
+// the anchor's own paint order. The geometry below is that shape reduced to
+// its bones, and every number in it is the arithmetic drawPopover does.
+
+const (
+	// stripH is the early slot's height: the room the popover is handed,
+	// across the top of the scene, with the covering sibling filling
+	// everything below it.
+	stripH = 40
+
+	// The anchor is 60x28 centred in a 320x40 strip, so it spans
+	// x [130,190], y [6,34]; Bottom places an 80x36 content in a
+	// 80+2*S3 = 104 by 36+2*S3 = 60 surface, centred on x=160 and standing
+	// S2 = 8 below the anchor's foot.
+	coveredSurfMinX, coveredSurfMinY = 108, 42
+	coveredSurfMaxX, coveredSurfMaxY = 212, 102
+	// tailRow is between the cover's top edge and the surface's: only the
+	// tail is drawn there, and only if it too was deferred.
+	tailRow = 41
+)
+
+var coverColor = color.NRGBA{R: 255, G: 0, B: 255, A: 255}
+
+// coveredScene lays w out in a strip across the top — the early slot — and
+// then paints an opaque sibling over everything below it, the way a shell
+// paints its main column after the navigation bar's actions.
+func coveredScene(w layout.Widget, bg color.NRGBA) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		paint.FillShape(gtx.Ops, bg, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		strip := gtx
+		strip.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, stripH))
+		w(strip)
+		off := op.Offset(image.Pt(0, stripH)).Push(gtx.Ops)
+		paint.FillShape(gtx.Ops, coverColor, clip.Rect{
+			Max: image.Pt(gtx.Constraints.Max.X, gtx.Constraints.Max.Y-stripH),
+		}.Op())
+		off.Pop()
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+}
+
+// TestSurfaceIsWholeOverALaterSibling is the paint-order contract: the
+// surface and its tail stand above the sibling laid out after the popover's
+// slot, so not one pixel of the cover survives inside the surface.
+func TestSurfaceIsWholeOverALaterSibling(t *testing.T) {
+	colors := tokens.DefaultLight
+	fill := colors.SurfaceAt(tokens.Level3)
+	content := color.NRGBA{R: 120, G: 120, B: 120, A: 255}
+	props := popover.Props{
+		Anchor:    fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
+		Content:   fixedRect(content, 80, 36),
+		Placement: popover.Bottom,
+	}
+	w := popover.Render(props, true, colors, tokens.Spacing, sharpRadius)
+	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+	img := golden.Capture(t, frameSize, coveredScene(w, bg))
+
+	// The sibling really did paint: a corner of the covered band it owns
+	// outright is its colour.
+	if got := at(img, 8, frameH-8); got != coverColor {
+		t.Fatalf("the covering sibling did not paint: (8,%d) is %v, want %v", frameH-8, got, coverColor)
+	}
+	// Inside the surface, two pixels in from its edge so the outline and its
+	// anti-aliasing are out of the way, every pixel is the surface's own
+	// fill or its content. A cover pixel here is the defect.
+	for y := coveredSurfMinY + 2; y < coveredSurfMaxY-2; y++ {
+		for x := coveredSurfMinX + 2; x < coveredSurfMaxX-2; x++ {
+			got := at(img, x, y)
+			if got == fill || got == content {
+				continue
+			}
+			t.Fatalf("(%d,%d) inside the surface is %v; want the surface fill %v or its content %v", x, y, got, fill, content)
+		}
+	}
+	// The tail bridges the gap in the covered band too, and is drawn in the
+	// surface fill about the anchor's midline.
+	lo, hi, ok := fillRun(img, tailRow, fill)
+	if !ok {
+		t.Fatalf("row %d, between the cover's top edge and the surface's, has no tail pixels", tailRow)
+	}
+	if mid := (lo + hi) / 2; mid < frameW/2-2 || mid > frameW/2+2 {
+		t.Errorf("the tail on row %d runs [%d,%d], centred on %d; the anchor's midline is %d", tailRow, lo, hi, mid, frameW/2)
+	}
+}
+
+// at reads one pixel as an opaque NRGBA, so captures compare against the
+// colours they were painted with.
+func at(img *image.RGBA, x, y int) color.NRGBA {
+	r, g, b, _ := img.At(x, y).RGBA()
+	return color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 255}
+}
+
+// pressCounter draws a solid rect, claims the presses that land on it, and
+// counts them.
+func pressCounter(tag *int, count *int, c color.NRGBA, widthDp, heightDp float32) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		size := image.Pt(gtx.Dp(unit.Dp(widthDp)), gtx.Dp(unit.Dp(heightDp)))
+		paint.FillShape(gtx.Ops, c, clip.Rect{Max: size}.Op())
+		area := clip.Rect{Max: size}.Push(gtx.Ops)
+		event.Op(gtx.Ops, tag)
+		area.Pop()
+		for {
+			e, ok := gtx.Event(pointer.Filter{Target: tag, Kinds: pointer.Press})
+			if !ok {
+				break
+			}
+			if pe, ok := e.(pointer.Event); ok && pe.Kind == pointer.Press {
+				*count++
+			}
+		}
+		return layout.Dimensions{Size: size}
+	}
+}
+
+// TestPressOnTheSurfaceReachesTheSurface is the hit-order half of the same
+// contract: the deferred surface is topmost for input as well as for paint,
+// so a press inside it reaches the popover's content and the sibling
+// underneath never sees it — and it is not read as a press outside, either.
+func TestPressOnTheSurfaceReachesTheSurface(t *testing.T) {
+	var (
+		contentTag, siblingTag int
+		contentHits, sibHits   int
+		dismissed              int
+	)
+	props := popover.Props{
+		Open:      rx.Of(true),
+		Anchor:    fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
+		Content:   pressCounter(&contentTag, &contentHits, color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 80, 36),
+		Placement: popover.Bottom,
+		Arbiter:   popover.NewArbiter(),
+		OnDismiss: func(_ layout.Context) { dismissed++ },
+	}
+	pop := livePopover(t, props)
+
+	sibling := pressCounter(&siblingTag, &sibHits, coverColor, frameW, frameH-stripH)
+	scene := func(gtx layout.Context) layout.Dimensions {
+		strip := gtx
+		strip.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, stripH))
+		pop(strip)
+		off := op.Offset(image.Pt(0, stripH)).Push(gtx.Ops)
+		sibling(gtx)
+		off.Pop()
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+
+	r := new(gioinput.Router)
+	ops := new(op.Ops)
+	driveFrame(scene, ops, r, frameSize)
+	driveFrame(scene, ops, r, frameSize)
+
+	// The centre of the popover's content, which is also well inside the
+	// sibling's band.
+	onSurface := f32.Pt((coveredSurfMinX+coveredSurfMaxX)/2, (coveredSurfMinY+coveredSurfMaxY)/2)
+	r.Queue(
+		pointer.Event{Kind: pointer.Press, Position: onSurface, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+		pointer.Event{Kind: pointer.Release, Position: onSurface, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+	)
+	driveFrame(scene, ops, r, frameSize)
+
+	if contentHits != 1 {
+		t.Errorf("press at %v reached the popover's content %d times, want 1", onSurface, contentHits)
+	}
+	if sibHits != 0 {
+		t.Errorf("press at %v also reached the sibling under the surface %d times", onSurface, sibHits)
+	}
+	if dismissed != 0 {
+		t.Errorf("press on the surface was read as a press outside it; OnDismiss fired %d times", dismissed)
+	}
+
+	// A press on the sibling, clear of the surface, is still a press
+	// outside the popover.
+	offSurface := f32.Pt(20, frameH-20)
+	r.Queue(
+		pointer.Event{Kind: pointer.Press, Position: offSurface, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+		pointer.Event{Kind: pointer.Release, Position: offSurface, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
+	)
+	driveFrame(scene, ops, r, frameSize)
+	if contentHits != 1 {
+		t.Errorf("press at %v away from the surface reached the popover's content; hits = %d", offSurface, contentHits)
 	}
 }
