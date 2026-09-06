@@ -72,11 +72,11 @@ func TestShellThreeColumnGolden(t *testing.T) {
 }
 
 // TestShellThreeColumnAsideResize verifies that pressing on the aside
-// divider and dragging horizontally emits absolute-width updates via
+// splitter and dragging horizontally emits absolute-width updates via
 // OnAsideResize. With PxPerDp=1, a 480-wide frame, an empty sidebar
-// (width 0) and an initial aside width of 200, the divider (6 px wide)
+// (width 0) and an initial aside width of 200, the splitter (6 px wide)
 // sits at x ∈ [274, 280). A press at (277, 100) followed by a drag to
-// (227, 100) moves the divider 50 px toward leading, growing the aside
+// (227, 100) moves the splitter 50 px toward leading, growing the aside
 // to 250 dp.
 func TestShellThreeColumnAsideResize(t *testing.T) {
 	var got []unit.Dp
@@ -93,7 +93,7 @@ func TestShellThreeColumnAsideResize(t *testing.T) {
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
 	size := image.Pt(480, 256)
-	// Warm-up frames so the divider's clip area is registered with the
+	// Warm-up frames so the splitter's clip area is registered with the
 	// router before pointer events are queued.
 	driveFrame(w, ops, r, size)
 	driveFrame(w, ops, r, size)

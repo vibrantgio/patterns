@@ -90,7 +90,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 
 | Package | |
 | --- | --- |
-| `shell` | The top-level layout, in four variants: `SidebarHeaderMain`, `SplitPane` (draggable divider on either axis), `ThreeColumn` (navbar, sidebar, main, resizable aside, footer strip) and `StackedPage` (pinned navbar over a shell-owned scroll of page sections). |
+| `shell` | The top-level layout, in four variants: `SidebarHeaderMain`, `SplitPane` (draggable splitter on either axis), `ThreeColumn` (navbar, sidebar, main, resizable aside, footer strip) and `StackedPage` (pinned navbar over a shell-owned scroll of page sections). |
 | `navbar` | A horizontal surface bar with three slots — leading brand, centred links, trailing actions. The active link carries a Primary underline. |
 | `sidebar` | A collapsible vertical column that swaps between an expanded width (icon + label) and a collapsed width (icon only). The active item is tinted Primary. |
 | `tabs` | A tab strip with a Primary underline on the selection, plus the content panel below it. Click, Arrow-Left/Right (wrapping), Home and End all change the selection. |

@@ -85,7 +85,7 @@ const (
 	bodyHDp       = 96
 	chevronColDp  = 32
 	chevronSizeDp = 10
-	dividerDp     = 1
+	seamDp        = 1
 )
 
 type resolvedTokens struct {
@@ -319,14 +319,14 @@ func drawHeader(
 			st.Pop()
 		}
 
-		// Bottom divider so adjacent headers are visually separated even
+		// Bottom seam so adjacent headers are visually separated even
 		// when no body is rendered between them.
-		divH := gtx.Dp(unit.Dp(dividerDp))
-		if divH < 1 {
-			divH = 1
+		seamH := gtx.Dp(unit.Dp(seamDp))
+		if seamH < 1 {
+			seamH = 1
 		}
-		divRect := image.Rect(0, size.Y-divH, size.X, size.Y)
-		paint.FillShape(gtx.Ops, colors.Divider, clip.Rect(divRect).Op())
+		seamRect := image.Rect(0, size.Y-seamH, size.X, size.Y)
+		paint.FillShape(gtx.Ops, colors.Seam, clip.Rect(seamRect).Op())
 
 		return layout.Dimensions{Size: size}
 	}

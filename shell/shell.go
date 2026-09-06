@@ -56,9 +56,9 @@ const (
 	// edge (unlike SidebarHeaderMain, where the sidebar claims the full
 	// height and the navbar starts after it), then a leading sidebar, a
 	// flexed main column, and a trailing aside column separated from
-	// main by a draggable vertical divider, with an optional full-width
+	// main by a draggable vertical splitter, with an optional full-width
 	// footer strip along the bottom. A nil Aside omits the trailing
-	// column and its divider, degenerating into a header-first sidebar
+	// column and its splitter, degenerating into a header-first sidebar
 	// layout; a nil Footer omits the bottom strip. Each column scrolls
 	// (or not) on its own — the shell hands every slot its full height.
 	ThreeColumn
@@ -94,16 +94,16 @@ type Props struct {
 
 	// SplitAxis selects the axis along which Left and Right are
 	// arranged. The zero value (layout.Horizontal) places them side by
-	// side separated by a vertical divider; layout.Vertical stacks Left
-	// above Right separated by a horizontal divider.
+	// side separated by a vertical splitter; layout.Vertical stacks Left
+	// above Right separated by a horizontal splitter.
 	SplitAxis layout.Axis
 
-	// SplitRatio drives the position of the divider as a fraction in
+	// SplitRatio drives the position of the splitter as a fraction in
 	// [0, 1] along SplitAxis. A nil SplitRatio is treated as a
 	// constant 0.5.
 	SplitRatio rx.Observable[float32]
 
-	// OnSplitChange is invoked when the user drags the divider. The
+	// OnSplitChange is invoked when the user drags the splitter. The
 	// value is the new ratio in [0, 1]. May be nil.
 	OnSplitChange func(gtx layout.Context, ratio float32)
 
@@ -112,7 +112,7 @@ type Props struct {
 	//
 	// Aside is the trailing column layout.Widget stream — a comments panel, an
 	// inspector, or any other contextual surface. A nil Aside omits the
-	// column and its divider entirely.
+	// column and its splitter entirely.
 	Aside rx.Observable[layout.Widget]
 
 	// Footer is an optional full-width strip below the columns (a
@@ -126,10 +126,10 @@ type Props struct {
 	// behaviour for annotation and inspector panels. Values are clamped
 	// to [minAsideDp, maxAsideDp]. A nil AsideWidth is treated as a
 	// constant defaultAsideDp. External updates win only while the user
-	// is not dragging the divider.
+	// is not dragging the splitter.
 	AsideWidth rx.Observable[unit.Dp]
 
-	// OnAsideResize is invoked when the user drags the aside divider.
+	// OnAsideResize is invoked when the user drags the aside splitter.
 	// The value is the new clamped width in dp. May be nil.
 	OnAsideResize func(gtx layout.Context, width unit.Dp)
 
@@ -169,11 +169,11 @@ type Props struct {
 const (
 	footerHDp = 48
 
-	// asideDividerDp is the ThreeColumn aside divider, which paints at
+	// asideSplitterDp is the ThreeColumn aside splitter, which paints at
 	// its full width and grabs the same rectangle. It is bounded above
 	// by the full-width navbar and below by the footer, so it separates
 	// two columns of chrome without ever reaching the window's edge.
-	asideDividerDp = 6
+	asideSplitterDp = 6
 
 	// splitSeamDp is what the SplitPane seam paints, and the room it
 	// takes between the panes: a hairline.
@@ -183,7 +183,7 @@ const (
 	// across the top of its window, the seam crosses it — so the seam's
 	// width is the width of the scar it leaves there, and a thick one
 	// severs the band into two pieces with the window's title marooned on
-	// the smaller of them. Platform split dividers are one point for the
+	// the smaller of them. Platform splitters are one point for the
 	// same reason: at that width an edge reads as an edge, and anything
 	// wider starts reading as a third column that nothing occupies.
 	splitSeamDp = 1
@@ -220,7 +220,7 @@ func NavbarHeight(d tokens.Density) unit.Dp {
 // whenever a consumed theme token, the SplitRatio observable,
 // or a composed sub-stream changes. Sidebar and navbar event handling
 // is delegated to the respective packages; Shell only owns the
-// SplitPane divider's drag handler.
+// SplitPane splitter's drag handler.
 func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	switch props.Layout {
 	case SplitPane:
@@ -348,7 +348,7 @@ type dragState struct {
 }
 
 // dragTag is a non-zero-size type so its address is a unique event
-// tag for the divider's pointer hit area.
+// tag for the splitter's pointer hit area.
 type dragTag struct{ _ byte }
 
 func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -513,7 +513,7 @@ func drawSplitPane(
 		Min: axis.Convert(image.Pt(leftPx, 0)),
 		Max: axis.Convert(image.Pt(leftPx+seamPx, cross)),
 	}
-	paint.FillShape(gtx.Ops, dividerColor(colors), clip.Rect(seamRect).Op())
+	paint.FillShape(gtx.Ops, seamColor(colors), clip.Rect(seamRect).Op())
 
 	// Grab band: wider than the seam, centred on it, over both panes.
 	if ds != nil {
@@ -542,11 +542,11 @@ func drawSplitPane(
 	return layout.Dimensions{Size: size}
 }
 
-// dividerColor is the semantic Divider token: one step past the Surface
+// seamColor is the semantic Seam token: one step past the Surface
 // fill, so it still registers a pixel delta against Surface on both
 // light and dark schemes.
-func dividerColor(c tokens.ColorTokens) color.NRGBA {
-	return c.Divider
+func seamColor(c tokens.ColorTokens) color.NRGBA {
+	return c.Seam
 }
 
 // ---- helpers -------------------------------------------------------------

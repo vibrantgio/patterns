@@ -153,7 +153,7 @@ type Props[T any] struct {
 const (
 	cellPadDp     = 12
 	chevronSizeDp = 10
-	dividerDp     = 1
+	seamDp        = 1
 	minColumnDp   = 64
 )
 
@@ -371,7 +371,7 @@ func columnWidths[T any](gtx layout.Context, columns []Column[T], totalW int) []
 
 // drawHeaderRow renders the bold-weight header labels with optional sort
 // chevrons and clickable hit areas for sortable columns. The trailing
-// divider line marks the boundary between the header and the body.
+// seam marks the boundary between the header and the body.
 func drawHeaderRow[T any](
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -390,7 +390,7 @@ func drawHeaderRow[T any](
 	// printed on the window's content.
 	//
 	// The seam the raise may owe is already drawn: the header closes with
-	// the same Divider rule every row does, which is the one hairline
+	// the same Seam rule every row does, which is the one hairline
 	// between the header band and the body and is more pronounced than a seam.
 	paint.FillShape(gtx.Ops, tok.color.RaisedOn(tok.color.SurfaceAt(tok.level)).Fill, clip.Rect{Max: size}.Op())
 
@@ -408,12 +408,12 @@ func drawHeaderRow[T any](
 		x += w
 	}
 
-	divH := gtx.Dp(unit.Dp(dividerDp))
-	if divH < 1 {
-		divH = 1
+	seamH := gtx.Dp(unit.Dp(seamDp))
+	if seamH < 1 {
+		seamH = 1
 	}
-	divRect := image.Rect(0, size.Y-divH, size.X, size.Y)
-	paint.FillShape(gtx.Ops, tok.color.Divider, clip.Rect(divRect).Op())
+	seamRect := image.Rect(0, size.Y-seamH, size.X, size.Y)
+	paint.FillShape(gtx.Ops, tok.color.Seam, clip.Rect(seamRect).Op())
 
 	return layout.Dimensions{Size: size}
 }
@@ -498,7 +498,7 @@ func drawHeaderCell[T any](
 }
 
 // drawRow renders one body row by invoking each column's Cell closure
-// inside a fixed-size cell box, then painting the bottom divider line.
+// inside a fixed-size cell box, then painting the bottom seam.
 // rowH is the density's row height (list.RowHeight — exactly
 // ControlHeight), not the cell's intrinsic size, so per-row layout cost
 // stays bounded regardless of cell content. Rows are
@@ -507,7 +507,7 @@ func drawHeaderCell[T any](
 //
 // current fills the row from the Primary ramp's tinted end BEFORE the cells
 // draw, so a Cell closure's own painting still lands on top of it and the
-// divider still closes the row underneath. It is one FillShape on at most
+// seam still closes the row underneath. It is one FillShape on at most
 // one visible row per frame.
 func drawRow[T any](
 	gtx layout.Context,
@@ -545,12 +545,12 @@ func drawRow[T any](
 		x += w
 	}
 
-	divH := gtx.Dp(unit.Dp(dividerDp))
-	if divH < 1 {
-		divH = 1
+	seamH := gtx.Dp(unit.Dp(seamDp))
+	if seamH < 1 {
+		seamH = 1
 	}
-	divRect := image.Rect(0, rowH-divH, totalW, rowH)
-	paint.FillShape(gtx.Ops, tok.color.Divider, clip.Rect(divRect).Op())
+	seamRect := image.Rect(0, rowH-seamH, totalW, rowH)
+	paint.FillShape(gtx.Ops, tok.color.Seam, clip.Rect(seamRect).Op())
 
 	return layout.Dimensions{Size: rowSize}
 }

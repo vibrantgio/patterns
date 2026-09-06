@@ -101,7 +101,7 @@ const (
 	// SeamDp is the width of the pane's internal hairline — drawn because
 	// the backdrop's own step is too small to part the pane from it, which
 	// the package comment records the measurement for. The width is the one
-	// the platform's own split dividers take, and the one a window's other
+	// the platform's own splitters take, and the one a window's other
 	// chrome boundaries should take beside it, so that boundaries drawn for
 	// different reasons are still drawn at one weight. Wider is worse in a
 	// way that is easy to miss — a seam runs a whole edge, so its width is

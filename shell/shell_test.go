@@ -226,13 +226,13 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 	return dims
 }
 
-// TestShellSplitPaneDividerDrag verifies that pressing on the seam and
+// TestShellSplitPaneSplitterDrag verifies that pressing on the seam and
 // dragging horizontally emits ratio updates via OnSplitChange. With
 // PxPerDp=1 and frame 200×100 at initial ratio 0.5, the painted seam
 // (1 px) sits at x=100 and the grab band (6 px, centred on it) at
 // x ∈ [98, 104). A press at (100, 50) followed by a drag to (150, 50)
 // shifts the ratio by 50/200 = +0.25, so the expected new ratio is 0.75.
-func TestShellSplitPaneDividerDrag(t *testing.T) {
+func TestShellSplitPaneSplitterDrag(t *testing.T) {
 	var got []float32
 	props := shell.Props{
 		Layout:        shell.SplitPane,
@@ -243,14 +243,14 @@ func TestShellSplitPaneDividerDrag(t *testing.T) {
 
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	// Warm-up frames so the divider's clip area is registered with the
+	// Warm-up frames so the splitter's clip area is registered with the
 	// router before pointer events are queued.
 	driveFrame(w, ops, r, dragSize)
 	driveFrame(w, ops, r, dragSize)
 
 	press := f32.Pt(100, 50)
 	drag := f32.Pt(150, 50)
-	// Press at the divider, Move to drag — the router converts the Move
+	// Press at the splitter, Move to drag — the router converts the Move
 	// to a pointer.Drag for the press target. Release ends the gesture.
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: press, Source: pointer.Touch},
@@ -270,13 +270,13 @@ func TestShellSplitPaneDividerDrag(t *testing.T) {
 	}
 }
 
-// TestShellSplitPaneVerticalDividerDrag is the SplitAxis=Vertical
-// counterpart of TestShellSplitPaneDividerDrag. With PxPerDp=1 and a
+// TestShellSplitPaneVerticalSplitterDrag is the SplitAxis=Vertical
+// counterpart of TestShellSplitPaneSplitterDrag. With PxPerDp=1 and a
 // 100×200 frame at initial ratio 0.5, the horizontal seam sits at
 // y=100 under a 6 px grab band at y ∈ [98, 104). A press at (50, 100)
 // followed by a drag to (50, 150) shifts the ratio by 50/200 = +0.25,
 // so the expected new ratio is 0.75.
-func TestShellSplitPaneVerticalDividerDrag(t *testing.T) {
+func TestShellSplitPaneVerticalSplitterDrag(t *testing.T) {
 	var got []float32
 	props := shell.Props{
 		Layout:        shell.SplitPane,
@@ -319,7 +319,7 @@ func TestShellSplitPaneVerticalDividerDrag(t *testing.T) {
 // Both halves are load-bearing and they pull in opposite directions. The
 // width is why an application may paint a band across the top of its
 // window without the seam severing it: at a hairline the seam crosses
-// the band the way a platform divider does instead of splitting it into
+// the band the way a platform splitter does instead of splitting it into
 // two pieces. The full-height run is why the band is not simply exempted
 // from the seam: an edge that stops short of the window's top leaves the
 // two panes' fills meeting with nothing between them, and the seam is
@@ -337,14 +337,14 @@ func TestShellSplitPaneSeamIsAHairline(t *testing.T) {
 	img := golden.Capture(t, splitSize, w)
 
 	// runAt reports the seam's start column and width on one row, where
-	// "seam" is any run of pixels matching the Divider token.
+	// "seam" is any run of pixels matching the Seam token.
 	runAt := func(y int) (start, width int) {
 		start = -1
 		for x := 0; x < splitW; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
-			isSeam := uint8(r>>8) == colors.Divider.R &&
-				uint8(g>>8) == colors.Divider.G &&
-				uint8(b>>8) == colors.Divider.B
+			isSeam := uint8(r>>8) == colors.Seam.R &&
+				uint8(g>>8) == colors.Seam.G &&
+				uint8(b>>8) == colors.Seam.B
 			switch {
 			case isSeam && start < 0:
 				start, width = x, 1

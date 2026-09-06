@@ -19,7 +19,7 @@ import (
 )
 
 // asideDragState is captured once per subscription and survives all
-// emissions for the lifetime of the Shell instance. The aside divider
+// emissions for the lifetime of the Shell instance. The aside splitter
 // tracks an absolute width rather than a ratio: when the window
 // resizes, the aside keeps its width and the main column absorbs the
 // change.
@@ -97,7 +97,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // should use Shell. sidebarW and asideW are pre-built layout.Widget values for the
 // leading and trailing columns (Props.Sidebar and Props.Aside are not
 // consulted); a nil sidebarW renders an empty leading column, and a
-// nil asideW omits the aside column and its divider entirely.
+// nil asideW omits the aside column and its splitter entirely.
 //
 // label is the LabelLarge role's whole text style, which the layout
 // spends on its navbar, and d is the density both the navbar and the
@@ -151,7 +151,7 @@ func processAsideDrag(gtx layout.Context, ds *asideDragState, onResize func(gtx 
 			if !ds.active {
 				continue
 			}
-			// The aside sits trailing of the divider, so dragging right
+			// The aside sits trailing of the splitter, so dragging right
 			// shrinks it.
 			delta := pe.Position.X - ds.pressX
 			w := clampAsideWidth(ds.startW - unit.Dp(delta/scale))
@@ -167,7 +167,7 @@ func processAsideDrag(gtx layout.Context, ds *asideDragState, onResize func(gtx 
 	}
 }
 
-// drawThreeColumn lays out navbar, sidebar, main, divider+aside and
+// drawThreeColumn lays out navbar, sidebar, main, splitter+aside and
 // footer in that op-stream order, so Tab focus traversal follows the
 // visual reading order. Every column receives the full row height —
 // scrolling belongs to slot content, not to the shell.
@@ -176,7 +176,7 @@ func drawThreeColumn(
 	nb, sb, main, aside, footer layout.Widget,
 	asideDp unit.Dp,
 	colors tokens.ColorTokens,
-	ds *asideDragState, // nil disables the divider hit area (static path)
+	ds *asideDragState, // nil disables the splitter hit area (static path)
 	hasAside bool,
 	navbarH unit.Dp,
 ) layout.Dimensions {
@@ -194,7 +194,7 @@ func drawThreeColumn(
 		rowH = 0
 	}
 
-	// Backstop so the divider and the empty slots read against something.
+	// Backstop so the splitter and the empty slots read against something.
 	// It is the BACKDROP — the bare window plane, which is what a
 	// three-column frame shows wherever nothing stands.
 	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
@@ -219,15 +219,15 @@ func drawThreeColumn(
 		}
 	}
 
-	dividerW := 0
+	splitterW := 0
 	asidePx := 0
 	if hasAside {
-		dividerW = gtx.Dp(unit.Dp(asideDividerDp))
-		if dividerW < 1 {
-			dividerW = 1
+		splitterW = gtx.Dp(unit.Dp(asideSplitterDp))
+		if splitterW < 1 {
+			splitterW = 1
 		}
 		asidePx = gtx.Dp(asideDp)
-		avail := size.X - sbW - dividerW
+		avail := size.X - sbW - splitterW
 		if avail < 0 {
 			avail = 0
 		}
@@ -235,7 +235,7 @@ func drawThreeColumn(
 			asidePx = avail
 		}
 	}
-	mainW := size.X - sbW - dividerW - asidePx
+	mainW := size.X - sbW - splitterW - asidePx
 	if mainW < 0 {
 		mainW = 0
 	}
@@ -256,13 +256,13 @@ func drawThreeColumn(
 	}
 
 	if hasAside {
-		// Divider. Its hit area is registered in shell-local coordinates
+		// Splitter. Its hit area is registered in shell-local coordinates
 		// (no offset transform pushed) so drag deltas are measured against
-		// a stable origin even as the divider itself moves.
-		dividerRect := image.Rect(sbW+mainW, navH, sbW+mainW+dividerW, navH+rowH)
-		paint.FillShape(gtx.Ops, dividerColor(colors), clip.Rect(dividerRect).Op())
+		// a stable origin even as the splitter itself moves.
+		splitterRect := image.Rect(sbW+mainW, navH, sbW+mainW+splitterW, navH+rowH)
+		paint.FillShape(gtx.Ops, seamColor(colors), clip.Rect(splitterRect).Op())
 		if ds != nil {
-			area := clip.Rect(dividerRect).Push(gtx.Ops)
+			area := clip.Rect(splitterRect).Push(gtx.Ops)
 			event.Op(gtx.Ops, &ds.tag)
 			pointer.CursorColResize.Add(gtx.Ops)
 			area.Pop()
@@ -270,7 +270,7 @@ func drawThreeColumn(
 
 		// Aside.
 		if rowH > 0 {
-			st := op.Offset(image.Pt(sbW+mainW+dividerW, navH)).Push(gtx.Ops)
+			st := op.Offset(image.Pt(sbW+mainW+splitterW, navH)).Push(gtx.Ops)
 			agtx := gtx
 			agtx.Constraints = layout.Exact(image.Pt(asidePx, rowH))
 			aside(agtx)
