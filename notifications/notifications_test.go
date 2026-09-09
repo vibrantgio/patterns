@@ -44,11 +44,11 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// noteText is the message each status role carries. ASCII only: Latin text in
+// noteText is the message each status carries. ASCII only: Latin text in
 // Roboto rasterises identically on every machine, and no symbol reaches a
 // stored image.
-func noteText(r toast.Role) string {
-	switch r {
+func noteText(status toast.Status) string {
+	switch status {
 	case toast.Success:
 		return "Workspace saved"
 	case toast.Warning:
@@ -60,13 +60,13 @@ func noteText(r toast.Role) string {
 	}
 }
 
-// item returns one notification of the given status role, carrying that
-// role's message.
-func item(id int64, r toast.Role) notifications.Notification {
-	return notifications.Notification{ID: id, Role: r, Text: noteText(r)}
+// item returns one notification of the given status, carrying that status's
+// message.
+func item(id int64, status toast.Status) notifications.Notification {
+	return notifications.Notification{ID: id, Status: status, Text: noteText(status)}
 }
 
-// TestColumnGolden records or diffs the stored scenes. The role's leading
+// TestColumnGolden records or diffs the stored scenes. The status's leading
 // edge and the column ordering are the load-bearing visual signal and the
 // text carries the LabelMedium role; one scene stands the column on the
 // bottom edge's midpoint, where the design language puts a transient

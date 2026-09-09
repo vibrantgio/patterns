@@ -104,7 +104,7 @@ const DefaultLifetime = 4 * time.Second
 // removes it from the queue.
 type Notification struct {
 	ID       int64
-	Role     toast.Role
+	Status   toast.Status
 	Text     string
 	At       time.Time
 	Lifetime time.Duration
@@ -114,7 +114,7 @@ type Notification struct {
 // inside a frame; Request builds one for a command goroutine. Lifetime is
 // optional and defaults to DefaultLifetime when Queue.Add sees it zero.
 type Requested struct {
-	Role     toast.Role
+	Status   toast.Status
 	Text     string
 	At       time.Time
 	Lifetime time.Duration
@@ -134,8 +134,8 @@ type Expired struct{ ID int64 }
 // exact buffer the frame is being recorded into: a call made from a layout.Widget
 // recording somewhere else — inside a components/cache.FrameCache body, most of
 // all — is dropped silently. Emit from the layout.Widget that owns gtx.Ops.
-func Notify(gtx layout.Context, role toast.Role, text string) {
-	mvu.MessageOp{Message: Requested{Role: role, Text: text, At: gtx.Now}}.Add(gtx.Ops)
+func Notify(gtx layout.Context, status toast.Status, text string) {
+	mvu.MessageOp{Message: Requested{Status: status, Text: text, At: gtx.Now}}.Add(gtx.Ops)
 }
 
 // Request builds the same message from outside a frame — a command
@@ -149,8 +149,8 @@ func Notify(gtx layout.Context, role toast.Role, text string) {
 //	    }
 //	    return notifications.Request(toast.Success, "Saved"), nil
 //	})
-func Request(role toast.Role, text string) Requested {
-	return Requested{Role: role, Text: text, At: time.Now()}
+func Request(status toast.Status, text string) Requested {
+	return Requested{Status: status, Text: text, At: time.Now()}
 }
 
 // Expire is the command that retires notification id after it has been up
@@ -182,7 +182,7 @@ type Queue struct {
 // re-deriving it, so the timer and the fade cannot disagree.
 func (q Queue) Add(r Requested) (Queue, Notification) {
 	q.next++
-	n := Notification{ID: q.next, Role: r.Role, Text: r.Text, At: r.At, Lifetime: r.Lifetime}
+	n := Notification{ID: q.next, Status: r.Status, Text: r.Text, At: r.At, Lifetime: r.Lifetime}
 	if n.Lifetime <= 0 {
 		n.Lifetime = DefaultLifetime
 	}
@@ -488,9 +488,9 @@ func paintColumn(
 		}
 		alphas[vis] = items[idx].alpha
 		dims := toast.Render(shaper, toast.Props{
-			Role:  items[idx].note.Role,
-			Text:  items[idx].note.Text,
-			Alpha: alphas[vis],
+			Status: items[idx].note.Status,
+			Text:   items[idx].note.Text,
+			Alpha:  alphas[vis],
 		}, tok.color, tok.spacing, tok.radius, tok.style)(toastGtx)
 		macros[vis] = macro.Stop()
 		sizes[vis] = dims.Size

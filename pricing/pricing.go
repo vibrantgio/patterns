@@ -111,7 +111,7 @@ type resolvedTokens struct {
 	color   tokens.ColorTokens
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	popular tokens.TextStyle // the badge role the "Popular" label is set in, at the density
+	popular tokens.TextStyle // the badge type role the "Popular" label is set in, at the density
 	name    tokens.TextStyle // the TitleLarge role (tier name)
 	price   tokens.TextStyle // the DisplaySmall role (price)
 	body    tokens.TextStyle // the BodyMedium role (cadence suffix, features)
@@ -129,7 +129,7 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	// typography emission supplies the badge/TitleLarge/DisplaySmall/
 	// BodyMedium/LabelLarge text styles and the theme's cached shaper — the
 	// theme owns the typeface; the density sizes the CTA and picks the
-	// badge's own role.
+	// badge's own type role.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
@@ -444,10 +444,10 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 }
 
 // popularBadgeWidget renders "Popular" as a Neutral badge: the developer's
-// word about the tier, which is the only word a card carries. Neutral
-// rather than a role, because the card's own raise is what recommends the
-// tier — a badge speaking Success on top of it would say it twice, in a
-// vocabulary that means something else.
+// word about the tier, which is the only word a card carries. No status,
+// because the card's own raise is what recommends the tier — a badge
+// indicating Success on top of it would say it twice, in a vocabulary that
+// means something else.
 func popularBadgeWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
 	// The badge's fill is derived against the surface it stands on rather
 	// than against the page: on the recommended card that surface is the

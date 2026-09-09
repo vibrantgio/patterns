@@ -71,7 +71,7 @@ func TestRequestAddsAndExpiredRetires(t *testing.T) {
 		t.Error("Request left At zero; the fade has nothing to measure from")
 	}
 
-	q, second := q.Add(Requested{Role: toast.Error, Text: "two", Lifetime: time.Second})
+	q, second := q.Add(Requested{Status: toast.Error, Text: "two", Lifetime: time.Second})
 	if second.ID == first.ID {
 		t.Errorf("both notifications got ID %d; IDs must be distinct within a queue", second.ID)
 	}
@@ -272,7 +272,7 @@ func TestAnExpiredNotificationPaintsNothing(t *testing.T) {
 	at := time.Unix(1700000000, 0)
 	now := at.Add(2 * DefaultLifetime)
 
-	expired := []Notification{{ID: 1, Role: toast.Warning, Text: "Connection is slow", At: at, Lifetime: DefaultLifetime}}
+	expired := []Notification{{ID: 1, Status: toast.Warning, Text: "Connection is slow", At: at, Lifetime: DefaultLifetime}}
 	frame := func(queued []Notification) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {
 			gtx.Now = now
@@ -288,7 +288,7 @@ func TestAnExpiredNotificationPaintsNothing(t *testing.T) {
 	// The same notification, still inside its lifetime, does paint —
 	// otherwise the assertion above would pass for a column that never draws
 	// anything.
-	live := []Notification{{ID: 1, Role: toast.Warning, Text: "Connection is slow", At: now, Lifetime: DefaultLifetime}}
+	live := []Notification{{ID: 1, Status: toast.Warning, Text: "Connection is slow", At: now, Lifetime: DefaultLifetime}}
 	up := golden.Capture(t, intFrame, frame(live))
 	if n := golden.PixelDiff(empty, up); n == 0 {
 		t.Error("a live notification painted nothing; the expiry assertion above proves nothing")
@@ -299,7 +299,7 @@ func TestAnExpiredNotificationPaintsNothing(t *testing.T) {
 // any of cs. A toast's surface is one flat, opaque, axis-aligned rectangle
 // at the zero radius these tests render with, so its extent can be read
 // back off the image and held against the anchor that placed it: pass the
-// fill together with the role's edge for a toast's whole rectangle, or
+// fill together with the status's edge for a toast's whole rectangle, or
 // the edge alone to find one toast inside a column of them.
 //
 // The match carries a tolerance of one step per channel, because the fill
@@ -358,7 +358,7 @@ func TestAnchorsPlaceTheColumn(t *testing.T) {
 	tok := intTok()
 	fill, lead := toast.Fill(tok.color), toast.Edge(tok.color, toast.Info)
 	edge := int(tok.spacing.S4)
-	queued := []Notification{{ID: 1, Role: toast.Info, Text: "Rescanned: 2 notes"}}
+	queued := []Notification{{ID: 1, Status: toast.Info, Text: "Rescanned: 2 notes"}}
 
 	cases := []struct {
 		name string
@@ -415,8 +415,8 @@ func TestBottomCenterStacksUpwardFromTheEdge(t *testing.T) {
 	// height at its leading side, and so reports where it stands and how
 	// tall it is. The column's width is read from everything together.
 	queued := []Notification{
-		{ID: 1, Role: toast.Info, Text: "Rescanned: 2 notes"},
-		{ID: 2, Role: toast.Error, Text: "Vault is unreadable"},
+		{ID: 1, Status: toast.Info, Text: "Rescanned: 2 notes"},
+		{ID: 2, Status: toast.Error, Text: "Vault is unreadable"},
 	}
 	img := golden.Capture(t, intFrame, func(gtx layout.Context) layout.Dimensions {
 		return drawColumnStatic(gtx, shaper, Props{Position: BottomCenter}, tok, queued)
