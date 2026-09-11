@@ -561,13 +561,35 @@ func fillRun(img *image.RGBA, y int, c color.NRGBA) (lo, hi int, ok bool) {
 	return lo, hi, ok
 }
 
-// drawnRun reports the leftmost and rightmost x on row y that is not the
-// scene's background, so an anti-aliased tip counts as drawn.
-func drawnRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
-	b := img.Bounds()
-	for x := b.Min.X; x < b.Max.X; x++ {
-		r, g, bl, _ := img.At(x, y).RGBA()
-		if uint8(r>>8) == bg.R && uint8(g>>8) == bg.G && uint8(bl>>8) == bg.B {
+// drawnRun reports the leftmost and rightmost x on row y where something was
+// drawn over the shadow, so an anti-aliased tip counts as drawn.
+//
+// The row's background is read off the row rather than passed in, and only
+// across the room the popover was given: a floating surface's shadow carries
+// 24 px past it, which is most of that room's width, so the scene's own fill
+// is not what most of the row is any more. The background is the value the row
+// holds most often, which is the shadow at the coverage it carries alongside
+// the surface. Darker than that is something drawn — the tail's tip and its
+// outline; lighter than it is the shadow thinning out towards the room's edge,
+// which is not.
+func drawnRun(img *image.RGBA, y, room int) (lo, hi int, ok bool) {
+	right := min(img.Bounds().Max.X, room)
+	sum := func(x int) int {
+		r, g, b, _ := img.At(x, y).RGBA()
+		return int(r>>8) + int(g>>8) + int(b>>8)
+	}
+	count := map[int]int{}
+	for x := img.Bounds().Min.X; x < right; x++ {
+		count[sum(x)]++
+	}
+	bg, best := 0, -1
+	for v, n := range count {
+		if n > best {
+			bg, best = v, n
+		}
+	}
+	for x := img.Bounds().Min.X; x < right; x++ {
+		if sum(x) >= bg {
 			continue
 		}
 		if !ok {
@@ -665,7 +687,7 @@ func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 		edge     = 142 // and the surface stands S2 below it
 		drawnMid = roomW - 30
 	)
-	lo, hi, ok := drawnRun(img, foot, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
+	lo, hi, ok := drawnRun(img, foot, roomW)
 	if !ok {
 		t.Fatalf("the row at the anchor's foot (y=%d) is bare; the tail floats above the anchor", foot)
 	}

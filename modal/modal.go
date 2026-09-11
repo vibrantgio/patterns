@@ -957,20 +957,13 @@ func crossIcon(gtx layout.Context, sizePx int, col color.NRGBA) {
 	paint.FillShape(gtx.Ops, col, clip.Stroke{Path: p.End(), Width: stroke}.Op())
 }
 
-// castShadow paints the platform's floating shadow under a surface.
-//
-// effects/depth still states its shadow as a fraction of a Material key
-// shadow, so the platform's measured coverage is passed as that fraction:
-// FloatingShadow's alpha over depth's own peak, which lands the shadow on
-// the measured black at 0.075 exactly. The shadow's REACH is still depth's
-// 6 dp for the floating level, not the 24 px the reference measures; that
-// geometry is effects' to move (CE2.4).
+// castShadow paints the platform's floating shadow under a surface: the
+// measured colour and coverage handed to effects/depth, which carries them out
+// over the reach the same captures measure.
 func castShadow(gtx layout.Context, bounds image.Rectangle, radius int, c tokens.PlatformColors) {
-	depth.Shadow(gtx, bounds, tokens.Level3, radius, float32(c.FloatingShadow.A)/depthPeakAlpha)
+	depth.Shadow(gtx, bounds, radius, c.FloatingShadow)
 }
 
-// depthPeakAlpha is the alpha effects/depth paints at opacity 1.
-const depthPeakAlpha = 76
 
 // spacerV returns a vertical-spacer layout.Widget that consumes hPx pixels in
 // the Y axis and zero pixels in X. Used inside the vertical Flex stack.

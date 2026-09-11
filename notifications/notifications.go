@@ -45,6 +45,7 @@ package notifications
 
 import (
 	"image"
+	"image/color"
 	"time"
 
 	"gioui.org/layout"
@@ -518,7 +519,7 @@ func paintColumn(
 		// model stay the same list.
 		if alphas[vis] > 0 {
 			off := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
-			depth.Shadow(gtx, image.Rectangle{Max: sizes[vis]}, tokens.Level3, radius, shadowOpacity(tok.color)*float32(alphas[vis]))
+			depth.Shadow(gtx, image.Rectangle{Max: sizes[vis]}, radius, fadedShadow(tok.color, float32(alphas[vis])))
 			macros[vis].Add(gtx.Ops)
 			off.Pop()
 		}
@@ -555,18 +556,11 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 	return tw.At(frame)
 }
 
-// shadowOpacity is the platform's floating shadow stated as the fraction
-// effects/depth still takes.
-//
-// depth states its shadow as a fraction of a Material key shadow, so the
-// measured coverage is passed as that fraction: FloatingShadow's alpha over
-// depth's own peak, which lands the shadow on the measured black at 0.075
-// exactly. The shadow's REACH is still depth's 6 dp for the floating level,
-// not the 24 px the reference measures; that geometry is effects' to move
-// (CE2.4).
-func shadowOpacity(c tokens.PlatformColors) float32 {
-	return float32(c.FloatingShadow.A) / depthPeakAlpha
+// fadedShadow is the platform's floating shadow at the share of its own
+// coverage a toast on its way in or out is showing, which is how a surface
+// that fades takes its shadow with it.
+func fadedShadow(c tokens.PlatformColors, share float32) color.NRGBA {
+	s := c.FloatingShadow
+	s.A = uint8(float32(s.A)*share + 0.5)
+	return s
 }
-
-// depthPeakAlpha is the alpha effects/depth paints at opacity 1.
-const depthPeakAlpha = 76
