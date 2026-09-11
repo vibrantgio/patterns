@@ -94,7 +94,7 @@ func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rect
 			mark.Min.Y = min(mark.Min.Y, y)
 			mark.Max.X = max(mark.Max.X, x+1)
 			mark.Max.Y = max(mark.Max.Y, y+1)
-			if cr := themecolor.ContrastRatio(px, fill); cr > contrast {
+			if cr := themecolor.Magnitude(px, fill); cr > contrast {
 				contrast, markColor = cr, px
 			}
 		}
@@ -147,11 +147,11 @@ func TestCloseMarkContrast(t *testing.T) {
 			if mark.Empty() {
 				t.Fatal("no close mark found: the panel's surface is bare")
 			}
-			t.Logf("surface %v, mark %v (%d×%d px), colour %v on fill %v, %.2f:1",
+			t.Logf("surface %v, mark %v (%d×%d px), colour %v on fill %v, |Lc| %.2f",
 				surface, mark, mark.Dx(), mark.Dy(), markColor, fill, contrast)
 
 			if contrast < closeMarkFloor {
-				t.Errorf("close mark on the dialog surface = %.2f:1, want at least %.1f:1",
+				t.Errorf("close mark on the dialog surface = |Lc| %.2f, want at least |Lc| %.1f",
 					contrast, closeMarkFloor)
 			}
 			// The mark is square by construction — two diagonals of one
@@ -296,14 +296,14 @@ func TestCloseMarkStateFillClearsThePerceptibilityFloor(t *testing.T) {
 				name      string
 				stateFill color.NRGBA
 			}{{"hover", hover}, {"press", press}} {
-				got := themecolor.ContrastRatio(w.stateFill, fill)
+				got := themecolor.LuminanceRatio(w.stateFill, fill)
 				if got < tokens.StateFloor {
 					t.Errorf("%s state fill %v on the panel surface %v measures %.3f:1, under the %.2f:1 floor",
 						w.name, w.stateFill, fill, got, tokens.StateFloor)
 				}
-				t.Logf("%s state fill %v on the panel surface %v: %.3f:1", w.name, w.stateFill, fill, got)
+				t.Logf("%s state fill %v on the panel surface %v: |Lc| %.3f", w.name, w.stateFill, fill, got)
 			}
-			if step := themecolor.ContrastRatio(press, hover); step <= 1 {
+			if step := themecolor.LuminanceRatio(press, hover); step <= 1 {
 				t.Errorf("press %v does not lie beyond hover %v", press, hover)
 			}
 		})

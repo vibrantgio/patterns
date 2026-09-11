@@ -96,9 +96,9 @@ func TestUnderlineForegroundClearsTheGraphicFloorForEverySeed(t *testing.T) {
 		for _, s := range underlineSweepSchemes(seed) {
 			for _, band := range underlineBands(s.tok) {
 				foreground := underlineForeground(s.tok, band)
-				got := color.ContrastRatio(foreground, band)
+				got := color.Magnitude(foreground, band)
 				if got < tokens.GraphicFloor {
-					t.Errorf("seed %s: %s: underline colour %s on band %s measures %.2f:1, under the %.1f:1 graphic floor",
+					t.Errorf("seed %s: %s: underline colour %s on band %s measures |Lc| %.2f, under the |Lc| %.1f graphic floor",
 						underlineHex(seed), s.name, underlineHex(foreground), underlineHex(band), got, tokens.GraphicFloor)
 				}
 				if s.light && got < worstLight {
@@ -110,7 +110,7 @@ func TestUnderlineForegroundClearsTheGraphicFloorForEverySeed(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("over %d seeds: worst light underline %.2f:1 (%s), worst dark underline %.2f:1 (%s)",
+	t.Logf("over %d seeds: worst light underline |Lc| %.2f (%s), worst dark underline |Lc| %.2f (%s)",
 		len(underlineSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
@@ -143,8 +143,8 @@ func TestAPastelSeedsUnderlineForegroundLeavesThePin(t *testing.T) {
 	light, dark := tokens.FromSeed(seed)
 
 	lightBand := light.RaisedOn(light.SurfaceAt(tokens.Level0)).Fill
-	if bare := color.ContrastRatio(light.Primary, lightBand); bare >= tokens.GraphicFloor {
-		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the strip band — the test no longer reads the shape it was written for", bare)
+	if bare := color.Magnitude(light.Primary, lightBand); bare >= tokens.GraphicFloor {
+		t.Fatalf("this seed's bare light pin now measures |Lc| %.2f on the strip band — the test no longer reads the shape it was written for", bare)
 	}
 	lightForeground := underlineForeground(light, lightBand)
 	if lightForeground == light.Primary {

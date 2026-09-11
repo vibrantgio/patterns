@@ -96,9 +96,9 @@ func TestCheckForegroundClearsTheGraphicFloorForEverySeed(t *testing.T) {
 			for _, k := range tierKinds {
 				fill := tierFill(s.tok, k.tier)
 				foreground := checkForeground(s.tok, fill)
-				got := color.ContrastRatio(foreground, fill)
+				got := color.Magnitude(foreground, fill)
 				if got < tokens.GraphicFloor {
-					t.Errorf("seed %s: %s: %s: check colour %s on %s measures %.2f:1, under the %.1f:1 graphic floor",
+					t.Errorf("seed %s: %s: %s: check colour %s on %s measures |Lc| %.2f, under the |Lc| %.1f graphic floor",
 						checkHex(seed), s.name, k.name, checkHex(foreground), checkHex(fill), got, tokens.GraphicFloor)
 				}
 				if s.light && got < worstLight {
@@ -110,7 +110,7 @@ func TestCheckForegroundClearsTheGraphicFloorForEverySeed(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("over %d seeds: worst light check colour %.2f:1 (%s), worst dark check colour %.2f:1 (%s)",
+	t.Logf("over %d seeds: worst light check colour |Lc| %.2f (%s), worst dark check colour |Lc| %.2f (%s)",
 		len(checkSweepSeeds()), worstLight, worstLightAt, worstDark, worstDarkAt)
 }
 
@@ -144,8 +144,8 @@ func TestAPastelSeedsCheckForegroundLeavesThePin(t *testing.T) {
 	recommended := Tier{Recommended: true}
 
 	lightFill := tierFill(light, recommended)
-	if bare := color.ContrastRatio(light.Primary, lightFill); bare >= tokens.GraphicFloor {
-		t.Fatalf("this seed's bare light pin now measures %.2f:1 on the card — the test no longer reads the shape it was written for", bare)
+	if bare := color.Magnitude(light.Primary, lightFill); bare >= tokens.GraphicFloor {
+		t.Fatalf("this seed's bare light pin now measures |Lc| %.2f on the card — the test no longer reads the shape it was written for", bare)
 	}
 	if lightForeground := checkForeground(light, lightFill); lightForeground == light.Primary {
 		t.Errorf("light check colour is still the bare pin %s", checkHex(light.Primary))

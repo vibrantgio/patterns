@@ -49,11 +49,11 @@ func TestOutlineColorClearsTheGraphicFloor(t *testing.T) {
 						continue // deeper than the fill: not a plane this surface stands on
 					}
 					surface := c.SurfaceAt(plane.level)
-					got := themecolor.ContrastRatio(edgeColor, surface)
-					t.Logf("%s outline %s against the %s plane %s: %.2f:1",
+					got := themecolor.Magnitude(edgeColor, surface)
+					t.Logf("%s outline %s against the %s plane %s: |Lc| %.2f",
 						fill.name, hex(edgeColor), plane.name, hex(surface), got)
 					if got < outline.Floor {
-						t.Errorf("%s outline %s against the %s plane %s = %.2f:1, want at least %.1f:1",
+						t.Errorf("%s outline %s against the %s plane %s = |Lc| %.2f, want at least |Lc| %.1f",
 							fill.name, hex(edgeColor), plane.name, hex(surface), got, outline.Floor)
 					}
 				}
@@ -105,17 +105,17 @@ func TestOutlineColorClearsTheFloorForEverySeed(t *testing.T) {
 						continue
 					}
 					surface := c.SurfaceAt(plane.level)
-					got := themecolor.ContrastRatio(edgeColor, surface)
+					got := themecolor.Magnitude(edgeColor, surface)
 					if got < worst {
 						worst = got
 					}
 					if got < outline.Floor {
-						t.Errorf("seed %s %s: %s outline %s against the %s plane %s = %.2f:1, want at least %.1f:1",
+						t.Errorf("seed %s %s: %s outline %s against the %s plane %s = |Lc| %.2f, want at least |Lc| %.1f",
 							hex(seed), sc.name, fill.name, hex(edgeColor), plane.name, hex(surface), got, outline.Floor)
 					}
 				}
 			}
 		}
 	}
-	t.Logf("worst outline pairing over the sweep: %.2f:1", worst)
+	t.Logf("worst outline pairing over the sweep: |Lc| %.2f", worst)
 }

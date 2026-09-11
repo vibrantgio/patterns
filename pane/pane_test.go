@@ -220,7 +220,7 @@ func TestSeamColorIsThePlatformsWhisper(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fill := pane.Surface(tc.colors)
 			seam := pane.SeamColor(tc.colors)
-			got := vgcolor.ContrastRatio(seam, fill)
+			got := vgcolor.LuminanceRatio(seam, fill)
 			if got < pane.SeamRatio-tolerance || got > pane.SeamRatio+tolerance {
 				t.Errorf("the pane's edge stands %.3f:1 off its fill (%v on %v), want the measured %.2f:1",
 					got, seam, fill, pane.SeamRatio)
@@ -230,8 +230,8 @@ func TestSeamColorIsThePlatformsWhisper(t *testing.T) {
 				t.Errorf("the pane's edge is %v against a fill of %v and a foreground of %v; the edge steps toward the foreground",
 					seam, fill, tc.colors.Text)
 			}
-			if got >= 3.0 {
-				t.Errorf("the pane's edge reads %.2f:1, at or over the graphic floor — this is a seam, not a mark", got)
+			if mark := vgcolor.Magnitude(seam, fill); mark >= tokens.GraphicFloor {
+				t.Errorf("the pane's edge reads |Lc| %.2f, at or over the graphic floor — this is a seam, not a mark", mark)
 			}
 		})
 	}

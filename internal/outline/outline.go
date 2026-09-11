@@ -18,10 +18,10 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// Floor is WCAG 1.4.11's contrast floor for a non-text graphic that carries
-// meaning — 3:1. An outline is such a graphic: it is the whole of what says a
-// surface is an object rather than a patch of page.
-const Floor = 3.0
+// Floor is the contrast floor for a non-text graphic that carries meaning,
+// the theme's own. An outline is such a graphic: it is the whole of what says
+// a surface is an object rather than a patch of page.
+const Floor = tokens.GraphicFloor
 
 // `Color` is the neutral step nearest the ramp's mid-value step that reaches
 // Floor against surface, the fill the line is drawn around.
