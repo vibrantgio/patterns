@@ -106,19 +106,19 @@ func TestFeatureGolden(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		colors  tokens.ColorTokens
+		colors  tokens.PlatformColors
 		bg      color.NRGBA
 		columns int
 		items   []feature.Item
 		size    image.Point
 	}{
-		{"light-3-up", tokens.DefaultLight, lightBG, 3, three, frameSize},
-		{"dark-3-up", tokens.DefaultDark, darkBG, 3, three, frameSize},
-		{"light-2-up", tokens.DefaultLight, lightBG, 2, two, frameSize},
+		{"light-3-up", tokens.PlatformLight, lightBG, 3, three, frameSize},
+		{"dark-3-up", tokens.PlatformDark, darkBG, 3, three, frameSize},
+		{"light-2-up", tokens.PlatformLight, lightBG, 2, two, frameSize},
 		// Two rows of real text do not fit the one-row frame; the taller
 		// frame keeps the second row's bodies on screen rather than cut
 		// off at the edge.
-		{"light-6-items-3-up", tokens.DefaultLight, lightBG, 3, six, image.Pt(frameW, 2*frameH)},
+		{"light-6-items-3-up", tokens.PlatformLight, lightBG, 3, six, image.Pt(frameW, 2*frameH)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -136,8 +136,8 @@ func TestFeatureColumnsDefaultsToThree(t *testing.T) {
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	cells := items(3)
 
-	zero := feature.Render(shaper, feature.Props{Columns: 0, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography)
-	three := feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography)
+	zero := feature.Render(shaper, feature.Props{Columns: 0, Items: cells}, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography)
+	three := feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography)
 
 	a := golden.Capture(t, frameSize, scene(zero, bg))
 	b := golden.Capture(t, frameSize, scene(three, bg))
@@ -162,7 +162,7 @@ func withBodyLineHeight(lh float32) tokens.Typography {
 func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 	t.Helper()
 	w := feature.Render(defaultShaper(t), feature.Props{Columns: 3, Items: items(3)},
-		tokens.DefaultLight, tokens.Spacing, withBodyLineHeight(lh))
+		tokens.PlatformLight, tokens.Spacing, withBodyLineHeight(lh))
 	return scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
 }
 
@@ -211,7 +211,7 @@ func TestFeatureWrappedTitleSharesHeight(t *testing.T) {
 
 	size := image.Pt(frameW, 1<<16)
 	render := func(cells []feature.Item) layout.Dimensions {
-		return drawOnce(t, size, feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography))
+		return drawOnce(t, size, feature.Render(shaper, feature.Props{Columns: 3, Items: cells}, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography))
 	}
 	got := render(oneLong)
 	want := render(allLong)

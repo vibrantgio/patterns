@@ -73,13 +73,13 @@ func TestShellStackedPageGolden(t *testing.T) {
 		name     string
 		sections []layout.Widget
 		props    shell.Props
-		colors   tokens.ColorTokens
+		colors   tokens.PlatformColors
 		bg       color.NRGBA
 	}{
-		{"light-stacked-page-short", short, props(band(footFill, 40)), tokens.DefaultLight, lightBG},
-		{"light-stacked-page-overflow", overflow, props(band(footFill, 40)), tokens.DefaultLight, lightBG},
-		{"dark-stacked-page-overflow", overflow, props(band(footFill, 40)), tokens.DefaultDark, darkBG},
-		{"light-stacked-page-maxwidth", short, maxWProps, tokens.DefaultLight, lightBG},
+		{"light-stacked-page-short", short, props(band(footFill, 40)), tokens.PlatformLight, lightBG},
+		{"light-stacked-page-overflow", overflow, props(band(footFill, 40)), tokens.PlatformLight, lightBG},
+		{"dark-stacked-page-overflow", overflow, props(band(footFill, 40)), tokens.PlatformDark, darkBG},
+		{"light-stacked-page-maxwidth", short, maxWProps, tokens.PlatformLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestShellStackedPageContentMaxWidth(t *testing.T) {
 				ContentMaxWidth: tc.maxW,
 			}
 			w := shell.RenderStackedPage(shaper, props, []layout.Widget{section},
-				tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+				tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 			img := golden.Capture(t, stackedSize, w)
 			if gotMin != tc.wantW || gotMax != tc.wantW {
 				t.Fatalf("section width constraints: min %d max %d; want exactly %d", gotMin, gotMax, tc.wantW)
@@ -131,7 +131,7 @@ func TestShellStackedPageContentMaxWidth(t *testing.T) {
 			}
 			margin := (stackedW - tc.wantW) / 2
 			y := 52 + 30 // mid-band: Comfortable navbar height (52) + half the 60 px section
-			bg := tokens.DefaultLight.Background
+			bg := tokens.PlatformLight.ControlBackground
 			if margin > 0 {
 				for _, x := range []int{0, margin - 1, margin + tc.wantW, stackedW - 1} {
 					if got := img.RGBAAt(x, y); !eq(got, bg) {

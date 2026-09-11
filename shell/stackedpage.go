@@ -18,8 +18,8 @@ import (
 
 func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	nb := navbar.Navbar(th, props.Navbar)
-	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.ColorTokens] {
-		return t.Color
+	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.PlatformColors] {
+		return t.Platform
 	})
 	// Combine the per-section streams into one []layout.Widget stream so
 	// any section emission (typically a theme change) re-emits the shell.
@@ -42,7 +42,7 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 		// The scroll position is captured once per subscription so it
 		// survives re-emissions for the lifetime of the Shell instance.
 		list := &layout.List{Axis: layout.Vertical}
-		return rx.Map(inputs, func(next rx.Tuple4[tokens.ColorTokens, layout.Widget, []layout.Widget, tokens.Density]) layout.Widget {
+		return rx.Map(inputs, func(next rx.Tuple4[tokens.PlatformColors, layout.Widget, []layout.Widget, tokens.Density]) layout.Widget {
 			colors, nbW, secW := next.First, next.Second, next.Third
 			navH := NavbarHeight(next.Fourth)
 			footer := props.Footer
@@ -70,7 +70,7 @@ func RenderStackedPage(
 	shaper *text.Shaper,
 	props Props,
 	sections []layout.Widget,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -96,7 +96,7 @@ func drawStackedPage(
 	nb layout.Widget,
 	sections []layout.Widget,
 	footer layout.Widget,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	maxW unit.Dp,
 	list *layout.List,
 	navbarH unit.Dp,
@@ -109,7 +109,7 @@ func drawStackedPage(
 	bodyH := size.Y - navH
 
 	// Page fill behind content shorter than the viewport.
-	paint.FillShape(gtx.Ops, colors.Background, clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
 
 	// Navbar pinned across the full width; sections scroll beneath it.
 	ngtx := gtx

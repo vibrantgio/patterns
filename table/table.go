@@ -51,6 +51,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/list"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -97,24 +98,17 @@ type Props[T any] struct {
 	// the clicked column and re-emits Sort and a re-sorted Items slice.
 	OnSort func(gtx layout.Context, col int)
 
-	// `Level` is the level the table's own plane fills at — the surface the
-	// grid is printed on. The zero value is Level0, the window's own content:
-	// a table is what a window exists to show rather than something standing
-	// around it, and a table that raised itself one step would leave a
-	// window's chrome standing level with its content. Set Level1 where
-	// the table genuinely rests on chrome — inside a dialog, on a panel,
-	// or as a specimen lifted off a page — and the walks that read from this
-	// field move with it.
-	//
-	// [Render], the static specimen path, keeps the semantic Surface it has
-	// always drawn and takes no Props at all; this field is the observable
-	// path's.
-	Level tokens.ElevationLevel
+	// Unemphasized draws the current row the way the platform draws a
+	// selection in a window that is not frontmost: the unemphasized grey
+	// under the ordinary label, rather than the accent-following selection
+	// colour under the foreground the platform pairs with it. The zero
+	// value is the frontmost window.
+	Unemphasized bool
 
 	// Current marks the row the window is currently showing — the record
 	// open in a detail pane beside the table, the item a reader navigated
 	// to. It is called once per VISIBLE row per frame and its row is filled
-	// from the Primary ramp's tinted end before the cells draw. Nil (the
+	// with the platform's selection colour before the cells draw. Nil (the
 	// default) marks nothing.
 	//
 	// This is a display mark, not selection state: the table stores nothing,
@@ -122,10 +116,7 @@ type Props[T any] struct {
 	// row scrolled out of the viewport costs nothing because it is never
 	// asked. Keyboard traversal over rows is still unbuilt; build it on
 	// components/list's LayoutSelectable, which moves an index over every
-	// row, not on a focus tag per row. It wants a SECOND colour: the neutral
-	// state walks are reserved for a cursor and this tint for the current
-	// item, so a list can show both at once without either standing in for
-	// the other.
+	// row, not on a focus tag per row.
 	Current func(item T) bool
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
@@ -143,8 +134,8 @@ type Props[T any] struct {
 }
 
 // Layout-affecting constants. Row and header heights come from the
-// density: both are exactly Density.ControlHeight (list.RowHeight), so
-// the body's vertical extent stays deterministic and the components/list
+// density: both are exactly Density.RowHeight, the platform's own list row,
+// so the body's vertical extent stays deterministic and the components/list
 // viewport can serve constant-time look-aheads. Sortable header cells
 // tile the header band edge to edge (like stacked rows, extending their
 // pointer area would steal a neighbour's slop), so their hit area stays
@@ -158,12 +149,14 @@ const (
 )
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	header  tokens.TextStyle      // the LabelLarge role: typeface, weight, size, line height
-	density tokens.Density        // row/header height source
-	shaper  *text.Shaper          // the theme's shaper; nil in the Render path
-	level   tokens.ElevationLevel // the level the table's plane fills at (`Props.Level`)
+	header  tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	density tokens.Density   // row/header height source
+	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
+	// unemphasized draws the current row's fill the way the platform draws
+	// a selection in a window that is not frontmost (`Props.Unemphasized`).
+	unemphasized bool
 }
 
 // Table returns an rx.Observable[layout.Widget] that emits a new one
@@ -184,16 +177,16 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 	// header and the theme's cached shaper.
 	tokensObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Typography, t.Density),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Third
 				return resolvedTokens{
-					color:   n.First,
-					spacing: n.Second,
-					header:  typ.LabelLarge,
-					density: n.Fourth,
-					shaper:  typ.Shaper(),
-					level:   props.Level,
+					color:        n.First,
+					spacing:      n.Second,
+					header:       typ.LabelLarge,
+					density:      n.Fourth,
+					shaper:       typ.Shaper(),
+					unemphasized: props.Unemphasized,
 				}
 			},
 		)
@@ -201,16 +194,17 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 	inputs := rx.CombineLatest3(tokensObs, items, sort)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		state := list.NewState()
+		rows := &rowIndex{}
 		clicks := make([]widget.Clickable, len(props.Columns))
 		return rx.Map(inputs, func(n rx.Tuple3[resolvedTokens, []T, Sort]) layout.Widget {
-			tok, rows, sk := n.First, n.Second, n.Third
+			tok, items, sk := n.First, n.Second, n.Third
 			shaper := props.Shaper
 			if shaper == nil {
 				shaper = tok.shaper
 			}
 			return func(gtx layout.Context) layout.Dimensions {
 				processHeaderClicks(gtx, props.Columns, clicks, props.OnSort)
-				return drawTable(gtx, shaper, props.Columns, rows, sk, state, clicks, tok, props.Current)
+				return drawTable(gtx, shaper, props.Columns, items, sk, state, rows, clicks, tok, props.Current)
 			}
 		})
 	})
@@ -221,15 +215,9 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // demonstrations; production code should use Table, which reads both of the
 // parameters below off the theme.
 //
-// Its plane is the semantic Surface and its header the level above that,
-// which is a specimen deliberately lifted off the page it is shown on. A
-// table that is a window's own content belongs on the window's own content
-// level instead: that is the `Level` field of [Props], and it is the
-// observable path's.
-//
 // header is the LabelLarge role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the grid draws
-// at (header row and body rows are each exactly Density.ControlHeight). Pass
+// at (header row and body rows are each exactly Density.RowHeight). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the default
 // desktop look. A zero header Weight falls back to bold, so a hand-built
 // size-only style still renders with the bold weight.
@@ -238,18 +226,16 @@ func Render[T any](
 	columns []Column[T],
 	items []T,
 	sk Sort,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	header tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
-	// Level1 rather than the Props default: this path draws a specimen for a
-	// golden or a gallery page, where the table is deliberately lifted off
-	// whatever it is shown on.
-	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, level: tokens.Level1}
+	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d}
 	state := list.NewState()
+	rows := &rowIndex{}
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawTable(gtx, shaper, columns, items, sk, state, nil, tok, nil)
+		return drawTable(gtx, shaper, columns, items, sk, state, rows, nil, tok, nil)
 	}
 }
 
@@ -272,6 +258,24 @@ func processHeaderClicks[T any](
 	}
 }
 
+// rowIndex caches the row positions 0..n-1 so the body can be laid out over
+// positions rather than over items: components/list hands its row function
+// the item and not the position, and the alternating stripe is a property of
+// the position. The slice is rebuilt only when the row count changes, so the
+// per-frame cost stays O(visible); its memory is one int per row beside the
+// caller's own slice.
+type rowIndex struct{ idx []int }
+
+func (r *rowIndex) upTo(n int) []int {
+	if len(r.idx) != n {
+		r.idx = make([]int, n)
+		for i := range r.idx {
+			r.idx[i] = i
+		}
+	}
+	return r.idx
+}
+
 // drawTable renders the full table: header row + virtualised body. Width
 // is partitioned across columns once per frame (O(cols), independent of
 // row count); the body is laid out via components/list so only viewport-
@@ -283,17 +287,20 @@ func drawTable[T any](
 	items []T,
 	sk Sort,
 	state *list.State,
+	rows *rowIndex,
 	clicks []widget.Clickable,
 	tok resolvedTokens,
 	current func(item T) bool,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tok.level), clip.Rect{Max: size}.Op())
+	// The grid is printed on the platform's content fill, which is what a
+	// list, a table and a text view all stand on there.
+	paint.FillShape(gtx.Ops, tok.color.ControlBackground, clip.Rect{Max: size}.Op())
 
 	widths := columnWidths(gtx, columns, size.X)
 	// The header is a row in the grid, so its height is exactly
-	// Density.ControlHeight, like the body rows below it.
-	headerH := gtx.Dp(unit.Dp(tok.density.ControlHeight))
+	// Density.RowHeight, like the body rows below it.
+	headerH := gtx.Dp(unit.Dp(tok.density.RowHeight))
 	if headerH > size.Y {
 		headerH = size.Y
 	}
@@ -315,8 +322,9 @@ func drawTable[T any](
 	bStack := op.Offset(image.Pt(0, bodyY)).Push(gtx.Ops)
 	bGtx := gtx
 	bGtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
-	list.Layout(bGtx, state, items, func(rGtx layout.Context, item T) layout.Dimensions {
-		return drawRow(rGtx, columns, widths, item, tok, current != nil && current(item))
+	list.Layout(bGtx, state, rows.upTo(len(items)), func(rGtx layout.Context, i int) layout.Dimensions {
+		item := items[i]
+		return drawRow(rGtx, columns, widths, item, tok, current != nil && current(item), i%2 == 1)
 	})
 	bStack.Pop()
 
@@ -382,17 +390,11 @@ func drawHeaderRow[T any](
 	tok resolvedTokens,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The header is trim over the grid's own plane, so its band is the
-	// raise walked from the plane's own fill and not an absolute step
-	// ([tokens.ColorTokens.RaisedOn]). An absolute neutral 300 here would
-	// read right only while every table happened to rest on Surface, and
-	// would put the header two steps off its own grid the moment the grid is
-	// printed on the window's content.
-	//
-	// The seam the raise may owe is already drawn: the header closes with
-	// the same Seam rule every row does, which is the one hairline
-	// between the header band and the body and is more pronounced than a seam.
-	paint.FillShape(gtx.Ops, tok.color.RaisedOn(tok.color.SurfaceAt(tok.level)).Fill, clip.Rect{Max: size}.Op())
+	// The header band stands on the grid's own plane and takes no fill of
+	// its own: on this platform a table's header is the content's fill
+	// under the header text, closed by a separator along its foot. That
+	// hairline is the header's own and is drawn below.
+	paint.FillShape(gtx.Ops, tok.color.ControlBackground, clip.Rect{Max: size}.Op())
 
 	x := 0
 	for i, col := range columns {
@@ -413,7 +415,7 @@ func drawHeaderRow[T any](
 		seamH = 1
 	}
 	seamRect := image.Rect(0, size.Y-seamH, size.X, size.Y)
-	paint.FillShape(gtx.Ops, tok.color.Seam, clip.Rect(seamRect).Op())
+	paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.Separator, tok.color.ControlBackground), clip.Rect(seamRect).Op())
 
 	return layout.Dimensions{Size: size}
 }
@@ -445,7 +447,7 @@ func drawHeaderCell[T any](
 			labelGtx.Constraints.Max.Y = size.Y
 
 			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: tok.color.Ramps.Neutral.Step(700)}.Add(gtx.Ops)
+			paint.ColorOp{Color: vgcolor.Flatten(tok.color.HeaderText, tok.color.ControlBackground)}.Add(gtx.Ops)
 			material := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
@@ -479,7 +481,7 @@ func drawHeaderCell[T any](
 			chev := gtx.Dp(unit.Dp(chevronSizeDp))
 			cx := size.X - padH - chev/2
 			cy := size.Y / 2
-			drawSortChevron(gtx, cx, cy, chev, tok.color.Ramps.Neutral.Step(700), asc)
+			drawSortChevron(gtx, cx, cy, chev, vgcolor.Flatten(tok.color.HeaderText, tok.color.ControlBackground), asc)
 		}
 
 		return layout.Dimensions{Size: size}
@@ -499,16 +501,17 @@ func drawHeaderCell[T any](
 
 // drawRow renders one body row by invoking each column's Cell closure
 // inside a fixed-size cell box, then painting the bottom seam.
-// rowH is the density's row height (list.RowHeight — exactly
-// ControlHeight), not the cell's intrinsic size, so per-row layout cost
-// stays bounded regardless of cell content. Rows are
-// stacked full-width strips: their hit area stays the row bounds (no
-// 44 dp extension — rows would steal each other's slop).
+// rowH is the density's row height (Density.RowHeight, the platform's own
+// list row), not the cell's intrinsic size, so per-row layout cost stays
+// bounded regardless of cell content. Rows are stacked full-width strips:
+// their hit area stays the row bounds (no 44 dp extension — rows would steal
+// each other's slop).
 //
-// current fills the row from the Primary ramp's tinted end BEFORE the cells
-// draw, so a Cell closure's own painting still lands on top of it and the
-// seam still closes the row underneath. It is one FillShape on at most
-// one visible row per frame.
+// odd stripes the row: the platform lays its alternating content background
+// under every second row of a list, which is what Finder's list view draws.
+// current then fills the row with the platform's selection colour BEFORE the
+// cells draw, so a Cell closure's own painting still lands on top of it and
+// the grid line still closes the row underneath.
 func drawRow[T any](
 	gtx layout.Context,
 	columns []Column[T],
@@ -516,14 +519,18 @@ func drawRow[T any](
 	item T,
 	tok resolvedTokens,
 	current bool,
+	odd bool,
 ) layout.Dimensions {
-	rowH := gtx.Dp(list.RowHeight(tok.density))
+	rowH := gtx.Dp(unit.Dp(tok.density.RowHeight))
 	totalW := gtx.Constraints.Max.X
 	rowSize := image.Pt(totalW, rowH)
 
-	if current {
-		paint.FillShape(gtx.Ops, tok.color.Ramps.Primary.Step(300),
+	if odd {
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.AlternatingContentBackground, tok.color.ControlBackground),
 			clip.Rect{Max: rowSize}.Op())
+	}
+	if current {
+		paint.FillShape(gtx.Ops, rowFill(tok), clip.Rect{Max: rowSize}.Op())
 	}
 
 	x := 0
@@ -550,13 +557,23 @@ func drawRow[T any](
 		seamH = 1
 	}
 	seamRect := image.Rect(0, rowH-seamH, totalW, rowH)
-	paint.FillShape(gtx.Ops, tok.color.Seam, clip.Rect(seamRect).Op())
+	paint.FillShape(gtx.Ops, tok.color.Grid, clip.Rect(seamRect).Op())
 
 	return layout.Dimensions{Size: rowSize}
 }
 
-// RenderTextCell renders a single line of Text-coloured text within
-// the cell's allocated rectangle, with horizontal padding equal to
+// rowFill is what the current row is filled with: the platform's selection
+// colour, which follows the accent, or its unemphasized grey where the
+// window is not the frontmost one.
+func rowFill(tok resolvedTokens) color.NRGBA {
+	if tok.unemphasized {
+		return tok.color.UnemphasizedSelectedContentBackground
+	}
+	return tok.color.SelectedContentBackground
+}
+
+// RenderTextCell renders a single line of text in the platform's label
+// within the cell's allocated rectangle, with horizontal padding equal to
 // cellPadDp. Exported so consumers building their own Cell closures can
 // match the table's stock text style.
 //
@@ -568,7 +585,7 @@ func drawRow[T any](
 // is handed.
 func RenderTextCell(
 	shaper *text.Shaper,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	body tokens.TextStyle,
 	s string,
 ) layout.Widget {
@@ -585,7 +602,7 @@ func RenderTextCell(
 		labelGtx.Constraints.Max.Y = size.Y
 
 		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: colors.Text}.Add(gtx.Ops)
+		paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.ControlBackground)}.Add(gtx.Ops)
 		material := mColor.Stop()
 
 		// Shape with the BodyMedium role's typeface, weight, size and line

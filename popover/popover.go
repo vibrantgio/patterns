@@ -6,14 +6,11 @@
 // written and read during layout on the frame goroutine. See ADR-008 and
 // arbitration.go.
 //
-// Elevation: the popover surface (and its tail) fills at
-// SurfaceAt(Level3) (Neutral step 400), the highest level there is.
-// A popover is an unscrimmed, shadowless transient overlay — unlike the
-// modal (level 2), which has a scrim, and the toast, which takes no level
-// at all and keeps its cast shadow, the popover's fill plus its 1 dp
-// Neutral step-500 stroke are its only separation cues, so it takes the
-// deepest tonal step. components/input's dropdown menu, the
-// same overlay class, sits at the same level.
+// A popover floats, so its surface (and its tail) is the platform's window
+// background under the platform's measured floating shadow, with the
+// platform's separator around its edge — the hairline the platform draws
+// around a popover, which a sheet does not have. components/input's dropdown
+// menu, the same overlay class, is filled the same way.
 //
 // Popover is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. The source is
@@ -65,7 +62,8 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
-	"github.com/vibrantgio/patterns/internal/outline"
+	"github.com/vibrantgio/effects/depth"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -163,12 +161,12 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	// elevation is snapshotted so a theme elevation change re-emits the
-	// layout.Widget; the surface fill resolves through SurfaceAt, which reads
-	// the default tokens.Elevation scale.
+	// layout.Widget; the shadow's reach resolves through effects/depth,
+	// which reads the default tokens.Elevation scale.
 	elevation tokens.ElevationScale
 }
 
@@ -186,8 +184,8 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	}
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Elevation),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.ElevationScale]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Radius, t.Elevation),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.ElevationScale]) resolvedTokens {
 				return resolvedTokens{color: n.First, spacing: n.Second, radius: n.Third, elevation: n.Fourth}
 			},
 		)
@@ -240,7 +238,7 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 func Render(
 	props Props,
 	open bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 ) layout.Widget {
@@ -392,21 +390,22 @@ func drawPopover(
 	//    lays out after this popover's slot (see the package doc). The
 	//    surface absorbs presses; the tail is a triangular path bridging the
 	//    gap to the anchor, drawn in the surface fill colour and carrying the
-	//    surface's own edge around it. Level 3, the highest there is: an
-	//    unscrimmed, shadowless transient overlay separates by fill alone.
+	//    surface's own edge around it. It floats: the window background under
+	//    the platform's shadow, inside the platform's separator.
 	if openNow {
 		floating := op.Record(gtx.Ops)
-		fill := tok.color.SurfaceAt(tokens.Level3)
-		// The surface's edge is derived against the level it circles — the
-		// same Level3 the fill is painted at, named once for both, and the
-		// tail's own edge is the same stroke colour for the same reason.
-		edge := outline.Color(tok.color, tok.color.SurfaceAt(tokens.Level3))
+		fill := tok.color.WindowBackground
+		// The edge is the platform's separator laid over the fill it
+		// circles, and the tail's own edge is that same line for the same
+		// reason.
+		edge := vgcolor.Flatten(tok.color.Separator, fill)
 		stroke := float32(gtx.Dp(strokeWidth))
 		surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
 		surfRRect := clip.RRect{
 			Rect: image.Rectangle{Max: surfaceRect.Size()},
 			SE:   r, SW: r, NE: r, NW: r,
 		}
+		castShadow(gtx, image.Rectangle{Max: surfaceRect.Size()}, r, tok.color)
 		paint.FillShape(gtx.Ops, fill, surfRRect.Op(gtx.Ops))
 		paint.FillShape(gtx.Ops, edge, clip.Stroke{
 			Path:  surfRRect.Path(gtx.Ops),
@@ -593,3 +592,18 @@ func fire(gtx layout.Context, cb func(gtx layout.Context)) {
 		cb(gtx)
 	}
 }
+
+// castShadow paints the platform's floating shadow under a surface.
+//
+// effects/depth still states its shadow as a fraction of a Material key
+// shadow, so the platform's measured coverage is passed as that fraction:
+// FloatingShadow's alpha over depth's own peak, which lands the shadow on
+// the measured black at 0.075 exactly. The shadow's REACH is still depth's
+// 6 dp for the floating level, not the 24 px the reference measures; that
+// geometry is effects' to move (CE2.4).
+func castShadow(gtx layout.Context, bounds image.Rectangle, radius int, c tokens.PlatformColors) {
+	depth.Shadow(gtx, bounds, tokens.Level3, radius, float32(c.FloatingShadow.A)/depthPeakAlpha)
+}
+
+// depthPeakAlpha is the alpha effects/depth paints at opacity 1.
+const depthPeakAlpha = 76

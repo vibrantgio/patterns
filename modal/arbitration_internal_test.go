@@ -157,7 +157,7 @@ func TestOnlyTheFrontModalTakesPointerInput(t *testing.T) {
 	arb := NewArbiter()
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	tok := resolvedTokens{
-		color:   tokens.DefaultLight,
+		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
 		title:   tokens.DefaultTypography.TitleMedium,
@@ -264,7 +264,7 @@ func TestACoveredModalDrawnLastTakesNoPointerInput(t *testing.T) {
 	arb := NewArbiter()
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	tok := resolvedTokens{
-		color:   tokens.DefaultLight,
+		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
 		title:   tokens.DefaultTypography.TitleMedium,

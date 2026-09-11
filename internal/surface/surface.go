@@ -1,9 +1,10 @@
 // Package surface draws the two edges a pattern's own surface can have: the
-// card's raise, and the group's hairline.
+// card's fill, and the group's hairline — and answers what a pattern stands
+// on, so every pattern in this library spells that answer the same way.
 //
-// They live together because they are the two halves of one ruling — a card
-// singles something out by standing a step above what it is in, a group
-// divides the page by drawing a line at the level it is already at — and a
+// The first two live together because they are the two halves of one ruling
+// — a card singles something out by wearing the platform's box, a group
+// divides the page by drawing a line at the surface it is already on — and a
 // pattern that draws either by hand drifts from the other.
 package surface
 
@@ -16,33 +17,17 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// Card paints a rounded surface raised on what it stands on: the raise's
-// own fill, plus the seam that raise owes where the scheme has no lighter
-// step left to tell it with. Nothing else — a card is raised, not floating,
-// so it casts no shadow, and it is never outlined.
-//
-// The seam is painted as the card's own rectangle in the seam colour with
-// the fill laid back over it one pixel in, rather than as a stroke: a
-// stroke is centred on the edge it follows, so half of it would land
-// outside the card and the card's painted footprint would depend on which
-// scheme was running.
-func Card(gtx layout.Context, bounds image.Rectangle, r int, raise tokens.Raise) {
+// Card paints the platform's box: one rounded fill and nothing else. The
+// platform's grouped box carries no hairline and no shadow — its edge is a
+// two-to-three pixel ramp straight from the plane to the fill — so the
+// caller hands in the fill and the box is that fill.
+func Card(gtx layout.Context, bounds image.Rectangle, r int, fill color.NRGBA) {
 	rrect := clip.RRect{Rect: bounds, SE: r, SW: r, NE: r, NW: r}
-	if !raise.Seamed {
-		paint.FillShape(gtx.Ops, raise.Fill, rrect.Op(gtx.Ops))
-		return
-	}
-	w := hairline(gtx)
-	paint.FillShape(gtx.Ops, raise.Seam, rrect.Op(gtx.Ops))
-	ir := r - w
-	if ir < 0 {
-		ir = 0
-	}
-	inner := clip.RRect{Rect: bounds.Inset(w), SE: ir, SW: ir, NE: ir, NW: ir}
-	paint.FillShape(gtx.Ops, raise.Fill, inner.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
 }
 
 // Group paints the hairline a group draws at its own edge, and nothing
@@ -62,6 +47,26 @@ func Group(gtx layout.Context, bounds image.Rectangle, r int, seam color.NRGBA) 
 	area.Pop()
 }
 
+// Or returns the surface the caller stated, or plane — the fill the pattern
+// stands on unless the caller moved it — when it stated none.
+//
+// The platform's labels, seams, overlays and shadow carry a coverage rather
+// than a colour, and a pattern flattens each against what is actually under
+// it (theme/color.Flatten) before it hands Gio a fill. Which surface that is
+// is the one thing a pattern cannot work out for itself, so a caller that
+// put it on a card, a selected row or a chrome band says so through the
+// pattern's Surface property.
+//
+// A surface is an opaque fill, so alpha zero is no answer rather than a
+// transparent one, and alpha zero is the zero value a Surface property is
+// left at.
+func Or(stated, plane color.NRGBA) color.NRGBA {
+	if stated.A == 0 {
+		return plane
+	}
+	return stated
+}
+
 // hairline is one device pixel at the current scale, floored at one: a line
 // the display cannot draw is not a line.
 func hairline(gtx layout.Context) int {
@@ -69,4 +74,12 @@ func hairline(gtx layout.Context) int {
 		return w
 	}
 	return 1
+}
+
+// Backdrop is the window's own plane where nothing stands on it — the
+// slivers showing around an inset pane. The platform's under-page
+// background carries a coverage in the light appearance, so it is flattened
+// onto the window background it lies on.
+func Backdrop(p tokens.PlatformColors) color.NRGBA {
+	return vgcolor.Flatten(p.UnderPageBackground, p.WindowBackground)
 }

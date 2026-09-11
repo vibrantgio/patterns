@@ -15,6 +15,7 @@ import (
 
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/group"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
 )
@@ -60,13 +61,13 @@ func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLin
 }
 
 // content is the pair of layout.Widget values every group case holds.
-func content(t *testing.T, c tokens.ColorTokens) []layout.Widget {
+func content(t *testing.T, c tokens.PlatformColors) []layout.Widget {
 	t.Helper()
 	shaper := defaultShaper(t)
 	typo := tokens.DefaultTypography
 	return []layout.Widget{
-		textSlot(shaper, typo.BodyMedium, c.Text, 1, "Comfortable"),
-		textSlot(shaper, typo.BodyMedium, c.Ramps.Neutral.Step(700), 2,
+		textSlot(shaper, typo.BodyMedium, vgcolor.Flatten(c.Label, c.ControlBackground), 1, "Comfortable"),
+		textSlot(shaper, typo.BodyMedium, vgcolor.Flatten(c.SecondaryLabel, c.ControlBackground), 2,
 			"Compact re-pitches every control on the page."),
 	}
 }
@@ -87,20 +88,20 @@ func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 func TestGroupGolden(t *testing.T) {
 	cases := []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		label  string
 	}{
-		{name: "light-labelled", colors: tokens.DefaultLight, label: "Density"},
-		{name: "dark-labelled", colors: tokens.DefaultDark, label: "Density"},
-		{name: "light-unlabelled", colors: tokens.DefaultLight},
-		{name: "dark-unlabelled", colors: tokens.DefaultDark},
+		{name: "light-labelled", colors: tokens.PlatformLight, label: "Density"},
+		{name: "dark-labelled", colors: tokens.PlatformDark, label: "Density"},
+		{name: "light-unlabelled", colors: tokens.PlatformLight},
+		{name: "dark-unlabelled", colors: tokens.PlatformDark},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := group.Render(defaultShaper(t),
 				group.Props{Label: tc.label, Content: content(t, tc.colors)},
 				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.SurfaceAt(tokens.Level0)))
+			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.ControlBackground))
 		})
 	}
 }
@@ -112,13 +113,13 @@ func TestGroupGolden(t *testing.T) {
 func TestGroupPaintsNothingInside(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 	}{
-		{"light", tokens.DefaultLight},
-		{"dark", tokens.DefaultDark},
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			want := tc.colors.SurfaceAt(tokens.Level0)
+			want := tc.colors.ControlBackground
 			w := group.Render(defaultShaper(t), group.Props{}, tc.colors,
 				tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 			img := golden.Capture(t, frameSize, scene(w, marginPx, want))
@@ -131,20 +132,20 @@ func TestGroupPaintsNothingInside(t *testing.T) {
 	}
 }
 
-// TestGroupHairlineIsTheSeam holds the derivation: the line at the group's
-// edge is tokens.SeamOn against the surface the group is in, and not the
-// 3:1 mark a graphic carrying meaning would derive to.
+// TestGroupHairlineIsTheSeam holds the mapping in pixels: the line at the
+// group's edge is the platform's separator flattened onto the surface the
+// group is in, and not the 3:1 mark a graphic carrying meaning would owe.
 func TestGroupHairlineIsTheSeam(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 	}{
-		{"light", tokens.DefaultLight},
-		{"dark", tokens.DefaultDark},
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			bg := tc.colors.SurfaceAt(tokens.Level0)
-			want := tc.colors.SeamOn(bg)
+			bg := tc.colors.ControlBackground
+			want := vgcolor.Flatten(tc.colors.Separator, bg)
 			w := group.Render(defaultShaper(t), group.Props{}, tc.colors,
 				tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 			img := golden.Capture(t, frameSize, scene(w, marginPx, bg))
@@ -163,14 +164,14 @@ func TestGroupHairlineIsTheSeam(t *testing.T) {
 // group and a labelled one differ, so a Label that never reached the shaper
 // cannot pass silently.
 func TestGroupLabelChangesPixels(t *testing.T) {
-	c := tokens.DefaultLight
+	c := tokens.PlatformLight
 	shaper := defaultShaper(t)
 	bare := group.Render(shaper, group.Props{Content: content(t, c)}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 	named := group.Render(shaper, group.Props{Label: "Density", Content: content(t, c)}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.SurfaceAt(tokens.Level0)))
-	b := golden.Capture(t, frameSize, scene(named, marginPx, c.SurfaceAt(tokens.Level0)))
+	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.ControlBackground))
+	b := golden.Capture(t, frameSize, scene(named, marginPx, c.ControlBackground))
 	if n := golden.PixelDiff(a, b); n == 0 {
 		t.Error("labelled and unlabelled groups render identically; expected the label")
 	}

@@ -37,9 +37,10 @@
 //
 // The pattern owns the queue, the placement and the timing, not the
 // presentation: the toast's fill, its message and its leading edge are
-// components/toast's. What the column adds under each toast is the Level3
-// cast shadow, because only the placement knows where the surface landed —
-// and a shadow is what says the surface floats and can leave.
+// components/toast's. What the column adds under each toast is the
+// platform's floating shadow, because only the placement knows where the
+// surface landed — and a shadow is what says the surface floats and can
+// leave.
 package notifications
 
 import (
@@ -245,7 +246,7 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	style   tokens.TextStyle // the LabelMedium role: typeface, weight, size, line height
@@ -274,10 +275,10 @@ func Column(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
 			rx.CombineLatest2(
-				rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Elevation),
+				rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Elevation),
 				t.Motion,
 			),
-			func(n rx.Tuple2[rx.Tuple5[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.ElevationScale], tokens.MotionScale]) resolvedTokens {
+			func(n rx.Tuple2[rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.ElevationScale], tokens.MotionScale]) resolvedTokens {
 				typ := n.First.Fourth
 				return resolvedTokens{
 					color:     n.First.First,
@@ -324,7 +325,7 @@ func Render(
 	shaper *text.Shaper,
 	props Props,
 	queued []Notification,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	label tokens.TextStyle,
@@ -417,11 +418,12 @@ func lifetimeOf(n Notification, props Props) time.Duration {
 }
 
 // paintColumn lays out the toasts at the frame anchor Props.Position names,
-// each at the alpha its placed entry carries, with the Level3 cast shadow
-// under it. The shadow is the column's rather than the toast's because only
-// the placement knows where the surface landed; it rounds to the toast's own
-// radius so the interior cannot show through the corners, and it takes the
-// same alpha so it never outlives the surface it belongs to.
+// each at the alpha its placed entry carries, with the platform's floating
+// shadow under it. The shadow is the column's rather than the toast's
+// because only the placement knows where the surface landed; it rounds to
+// the toast's own radius so the interior cannot show through the corners,
+// and it is scaled by the same alpha so it never outlives the surface it
+// belongs to.
 func paintColumn(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -516,7 +518,7 @@ func paintColumn(
 		// model stay the same list.
 		if alphas[vis] > 0 {
 			off := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
-			depth.Shadow(gtx, image.Rectangle{Max: sizes[vis]}, tokens.Level3, radius, float32(alphas[vis]))
+			depth.Shadow(gtx, image.Rectangle{Max: sizes[vis]}, tokens.Level3, radius, shadowOpacity(tok.color)*float32(alphas[vis]))
 			macros[vis].Add(gtx.Ops)
 			off.Pop()
 		}
@@ -552,3 +554,19 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 	frame := int((age - (lifetime - fade)) / time.Millisecond)
 	return tw.At(frame)
 }
+
+// shadowOpacity is the platform's floating shadow stated as the fraction
+// effects/depth still takes.
+//
+// depth states its shadow as a fraction of a Material key shadow, so the
+// measured coverage is passed as that fraction: FloatingShadow's alpha over
+// depth's own peak, which lands the shadow on the measured black at 0.075
+// exactly. The shadow's REACH is still depth's 6 dp for the floating level,
+// not the 24 px the reference measures; that geometry is effects' to move
+// (CE2.4).
+func shadowOpacity(c tokens.PlatformColors) float32 {
+	return float32(c.FloatingShadow.A) / depthPeakAlpha
+}
+
+// depthPeakAlpha is the alpha effects/depth paints at opacity 1.
+const depthPeakAlpha = 76

@@ -46,15 +46,15 @@ func TestShellThreeColumnGolden(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		bg     color.NRGBA
 		aside  layout.Widget
 		footer layout.Widget
 		width  unit.Dp
 	}{
-		{"light-three-column", tokens.DefaultLight, lightBG, fillRect(asideFill), fillRect(footerFill), 160},
-		{"dark-three-column", tokens.DefaultDark, darkBG, fillRect(asideFill), fillRect(footerFill), 160},
-		{"light-three-column-no-aside", tokens.DefaultLight, lightBG, nil, nil, 160},
+		{"light-three-column", tokens.PlatformLight, lightBG, fillRect(asideFill), fillRect(footerFill), 160},
+		{"dark-three-column", tokens.PlatformDark, darkBG, fillRect(asideFill), fillRect(footerFill), 160},
+		{"light-three-column-no-aside", tokens.PlatformLight, lightBG, nil, nil, 160},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

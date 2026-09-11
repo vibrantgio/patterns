@@ -70,26 +70,26 @@ func item(id int64, status toast.Status) notifications.Notification {
 // edge and the column ordering are the load-bearing visual signal and the
 // text carries the LabelMedium role; one scene stands the column on the
 // bottom edge's midpoint, where the design language puts a transient
-// confirmation. The scenes composite over a real pane background
-// (SurfaceAt(LevelChrome)), so a toast fill that stops separating from real
-// app backgrounds fails the diff instead of hiding behind an arbitrary grey.
+// confirmation. The scenes composite over the platform's chrome material,
+// so a toast fill that stops separating from real app backgrounds fails the
+// diff instead of hiding behind an arbitrary grey.
 func TestColumnGolden(t *testing.T) {
 	shaper := defaultShaper(t)
-	lightBG := tokens.DefaultLight.SurfaceAt(tokens.LevelChrome)
-	darkBG := tokens.DefaultDark.SurfaceAt(tokens.LevelChrome)
+	lightBG := tokens.PlatformLight.SidebarMaterial
+	darkBG := tokens.PlatformDark.SidebarMaterial
 
 	cases := []struct {
 		name   string
 		props  notifications.Props
 		items  []notifications.Notification
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		bg     color.NRGBA
 	}{
 		{
 			name:   "light-empty",
 			props:  notifications.Props{Position: notifications.TopRight, Shaper: shaper},
 			items:  nil,
-			colors: tokens.DefaultLight,
+			colors: tokens.PlatformLight,
 			bg:     lightBG,
 		},
 		{
@@ -100,14 +100,14 @@ func TestColumnGolden(t *testing.T) {
 				item(2, toast.Success),
 				item(3, toast.Warning),
 			},
-			colors: tokens.DefaultLight,
+			colors: tokens.PlatformLight,
 			bg:     lightBG,
 		},
 		{
 			name:   "dark-warning-toast",
 			props:  notifications.Props{Position: notifications.BottomRight, Shaper: shaper},
 			items:  []notifications.Notification{item(1, toast.Warning)},
-			colors: tokens.DefaultDark,
+			colors: tokens.PlatformDark,
 			bg:     darkBG,
 		},
 		{
@@ -117,7 +117,7 @@ func TestColumnGolden(t *testing.T) {
 				item(1, toast.Info),
 				item(2, toast.Success),
 			},
-			colors: tokens.DefaultLight,
+			colors: tokens.PlatformLight,
 			bg:     lightBG,
 		},
 	}
@@ -136,8 +136,8 @@ func TestEmptyAndPopulatedColumnsDiffer(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 	props := notifications.Props{Position: notifications.TopRight, Shaper: shaper}
 
-	empty := notifications.Render(shaper, props, nil, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
-	full := notifications.Render(shaper, props, []notifications.Notification{item(1, toast.Info)}, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+	empty := notifications.Render(shaper, props, nil, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+	full := notifications.Render(shaper, props, []notifications.Notification{item(1, toast.Info)}, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
 
 	imgE := golden.Capture(t, frameSize, scene(empty, bg))
 	imgF := golden.Capture(t, frameSize, scene(full, bg))
@@ -154,8 +154,8 @@ func TestColumnPositionAnchoring(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 	items := []notifications.Notification{item(1, toast.Info)}
 
-	tr := notifications.Render(shaper, notifications.Props{Position: notifications.TopRight, Shaper: shaper}, items, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
-	bl := notifications.Render(shaper, notifications.Props{Position: notifications.BottomLeft, Shaper: shaper}, items, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+	tr := notifications.Render(shaper, notifications.Props{Position: notifications.TopRight, Shaper: shaper}, items, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+	bl := notifications.Render(shaper, notifications.Props{Position: notifications.BottomLeft, Shaper: shaper}, items, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
 
 	imgTR := golden.Capture(t, frameSize, scene(tr, bg))
 	imgBL := golden.Capture(t, frameSize, scene(bl, bg))

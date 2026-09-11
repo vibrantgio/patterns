@@ -15,6 +15,7 @@ import (
 
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/card"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
 )
@@ -88,14 +89,14 @@ func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLin
 // slots returns the header / body / footer trio every card case draws, in the
 // colours of the given token set: a title, a body long enough to wrap inside a
 // 280 px card, and a footer line.
-func slots(t *testing.T, c tokens.ColorTokens) (header, body, footer layout.Widget) {
+func slots(t *testing.T, c tokens.PlatformColors) (header, body, footer layout.Widget) {
 	t.Helper()
 	shaper := defaultShaper(t)
 	typo := tokens.DefaultTypography
-	return textSlot(shaper, typo.TitleMedium, c.Text, 1, "Density"),
-		textSlot(shaper, typo.BodyMedium, c.Ramps.Neutral.Step(700), 3,
+	return textSlot(shaper, typo.TitleMedium, vgcolor.Flatten(c.Label, c.CardFill), 1, "Density"),
+		textSlot(shaper, typo.BodyMedium, vgcolor.Flatten(c.SecondaryLabel, c.CardFill), 3,
 			"Comfortable and Compact set the control height and the padding around it."),
-		textSlot(shaper, typo.LabelMedium, c.Primary, 1, "Read the token")
+		textSlot(shaper, typo.LabelMedium, c.ControlAccent, 1, "Read the token")
 }
 
 // scene renders w into a frame-sized constraint. The optional margin
@@ -110,38 +111,39 @@ func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 // TestCardGolden records or diffs the canonical card renders.
 // light-header-only asserts that a lone slot is not padded as though the
 // other two were there but empty; light-margin leaves the surface the card
-// stands on visible around it, so the raise is read at the card's edge.
+// stands on visible around it, so the box's step of fill is read at the
+// card's edge.
 func TestCardGolden(t *testing.T) {
 	cases := []struct {
 		name       string
-		colors     tokens.ColorTokens
+		colors     tokens.PlatformColors
 		headerOnly bool
 		bg         color.NRGBA
 		margin     int
 	}{
 		{
 			name:   "light-normal",
-			colors: tokens.DefaultLight,
-			bg:     color.NRGBA{R: 240, G: 240, B: 240, A: 255},
+			colors: tokens.PlatformLight,
+			bg:     tokens.PlatformLight.ControlBackground,
 			margin: 0,
 		},
 		{
 			name:   "dark-normal",
-			colors: tokens.DefaultDark,
-			bg:     color.NRGBA{R: 20, G: 20, B: 20, A: 255},
+			colors: tokens.PlatformDark,
+			bg:     tokens.PlatformDark.ControlBackground,
 			margin: 0,
 		},
 		{
 			name:       "light-header-only",
-			colors:     tokens.DefaultLight,
+			colors:     tokens.PlatformLight,
 			headerOnly: true,
-			bg:         color.NRGBA{R: 240, G: 240, B: 240, A: 255},
+			bg:         tokens.PlatformLight.ControlBackground,
 			margin:     0,
 		},
 		{
 			name:   "light-margin",
-			colors: tokens.DefaultLight,
-			bg:     color.NRGBA{R: 240, G: 240, B: 240, A: 255},
+			colors: tokens.PlatformLight,
+			bg:     tokens.PlatformLight.ControlBackground,
 			margin: marginPx,
 		},
 	}
@@ -158,33 +160,27 @@ func TestCardGolden(t *testing.T) {
 	}
 }
 
-// TestCardEdgeIsNeverAnOutline holds the ruling in pixels: a card's edge is
-// its raise and, where the scheme has run out of steps, the seam that raise
-// owes — never a 3:1 outline. Level 0 in the light scheme has a step left,
-// so the card's edge pixels are its own fill; level 1 has none, so they are
-// the seam the raise owes and nothing more pronounced.
-func TestCardEdgeIsNeverAnOutline(t *testing.T) {
-	c := tokens.DefaultLight
+// TestCardEdgeIsTheBoxsFill holds the ruling in pixels: a card's edge is the
+// platform's box and nothing else — the first pixel inside the card is
+// CardFill, never a hairline and never a shadow.
+func TestCardEdgeIsTheBoxsFill(t *testing.T) {
 	for _, tc := range []struct {
-		name  string
-		level tokens.ElevationLevel
+		name   string
+		colors tokens.PlatformColors
 	}{
-		{"level-0", tokens.Level0},
-		{"level-1", tokens.Level1},
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			raise := c.RaisedOn(c.SurfaceAt(tc.level))
-			want := raise.Fill
-			if raise.Seamed {
-				want = raise.Seam
-			}
-			w := card.Render(card.Props{Header: fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 24), Level: tc.level},
+			c := tc.colors
+			want := c.CardFill
+			w := card.Render(card.Props{Header: fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 24)},
 				c, tokens.Spacing, sharpRadius)
-			img := golden.Capture(t, frameSize, scene(w, marginPx, c.SurfaceAt(tc.level)))
+			img := golden.Capture(t, frameSize, scene(w, marginPx, c.ControlBackground))
 			got := img.At(marginPx, frameH/2)
 			r, g, b, _ := got.RGBA()
 			if uint8(r>>8) != want.R || uint8(g>>8) != want.G || uint8(b>>8) != want.B {
-				t.Errorf("%s: card edge is #%02x%02x%02x, want the raise's own #%02x%02x%02x",
+				t.Errorf("%s: card edge is #%02x%02x%02x, want the box's own #%02x%02x%02x",
 					tc.name, uint8(r>>8), uint8(g>>8), uint8(b>>8), want.R, want.G, want.B)
 			}
 		})
@@ -198,8 +194,8 @@ func TestCardLightDarkDiffer(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 48)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
-	light := card.Render(card.Props{Header: header, Body: body}, tokens.DefaultLight, tokens.Spacing, sharpRadius)
-	dark := card.Render(card.Props{Header: header, Body: body}, tokens.DefaultDark, tokens.Spacing, sharpRadius)
+	light := card.Render(card.Props{Header: header, Body: body}, tokens.PlatformLight, tokens.Spacing, sharpRadius)
+	dark := card.Render(card.Props{Header: header, Body: body}, tokens.PlatformDark, tokens.Spacing, sharpRadius)
 
 	imgLight := golden.Capture(t, frameSize, scene(light, 0, bg))
 	imgDark := golden.Capture(t, frameSize, scene(dark, 0, bg))

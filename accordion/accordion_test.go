@@ -87,15 +87,15 @@ func TestAccordionGolden(t *testing.T) {
 	cases := []struct {
 		name   string
 		open   map[int]bool
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		bg     color.NRGBA
 	}{
-		{"light-three-sections-first-open", map[int]bool{0: true}, tokens.DefaultLight, lightBG},
-		{"dark-three-sections-all-closed", map[int]bool{}, tokens.DefaultDark, darkBG},
+		{"light-three-sections-first-open", map[int]bool{0: true}, tokens.PlatformLight, lightBG},
+		{"dark-three-sections-all-closed", map[int]bool{}, tokens.PlatformDark, darkBG},
 		// SingleOpen is a behavioural property exercised by the
 		// interaction test; the visual golden simply pins the
 		// "one section open in the middle" appearance the mode produces.
-		{"light-single-open-mode", map[int]bool{1: true}, tokens.DefaultLight, lightBG},
+		{"light-single-open-mode", map[int]bool{1: true}, tokens.PlatformLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,11 +120,11 @@ func TestAccordionChevronRotatesBetweenStates(t *testing.T) {
 		// chevron, not in the body area.
 		// The title is identical in both renders, so it cannot contribute
 		// to the diff either; only the chevron can.
-		sections := []accordion.Section{{Title: sectionTitles[0], Body: bodyRect(tokens.DefaultLight.Surface)}}
+		sections := []accordion.Section{{Title: sectionTitles[0], Body: bodyRect(tokens.PlatformLight.ControlBackground)}}
 		props := accordion.Props{Sections: sections, Shaper: shaper}
 		// Crop to the header strip so the body area never participates
 		// in the diff regardless of how the renderer pads.
-		w := accordion.Render(shaper, props, open, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge)
+		w := accordion.Render(shaper, props, open, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge)
 		return golden.Capture(t, image.Pt(48, 48), scene(w, bg))
 	}
 

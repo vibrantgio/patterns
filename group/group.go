@@ -3,12 +3,11 @@
 //
 // A group divides the page. It is drawn at the level of the surface it is
 // in and takes that surface's own fill — it paints nothing inside itself,
-// only the line at its edge — so it raises nothing and nothing is derived
-// against it: what a group holds stands on the surface the group is in, at
-// that surface's own level. The hairline is the seam of two regions that
-// share one fill, derived to be findable against that fill in either
-// scheme (tokens.ColorTokens.SeamOn), which is the understated line the
-// platform draws and not the 3:1 mark a graphic carrying meaning owes.
+// only the line at its edge — so it raises nothing: what a group holds
+// stands on the surface the group is in. The hairline is the seam of two
+// regions that share one fill: the platform's separator, black or white at
+// a tenth laid over that fill, which is the understated line the platform
+// draws and not the 3:1 mark a graphic carrying meaning owes.
 //
 // A group wears no role. It is not operated, so it has no emphasis to
 // speak with, and a role-coloured hairline would borrow the accent's
@@ -36,6 +35,7 @@ package group
 
 import (
 	"image"
+	"image/color"
 
 	"gioui.org/font"
 	"gioui.org/layout"
@@ -47,6 +47,7 @@ import (
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/patterns/internal/surface"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -78,16 +79,16 @@ type Props struct {
 	// which is what makes sharing it correct.
 	Shaper *text.Shaper
 
-	// Level is the level of the surface the group is in. The group draws
-	// at that level rather than above it: the zero value is the content,
-	// which is where most groups are, and a group inside a dialog names
-	// Level2 so its hairline is derived against the dialog's fill rather
-	// than against a content plane it is nowhere near.
-	Level tokens.ElevationLevel
+	// Surface is the opaque fill the group is drawn on. The platform's
+	// separator is a coverage rather than a colour, so the hairline is
+	// flattened onto this before it is painted; a group inside a card or a
+	// dialog states that fill here. The zero value — no colour — is the
+	// content.
+	Surface color.NRGBA
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
@@ -99,8 +100,8 @@ type resolvedTokens struct {
 func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Typography),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Radius, t.Typography),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
 					color:   n.First,
@@ -132,7 +133,7 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	label tokens.TextStyle,
@@ -146,7 +147,7 @@ func draw(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	label tokens.TextStyle,
@@ -156,13 +157,15 @@ func draw(
 	gap := gtx.Dp(unit.Dp(sp.S3))
 
 	// The hairline parts two regions that share one fill: the surface
-	// inside the group and the same surface outside it.
-	surface.Group(gtx, image.Rectangle{Max: size}, r, colors.SeamOn(colors.SurfaceAt(props.Level)))
+	// inside the group and the same surface outside it. It is the
+	// platform's separator, flattened onto that one fill.
+	plane := surface.Or(props.Surface, colors.ControlBackground)
+	surface.Group(gtx, image.Rectangle{Max: size}, r, vgcolor.Flatten(colors.Separator, plane))
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		ws := make([]layout.Widget, 0, len(props.Content)+1)
 		if props.Label != "" {
-			ws = append(ws, labelWidget(shaper, props.Label, label, colors))
+			ws = append(ws, labelWidget(shaper, props.Label, label, vgcolor.Flatten(colors.SecondaryLabel, plane)))
 		}
 		ws = append(ws, props.Content...)
 		return stack(gtx, gap, ws...)
@@ -172,14 +175,14 @@ func draw(
 }
 
 // labelWidget draws the group's own label: the LabelLarge role in the
-// neutral ramp's low-contrast step, which is the step every understated label in
-// this system is set in. It is not the accent — a group wears no role — and
-// not the Text pin, which would give a section header the weight of the
-// content it names.
-func labelWidget(shaper *text.Shaper, s string, style tokens.TextStyle, colors tokens.ColorTokens) layout.Widget {
+// platform's secondary label, which is the strength every understated label
+// in this system is set in. It is not the accent — a group wears no role —
+// and not the full-strength label, which would give a section header the
+// weight of the content it names.
+func labelWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		m := op.Record(gtx.Ops)
-		paint.ColorOp{Color: colors.Ramps.Neutral.Step(700)}.Add(gtx.Ops)
+		paint.ColorOp{Color: foreground}.Add(gtx.Ops)
 		material := m.Stop()
 
 		f := typeset.Font(style, font.Normal)

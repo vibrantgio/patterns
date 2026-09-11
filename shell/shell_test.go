@@ -24,6 +24,7 @@ import (
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/shell"
 	"github.com/vibrantgio/patterns/sidebar"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -141,16 +142,16 @@ func TestShellGolden(t *testing.T) {
 		name         string
 		props        shell.Props
 		sidebarProps *sidebar.Props
-		colors       tokens.ColorTokens
+		colors       tokens.PlatformColors
 		bg           color.NRGBA
 		size         image.Point
 		ratio        float32
 	}{
-		{"light-sidebar-header-main", shmProps(), &shmSidebarProps, tokens.DefaultLight, lightBG, shmSize, 0},
-		{"dark-sidebar-header-main", shmProps(), &shmSidebarProps, tokens.DefaultDark, darkBG, shmSize, 0},
-		{"light-split-pane-50-50", splitProps(layout.Horizontal), nil, tokens.DefaultLight, lightBG, splitSize, 0.5},
-		{"light-split-pane-30-70", splitProps(layout.Horizontal), nil, tokens.DefaultLight, lightBG, splitSize, 0.3},
-		{"light-split-pane-vertical-30-70", splitProps(layout.Vertical), nil, tokens.DefaultLight, lightBG, vsplitSize, 0.3},
+		{"light-sidebar-header-main", shmProps(), &shmSidebarProps, tokens.PlatformLight, lightBG, shmSize, 0},
+		{"dark-sidebar-header-main", shmProps(), &shmSidebarProps, tokens.PlatformDark, darkBG, shmSize, 0},
+		{"light-split-pane-50-50", splitProps(layout.Horizontal), nil, tokens.PlatformLight, lightBG, splitSize, 0.5},
+		{"light-split-pane-30-70", splitProps(layout.Horizontal), nil, tokens.PlatformLight, lightBG, splitSize, 0.3},
+		{"light-split-pane-vertical-30-70", splitProps(layout.Vertical), nil, tokens.PlatformLight, lightBG, vsplitSize, 0.3},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -326,7 +327,7 @@ func TestShellSplitPaneVerticalSplitterDrag(t *testing.T) {
 // the only thing saying where one pane ends and the other begins.
 func TestShellSplitPaneSeamIsAHairline(t *testing.T) {
 	shaper := defaultShaper(t)
-	colors := tokens.DefaultLight
+	colors := tokens.PlatformLight
 	props := shell.Props{
 		Layout: shell.SplitPane,
 		Left:   fillRect(color.NRGBA{R: 0x22, G: 0x55, B: 0x88, A: 0xff}),
@@ -337,14 +338,16 @@ func TestShellSplitPaneSeamIsAHairline(t *testing.T) {
 	img := golden.Capture(t, splitSize, w)
 
 	// runAt reports the seam's start column and width on one row, where
-	// "seam" is any run of pixels matching the Seam token.
+	// "seam" is any run of pixels matching the platform's separator
+	// flattened onto the content the splitter crosses.
+	seam := vgcolor.Flatten(colors.Separator, colors.ControlBackground)
 	runAt := func(y int) (start, width int) {
 		start = -1
 		for x := 0; x < splitW; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
-			isSeam := uint8(r>>8) == colors.Seam.R &&
-				uint8(g>>8) == colors.Seam.G &&
-				uint8(b>>8) == colors.Seam.B
+			isSeam := uint8(r>>8) == seam.R &&
+				uint8(g>>8) == seam.G &&
+				uint8(b>>8) == seam.B
 			switch {
 			case isSeam && start < 0:
 				start, width = x, 1

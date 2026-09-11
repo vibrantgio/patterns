@@ -1,8 +1,9 @@
 // Package sidebar provides the Patterns Sidebar pattern: a collapsible
-// vertical Surface column that swaps between an expanded width
+// vertical chrome column that swaps between an expanded width
 // (label+icon) and a collapsed width (icon-only) on demand. The active
-// Item is rendered on the Primary ramp's selected step, two steps past
-// the Surface fill.
+// Item is drawn as the platform draws a selected row: filled with the
+// selection colour, its label in the foreground the platform pairs with
+// that fill.
 //
 // Sidebar is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is
@@ -22,7 +23,7 @@
 // affordance to nothing leaves a sidebar that cannot collapse.
 //
 // Items are stacked at the density's row pitch — exactly
-// Density.ControlHeight (36 dp Comfortable, 28 dp Compact) — in a
+// Density.RowHeight, the platform's own list row — in a
 // components/list scroll region filling the column below the toggle: a
 // list longer than the column is tall scrolls by wheel or touch
 // instead of painting past the bottom edge. No scrollbar is drawn — the
@@ -80,6 +81,7 @@ import (
 	"github.com/vibrantgio/components/icon"
 	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/components/list"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -92,7 +94,7 @@ import (
 // interactive.
 //
 // Active marks the item the rail should start on. It seeds the list's
-// selection, which is what draws the Primary selected-state background,
+// selection, which is what draws the platform's selected-row fill,
 // so the highlight then follows the keyboard and the pointer from there;
 // re-emitting Items with a different Active moves it back. At most one
 // item should carry it — the first one that does wins. It is independent
@@ -139,6 +141,13 @@ type Props struct {
 	// layout.Widget out on the one goroutine that runs the event loop,
 	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
+
+	// Unemphasized draws the selected row the way the platform draws one in
+	// a window that is not frontmost: the unemphasized grey under the
+	// ordinary label, rather than the accent-following selection colour
+	// under the foreground the platform pairs with it. The zero value is
+	// the frontmost window.
+	Unemphasized bool
 }
 
 // Width constants.
@@ -154,7 +163,7 @@ const (
 )
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density   // item/toggle height source
@@ -178,8 +187,8 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Typography, t.Density),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Third
 				return resolvedTokens{
 					color:   n.First,
@@ -247,7 +256,7 @@ func Render(
 	shaper *text.Shaper,
 	props Props,
 	collapsed bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -352,7 +361,7 @@ func drawSidebar(
 	st *liveState,
 	state *list.State,
 	collapsed bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 	d tokens.Density,
@@ -365,13 +374,11 @@ func drawSidebar(
 	h := gtx.Constraints.Max.Y
 	size := image.Pt(w, h)
 
-	// A sidebar is chrome, so it fills at the chrome
-	// level — the level beneath the content, in both schemes. Filling
-	// colors.Surface instead would be wrong: that neutral-ramp alias is a
-	// pairing rather than a level, and it coincides with the chrome level
-	// in the light scheme but with a raised one in the dark scheme, putting
-	// the chrome above the document lying on it.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect{Max: size}.Op())
+	// A sidebar is chrome, so it wears the platform's chrome material: the
+	// sidebar and toolbar fill, which in the light appearance is the
+	// content's white exactly and in the dark one a blue-grey lighter than
+	// the content.
+	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: size}.Op())
 
 	// Toggle affordance at the top: a row like the items, so it shares
 	// the density's control height.
@@ -385,13 +392,13 @@ func drawSidebar(
 	// Items below the toggle, in a components/list scroll region filling the
 	// rest of the column — no scrollbar, like table's body: wheel/touch
 	// scrolling plus the list's own keyboard traversal. Each row is a
-	// full-width row at the density's pitch: exactly ControlHeight, which
-	// is what list.RowHeight resolves to.
+	// full-width row at the density's pitch: exactly RowHeight, the
+	// platform's own list row.
 	listH := h - toggleH
 	if listH <= 0 {
 		return layout.Dimensions{Size: size}
 	}
-	itemH := gtx.Dp(list.RowHeight(d))
+	itemH := gtx.Dp(unit.Dp(d.RowHeight))
 	stk := op.Offset(image.Pt(0, toggleH)).Push(gtx.Ops)
 	lGtx := gtx
 	lGtx.Constraints = layout.Exact(image.Pt(w, listH))
@@ -400,11 +407,28 @@ func drawSidebar(
 		idx[i] = i
 	}
 	list.LayoutSelectable(lGtx, state, idx, func(rGtx layout.Context, i int, selected bool) layout.Dimensions {
-		return drawItem(rGtx, shaper, props.Items[i], clickFor(st, i), selected, image.Pt(w, itemH), collapsed, colors, sp, style)
+		return drawItem(rGtx, shaper, props.Items[i], clickFor(st, i), selected, props.Unemphasized, image.Pt(w, itemH), collapsed, colors, sp, style)
 	})
 	stk.Pop()
 
+	drawTrailingSeam(gtx, size, colors)
+
 	return layout.Dimensions{Size: size}
+}
+
+// drawTrailingSeam draws the hairline down the rail's trailing edge: two
+// flush regions, so the one leading draws the line that says where it ends —
+// once, inside its own bounds. It is what parts the rail from the content
+// beside it: in the light appearance the platform's chrome material IS the
+// content's white, so without this line the two regions are one blank page.
+// It is drawn last so a full-width row, selected or not, cannot erase it.
+func drawTrailingSeam(gtx layout.Context, size image.Point, colors tokens.PlatformColors) {
+	w := max(gtx.Dp(unit.Dp(1)), 1)
+	if size.X <= w || size.Y <= 0 {
+		return
+	}
+	edge := image.Rect(size.X-w, 0, size.X, size.Y)
+	paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, colors.SidebarMaterial), clip.Rect(edge).Op())
 }
 
 func clickFor(st *liveState, i int) *gesture.Click {
@@ -422,14 +446,14 @@ func clickFor(st *liveState, i int) *gesture.Click {
 // The glyph is the icon set's sidebar mark — the control that shows and
 // hides a window's sidebar, resolved to the host platform's drawing —
 // at the icon rule's size for the density (icon.Size: the control's
-// inner content box), in the icon set's secondary neutral.
-func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.ColorTokens, d tokens.Density) {
+// inner content box), in the platform's secondary label over the chrome.
+func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.PlatformColors, d tokens.Density) {
 	g := gtx.Dp(icon.Size(d))
 	gx := (size.X - g) / 2
 	gy := (size.Y - g) / 2
 	if mark := icons.Mark(icons.Sidebar); mark != nil {
 		st := op.Offset(image.Pt(gx, gy)).Push(gtx.Ops)
-		mark(gtx, g, colors.Ramps.Neutral.Step(700))
+		mark(gtx, g, vgcolor.Flatten(colors.SecondaryLabel, colors.SidebarMaterial))
 		st.Pop()
 	}
 
@@ -448,19 +472,32 @@ func drawItem(
 	item Item,
 	click *gesture.Click,
 	selected bool,
+	unemphasized bool,
 	size image.Point,
 	collapsed bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 ) layout.Dimensions {
+	// The selected row is the platform's: the accent-following selection
+	// colour under the foreground the platform pairs with an accent fill,
+	// or the unemphasized grey under the ordinary label where the window is
+	// not frontmost. A row that is not selected takes no fill of its own and
+	// no hover tint either — the platform tints neither a list row nor a
+	// sidebar row under the pointer, which the reference captures measure.
+	rowFill := colors.SidebarMaterial
+	label := colors.Label
+	if selected {
+		rowFill, label = colors.SelectedContentBackground, colors.AlternateSelectedControlText
+		if unemphasized {
+			rowFill, label = colors.UnemphasizedSelectedContentBackground, colors.Label
+		}
+	}
+	foreground := vgcolor.Flatten(label, rowFill)
+
 	inner := func(gtx layout.Context) layout.Dimensions {
 		if selected {
-			// Selected background is a step past the sidebar's Surface
-			// fill on the Primary ramp, keeping the highlight's primary
-			// hue as a real, addressable colour.
-			active := colors.StateColor(tokens.RolePrimary, 200, tokens.StateSelected)
-			paint.FillShape(gtx.Ops, active, clip.Rect{Max: size}.Op())
+			paint.FillShape(gtx.Ops, rowFill, clip.Rect{Max: size}.Op())
 		}
 
 		iconW := gtx.Dp(unit.Dp(iconColDp))
@@ -499,7 +536,7 @@ func drawItem(
 			labelMaxW := size.X - iconW - padH
 			if labelMaxW > 0 {
 				mColor := op.Record(gtx.Ops)
-				paint.ColorOp{Color: colors.Text}.Add(gtx.Ops)
+				paint.ColorOp{Color: foreground}.Add(gtx.Ops)
 				textMaterial := mColor.Stop()
 
 				labelGtx := gtx

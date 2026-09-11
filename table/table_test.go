@@ -20,6 +20,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/table"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -88,13 +89,13 @@ func TestRowFnCalledOnlyForVisibleItems(t *testing.T) {
 			Header: "ID",
 			Cell: func(item int) layout.Widget {
 				calls++
-				return table.RenderTextCell(shaper, tokens.DefaultLight, tokens.DefaultTypography.BodyMedium, strconv.Itoa(item))
+				return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, strconv.Itoa(item))
 			},
 		},
 	}
 
 	w := table.Render(shaper, cols, items, table.Sort{Column: -1},
-		tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 	var ops op.Ops
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
@@ -117,13 +118,13 @@ func TestRowFnCalledOnlyForVisibleItems(t *testing.T) {
 // Sortable header (column 0) and confirms OnSort fires with column index
 // 0. With PxPerDp=1 and viewW=480, the table partitions [0, 480] into
 // three columns: ID (Width=80), Name (flexed, width = 480-80-120 = 280),
-// Value (Width=120). Header row occupies y∈[0, 36] (the Comfortable
-// control height).
+// Value (Width=120). The header row is one row of the grid, so it occupies
+// y∈[0, Density.RowHeight) — the platform's own row height, which the
+// click's y is derived from rather than written down.
 //
-// A click at (40, 22) lands on the Sortable ID header.
-// A click at (220, 22) lands on the Sortable Name header (column 1).
-// A click at (420, 22) lands on the non-Sortable Value header — should
-// not fire OnSort.
+// The first click lands on the Sortable ID header, the second on the
+// Sortable Name header (column 1), the third on the non-Sortable Value
+// header — which should not fire OnSort.
 func TestHeaderClickFiresOnSort(t *testing.T) {
 	shaper := defaultShaper(t)
 	var calls []int
@@ -154,9 +155,10 @@ func TestHeaderClickFiresOnSort(t *testing.T) {
 		driveFrame(w, ops, r, image.Pt(viewW, viewH))
 	}
 
-	clickAt(40, 22)  // ID header (sortable, col 0)
-	clickAt(220, 22) // Name header (sortable, col 1)
-	clickAt(420, 22) // Value header (NOT sortable)
+	headerMid := tokens.Comfortable.RowHeight / 2
+	clickAt(40, headerMid)  // ID header (sortable, col 0)
+	clickAt(220, headerMid) // Name header (sortable, col 1)
+	clickAt(420, headerMid) // Value header (NOT sortable)
 
 	want := []int{0, 1}
 	if !equalInts(calls, want) {
@@ -201,7 +203,7 @@ var rowNames = []string{"Tokens", "Density", "Elevation", "Motion"}
 // own padding and clamping.
 func textCell(shaper *text.Shaper, f func(int) string) func(int) layout.Widget {
 	return func(item int) layout.Widget {
-		return table.RenderTextCell(shaper, tokens.DefaultLight, tokens.DefaultTypography.BodyMedium, f(item))
+		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, f(item))
 	}
 }
 
@@ -236,13 +238,6 @@ func TestTableGolden(t *testing.T) {
 				Items:   rx.Of([]int{0, 1, 2, 3}),
 				Sort:    rx.Of(table.Sort{Column: 0, Asc: true}),
 				Shaper:  shaper,
-				// A specimen, deliberately lifted off the page it is shown
-				// on, so the grid has an edge in the image. The default
-				// level — the window pin, where a table that IS a window's
-				// content belongs — is pinned by
-				// TestLevelPicksTheStepThePlaneFillsAt instead, which can
-				// state the rule in tokens rather than in pixels.
-				Level: tokens.Level1,
 			}
 			w := liveWidget(t, table.Table(rx.Of(densityTheme(tc.density)), props))
 			golden.Render(t, tc.name, size, scene(w, lightBG))
@@ -260,7 +255,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 
 func cellAs(shaper *text.Shaper) func(int) layout.Widget {
 	return func(v int) layout.Widget {
-		return table.RenderTextCell(shaper, tokens.DefaultLight, tokens.DefaultTypography.BodyMedium, strconv.Itoa(v))
+		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, strconv.Itoa(v))
 	}
 }
 
@@ -276,31 +271,24 @@ func equalInts(a, b []int) bool {
 	return true
 }
 
-// TestLevelPicksTheStepThePlaneFillsAt pins what the table's level field
-// decides: the surface the grid is printed on. The zero value is the window's own content: a
-// table that raised itself one step by default would put the biggest thing
-// in a window level with the chrome framing it. Level1 is the opt-in for
-// a table that really is resting on chrome, or is a specimen lifted off a
-// page.
-//
-// The corner sampled is inside the table's rect and outside every cell's
-// text, over a sentinel no fill in this package resolves to, so a plane that
-// went unpainted would be caught as loudly as one painted at the wrong level.
-func TestLevelPicksTheStepThePlaneFillsAt(t *testing.T) {
+// TestThePlaneIsTheContentsFill pins what the table's plane is: the
+// platform's content fill, which is what a list, a table and a text view all
+// stand on. The corner sampled is inside the table's rect and outside every
+// cell's text, over a sentinel no fill in this package resolves to, so a
+// plane that went unpainted would be caught as loudly as one painted wrong.
+func TestThePlaneIsTheContentsFill(t *testing.T) {
 	shaper := defaultShaper(t)
 	sentinel := color.NRGBA{R: 255, G: 0, B: 255, A: 255}
 	size := image.Pt(360, 200)
 	cols := []table.Column[int]{
 		{Header: "ID", Width: unit.Dp(80), Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
 	}
-
 	for _, tc := range []struct {
-		name  string
-		level tokens.ElevationLevel
-		want  color.NRGBA
+		name   string
+		colors tokens.PlatformColors
+		theme  theme.Theme
 	}{
-		{"default is the window's own content", tokens.Level0, tokens.DefaultLight.SurfaceAt(tokens.Level0)},
-		{"level 1 is the semantic Surface", tokens.Level1, tokens.DefaultLight.SurfaceAt(tokens.Level1)},
+		{"light", tokens.PlatformLight, densityTheme(tokens.Comfortable)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			props := table.Props[int]{
@@ -308,25 +296,29 @@ func TestLevelPicksTheStepThePlaneFillsAt(t *testing.T) {
 				Items:   rx.Of([]int{0, 1, 2, 3}),
 				Sort:    rx.Of(table.Sort{Column: -1}),
 				Shaper:  shaper,
-				Level:   tc.level,
 			}
-			w := liveWidget(t, table.Table(rx.Of(densityTheme(tokens.Comfortable)), props))
+			w := liveWidget(t, table.Table(rx.Of(tc.theme), props))
 			img := golden.Capture(t, size, scene(w, sentinel))
 			got := pixelAt(img, size.X-2, size.Y-2)
 			if got == sentinel {
 				t.Fatalf("bottom-right pixel is the sentinel; the table painted no plane")
 			}
-			if got != tc.want {
-				t.Errorf("plane fill = %v, want %v", got, tc.want)
+			// The last body row may be striped, so either the content's own
+			// fill or the alternating one is the right answer here.
+			plain := tc.colors.ControlBackground
+			striped := vgcolor.Flatten(tc.colors.AlternatingContentBackground, plain)
+			if got != plain && got != striped {
+				t.Errorf("plane fill = %v, want the content %v or its alternating row %v", got, plain, striped)
 			}
 		})
 	}
 }
 
 // TestCurrentFillsTheChosenRow pins the other half of the same window: the
-// row the consumer names as current carries the Primary-tinted fill, and a
-// table asked to mark nothing marks nothing. The sample sits in the first
-// body row, past the one column's text, where only a row fill can reach.
+// row the consumer names as current carries the platform's selection fill,
+// and a table asked to mark nothing marks nothing. The sample sits in the
+// first body row, past the one column's text, where only a row fill can
+// reach. Row 0 is even, so it carries no alternating stripe either.
 func TestCurrentFillsTheChosenRow(t *testing.T) {
 	shaper := defaultShaper(t)
 	size := image.Pt(360, 200)
@@ -334,8 +326,8 @@ func TestCurrentFillsTheChosenRow(t *testing.T) {
 		{Header: "ID", Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
 	}
 	// Row 0 sits directly under the header band, and both bands are exactly
-	// Density.ControlHeight; PxPerDp is 1 here.
-	rowH := int(tokens.Comfortable.ControlHeight)
+	// Density.RowHeight; PxPerDp is 1 here.
+	rowH := int(tokens.Comfortable.RowHeight)
 	rowMid := image.Pt(size.X-8, rowH+rowH/2)
 
 	render := func(current func(int) bool) color.NRGBA {
@@ -351,13 +343,13 @@ func TestCurrentFillsTheChosenRow(t *testing.T) {
 		return pixelAt(img, rowMid.X, rowMid.Y)
 	}
 
-	surface := tokens.DefaultLight.SurfaceAt(tokens.Level0)
+	surface := tokens.PlatformLight.ControlBackground
 	if got := render(nil); got != surface {
 		t.Errorf("unmarked table row = %v, want the plane %v; a nil Current must mark nothing", got, surface)
 	}
-	want := tokens.DefaultLight.Ramps.Primary.Step(300)
+	want := tokens.PlatformLight.SelectedContentBackground
 	if got := render(func(i int) bool { return i == 0 }); got != want {
-		t.Errorf("current row = %v, want the Primary tint %v", got, want)
+		t.Errorf("current row = %v, want the platform's selection %v", got, want)
 	}
 	if got := render(func(i int) bool { return i == 1 }); got != surface {
 		t.Errorf("row 0 = %v while row 1 is current; the mark followed the wrong item", got)

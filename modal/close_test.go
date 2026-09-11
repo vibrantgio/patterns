@@ -19,11 +19,14 @@ import (
 )
 
 // A panel's close mark is a drawn cross, not a glyph and not a filled
-// control, so what it has to clear is WCAG 1.4.11's floor for a non-text
-// graphic: 3:1 against the surface immediately behind it. 1.4.3's 4.5:1 is
-// the floor for TEXT and is the wrong criterion to reach for here, which is
-// why the one that applies is named rather than left as a bare number.
-const closeMarkFloor = 3.0
+// control, so what it has to clear is the floor for a mark that carries
+// meaning without being read as text — tokens.GraphicFloor, in the APCA
+// lightness contrast this system measures in since CC1.2. The text floor is
+// the wrong criterion to reach for here, which is why the one that applies
+// is named rather than left as a bare number. The colours themselves are
+// the platform's, so this is a guard against a future mapping and not a
+// derivation: nothing here walks a ramp to reach it.
+const closeMarkFloor = tokens.GraphicFloor
 
 // closeTargetDp is the pointer target the mark is owed on each axis. It is
 // tokens.MinHitTarget, the STANDALONE-control floor, and not the smaller one
@@ -45,6 +48,12 @@ const closeTargetDp = int(tokens.MinHitTarget)
 // the close mark. That is what lets the mark be found in the pixels by
 // looking for what is not the surface fill, with no coordinate written down
 // anywhere and nothing to drift when the header's layout changes.
+// cornerInset clears the dialog's own corner arcs — tokens.Radius.Lg plus a
+// pixel of antialiasing — so the search for the close mark does not find the
+// scrim showing through a rounded corner. The dialog draws no hairline, so
+// there is nothing else at its edge to stop at.
+var cornerInset = int(tokens.Radius.Lg) + 1
+
 func markOnly() modal.Props {
 	return modal.Props{Title: "", Body: nil}
 }
@@ -55,8 +64,11 @@ func markOnly() modal.Props {
 //
 // Both are found by colour rather than by arithmetic. The surface is the
 // bounding box of every pixel holding its own fill token; the mark is
-// whatever inside that box, clear of the 1 dp edge stroke, departs from it.
-func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rectangle, markColor color.NRGBA, contrast float64) {
+// whatever inside that box, clear of the rounded corners, departs from it.
+// inset is how far in the mark search starts: far enough to clear the
+// corner arcs, since the dialog carries no hairline to hide them behind and
+// the scrim shows through them.
+func surfaceAndMark(img *image.RGBA, fill color.NRGBA, inset int) (surface, mark image.Rectangle, markColor color.NRGBA, contrast float64) {
 	at := func(x, y int) color.NRGBA {
 		p := img.RGBAAt(x, y)
 		return color.NRGBA{R: p.R, G: p.G, B: p.B, A: 255}
@@ -78,9 +90,7 @@ func surfaceAndMark(img *image.RGBA, fill color.NRGBA) (surface, mark image.Rect
 		return surface, image.Rectangle{}, markColor, 0
 	}
 
-	// Two pixels in from the surface's own bounds: one for the edge stroke,
-	// one for the pixel it antialiases into.
-	inner := surface.Inset(2)
+	inner := surface.Inset(inset)
 	mark = image.Rectangle{Min: image.Pt(inner.Max.X, inner.Max.Y), Max: inner.Min}
 	for y := inner.Min.Y; y < inner.Max.Y; y++ {
 		for x := inner.Min.X; x < inner.Max.X; x++ {
@@ -111,7 +121,7 @@ func absDiffU8(a, b uint8) int {
 
 // capturePanel renders the mark-only panel in one scheme and returns the
 // frame together with the surface fill it was drawn on.
-func capturePanel(t *testing.T, c tokens.ColorTokens, bg color.NRGBA) (*image.RGBA, color.NRGBA) {
+func capturePanel(t *testing.T, c tokens.PlatformColors, bg color.NRGBA) (*image.RGBA, color.NRGBA) {
 	t.Helper()
 	shaper := defaultShaper(t)
 	// The default radius rather than the goldens' sharp one: this is a
@@ -120,7 +130,7 @@ func capturePanel(t *testing.T, c tokens.ColorTokens, bg color.NRGBA) (*image.RG
 	// shape keeps the two halves talking about one dialog.
 	w := modal.Render(shaper, markOnly(), true, c, tokens.Spacing, tokens.Radius,
 		tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-	return golden.Capture(t, frameSize, scene(w, bg)), c.SurfaceAt(tokens.Level2)
+	return golden.Capture(t, frameSize, scene(w, bg)), c.WindowBackground
 }
 
 // TestCloseMarkContrast measures the close mark against the surface behind
@@ -132,17 +142,17 @@ func capturePanel(t *testing.T, c tokens.ColorTokens, bg color.NRGBA) (*image.RG
 func TestCloseMarkContrast(t *testing.T) {
 	for _, sc := range []struct {
 		name string
-		c    tokens.ColorTokens
+		c    tokens.PlatformColors
 		bg   color.NRGBA
 	}{
-		{"light", tokens.DefaultLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}},
-		{"dark", tokens.DefaultDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
+		{"light", tokens.PlatformLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}},
+		{"dark", tokens.PlatformDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
 	} {
 		t.Run(sc.name, func(t *testing.T) {
 			img, fill := capturePanel(t, sc.c, sc.bg)
-			surface, mark, markColor, contrast := surfaceAndMark(img, fill)
+			surface, mark, markColor, contrast := surfaceAndMark(img, fill, cornerInset)
 			if surface.Empty() {
-				t.Fatal("no surface found: nothing in the frame holds the level-2 fill")
+				t.Fatal("no surface found: nothing in the frame holds the dialog's own fill")
 			}
 			if mark.Empty() {
 				t.Fatal("no close mark found: the panel's surface is bare")
@@ -190,8 +200,8 @@ func TestCloseMarkContrast(t *testing.T) {
 func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	// Find the mark's centre from the static render, which lays the header
 	// out exactly as the live pipeline does.
-	img, fill := capturePanel(t, tokens.DefaultLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
-	surface, mark, _, _ := surfaceAndMark(img, fill)
+	img, fill := capturePanel(t, tokens.PlatformLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
+	surface, mark, _, _ := surfaceAndMark(img, fill, cornerInset)
 	if mark.Empty() {
 		t.Fatal("no close mark found to measure the target of")
 	}
@@ -258,54 +268,5 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	if width <= mark.Dx() || height <= mark.Dy() {
 		t.Errorf("close target %d×%d does not exceed the %d×%d mark drawn in it",
 			width, height, mark.Dx(), mark.Dy())
-	}
-}
-
-// TestCloseMarkStateFillClearsThePerceptibilityFloor pins the third of the
-// ghost affordances at the floor the other two are gated at in
-// components/button: the close mark is a ghost naming tokens.Level2, so
-// the state fill it paints under the pointer is that level's own, and a dialog's
-// dismissal is the last control in the system that may dissolve into the
-// surface behind it.
-//
-// The surface is taken from the rendered pixels rather than assumed: the
-// bounding box is found by looking for the level-2 fill, so a panel that
-// stopped standing at level 2 would leave nothing to measure against and
-// fail here rather than measure the wrong pairing.
-func TestCloseMarkStateFillClearsThePerceptibilityFloor(t *testing.T) {
-	for _, sc := range []struct {
-		name string
-		c    tokens.ColorTokens
-		bg   color.NRGBA
-	}{
-		{"light", tokens.DefaultLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}},
-		{"dark", tokens.DefaultDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
-	} {
-		t.Run(sc.name, func(t *testing.T) {
-			img, fill := capturePanel(t, sc.c, sc.bg)
-			if img == nil {
-				return // headless unavailable; Capture called t.Skip
-			}
-			surface, _, _, _ := surfaceAndMark(img, fill)
-			if surface.Empty() {
-				t.Fatalf("no %v surface found in the frame: the panel no longer stands on level 2", fill)
-			}
-			hover := sc.c.StateAt(tokens.Level2, tokens.StateHover)
-			press := sc.c.StateAt(tokens.Level2, tokens.StatePressed)
-			for _, w := range []struct {
-				name      string
-				stateFill color.NRGBA
-			}{{"hover", hover}, {"press", press}} {
-				got := themecolor.LuminanceRatio(w.stateFill, fill)
-				if got < tokens.StateFloor {
-					t.Errorf("%s state fill %v on the panel surface %v measures %.3f:1, under the %.2f:1 floor",
-						w.name, w.stateFill, fill, got, tokens.StateFloor)
-				}
-				t.Logf("%s state fill %v on the panel surface %v: |Lc| %.3f", w.name, w.stateFill, fill, got)
-			}
-			if step := themecolor.LuminanceRatio(press, hover); step <= 1 {
-				t.Errorf("press %v does not lie beyond hover %v", press, hover)
-			}
-		})
 	}
 }

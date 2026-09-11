@@ -1,13 +1,10 @@
-// Package card provides the Patterns Card pattern: one rounded surface
-// raised a step above the surface it stands on, with optional Header /
-// Body / Footer slots.
+// Package card provides the Patterns Card pattern: the platform's grouped
+// box — one rounded surface whose fill is a small step from the surface it
+// stands on — with optional Header / Body / Footer slots.
 //
-// A card singles something out, and the raise is the whole of how it does
-// it: no hairline of its own, never outlined, never wearing a role. What
-// the developer wants to say about a card is a badge in its header. Where
-// the scheme has no lighter step left, the raise is told by a seam at the
-// card's edge instead of by its fill — that is the elevation's rule for
-// every raise, not an outline.
+// A card singles something out, and the box is the whole of how it does it:
+// no hairline of its own, never outlined, never wearing a role. What the
+// developer wants to say about a card is a badge in its header.
 //
 // A card is raised, not floating, so it casts no shadow: a shadow marks
 // what floats and can leave (a toast, a menu), which a card is not. It
@@ -51,13 +48,6 @@ type Props struct {
 	Header layout.Widget
 	Body   layout.Widget
 	Footer layout.Widget
-
-	// Level is the level of the surface the card stands on, and the card
-	// fills one step above it. The zero value is the content, which is
-	// where most cards stand; a card inside a dialog names Level2 and
-	// comes out one step above the dialog rather than one step above a
-	// content plane it is nowhere near.
-	Level tokens.ElevationLevel
 }
 
 // Card returns an rx.Observable[layout.Widget] that emits a new one
@@ -67,9 +57,9 @@ type Props struct {
 func Card(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Elevation),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.ElevationScale]) resolvedTokens {
-				return resolvedTokens{color: n.First, spacing: n.Second, radius: n.Third, elevation: n.Fourth}
+			rx.CombineLatest3(t.Platform, t.Spacing, t.Radius),
+			func(n rx.Tuple3[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale]) resolvedTokens {
+				return resolvedTokens{color: n.First, spacing: n.Second, radius: n.Third}
 			},
 		)
 	})
@@ -81,33 +71,28 @@ func Card(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // Render produces a layout.Widget for a card with pre-resolved tokens.
 // Intended for golden-image testing and static demonstrations; production
 // code should use Card.
-func Render(props Props, colors tokens.ColorTokens, sp tokens.SpacingScale, rad tokens.RadiusScale) layout.Widget {
+func Render(props Props, colors tokens.PlatformColors, sp tokens.SpacingScale, rad tokens.RadiusScale) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawCard(gtx, props, colors, sp, rad)
 	}
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	// elevation is snapshotted so a theme elevation change re-emits the
-	// layout.Widget; the fills themselves resolve through SurfaceAt, which reads
-	// the default tokens.Elevation scale.
-	elevation tokens.ElevationScale
 }
 
-func drawCard(gtx layout.Context, props Props, colors tokens.ColorTokens, sp tokens.SpacingScale, rad tokens.RadiusScale) layout.Dimensions {
+func drawCard(gtx layout.Context, props Props, colors tokens.PlatformColors, sp tokens.SpacingScale, rad tokens.RadiusScale) layout.Dimensions {
 	size := gtx.Constraints.Max
 	bounds := image.Rectangle{Max: size}
 	r := gtx.Dp(unit.Dp(rad.Lg))
 	gap := gtx.Dp(unit.Dp(sp.S3))
 
-	// The card is raised by one tonal step walked from the surface it
-	// stands on, and casts no shadow. Where the scheme has no step left,
-	// the raise is told by the seam at its own edge instead — that is the
-	// elevation's rule for every raise, not an outline.
-	surface.Card(gtx, bounds, r, colors.RaisedOn(colors.SurfaceAt(props.Level)))
+	// The platform's box: a small step of fill from the surface the card
+	// stands on, darker in light and lighter in dark, with no hairline and
+	// no shadow.
+	surface.Card(gtx, bounds, r, colors.CardFill)
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return stack(gtx, gap, props.Header, props.Body, props.Footer)

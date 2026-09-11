@@ -40,7 +40,7 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
-	"github.com/vibrantgio/patterns/internal/outline"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -105,7 +105,7 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	quote   tokens.TextStyle // the BodyLarge role: typeface, weight, size, line height
@@ -123,8 +123,8 @@ func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layou
 	// styles and the theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Radius, t.Typography),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Radius, t.Typography),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
 					color:   n.First,
@@ -166,7 +166,7 @@ func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layou
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	typo tokens.Typography,
@@ -222,9 +222,10 @@ func drawGrid(gtx layout.Context, shaper *text.Shaper, items []Item, tok resolve
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
 }
 
-// drawCard draws one testimonial card: a rounded Surface filled to its
+// drawCard draws one testimonial card: the platform's box filled to its
 // allocated width with content height matching the inner stack plus S5
-// padding on all sides, framed with a 1 dp neutral step-500 stroke.
+// padding on all sides. No hairline and no shadow — the box's own step of
+// fill is the whole of what singles it out.
 func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTokens) layout.Dimensions {
 	pad := gtx.Dp(unit.Dp(tok.spacing.S5))
 	width := gtx.Constraints.Max.X
@@ -242,15 +243,9 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
-	// The card fills at the raise walked from the content and its edge is
-	// derived against that fill, rather than named at a step that means two
-	// different contrasts in the two schemes. The edge is derived against
-	// the fill the card actually paints, or it is derived against a fill
-	// that is not there.
-	fill := tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill
-	paint.FillShape(gtx.Ops, fill, rrect.Op(gtx.Ops))
-	strokeW := float32(gtx.Dp(unit.Dp(1)))
-	paint.FillShape(gtx.Ops, outline.Color(tok.color, fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: strokeW}.Op())
+	// A testimonial is a card, so it wears the platform's box: one step of
+	// fill from the content it stands on, no hairline and no shadow.
+	paint.FillShape(gtx.Ops, tok.color.CardFill, rrect.Op(gtx.Ops))
 
 	off := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
 	contentCall.Add(gtx.Ops)
@@ -293,7 +288,10 @@ func quoteGlyphWidget(tok resolvedTokens) layout.Widget {
 		path.Begin(gtx.Ops)
 		appendComma(&path, 0, 0, commaW, h)
 		appendComma(&path, commaW+gap, 0, commaW, h)
-		paint.FillShape(gtx.Ops, tok.color.Primary, clip.Outline{Path: path.End()}.Op())
+		// The opening quotation mark is decoration, not a mark carrying
+		// meaning, so it is set at the platform's third label strength over
+		// the card's own fill rather than in the accent.
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.TertiaryLabel, tok.color.CardFill), clip.Outline{Path: path.End()}.Op())
 
 		return layout.Dimensions{Size: image.Pt(totalW, h)}
 	}
@@ -322,7 +320,7 @@ func quoteBodyWidget(shaper *text.Shaper, label string, tok resolvedTokens) layo
 			return layout.Dimensions{}
 		}
 		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: tok.color.Text}.Add(gtx.Ops)
+		paint.ColorOp{Color: vgcolor.Flatten(tok.color.Label, tok.color.CardFill)}.Add(gtx.Ops)
 		material := mColor.Stop()
 		wl := typeset.Label(tok.quote, 4)
 		return typeset.Layout(gtx, shaper, wl, typeset.Font(tok.quote, font.Normal), unit.Sp(tok.quote.Size), label, material)
@@ -340,8 +338,8 @@ func authorBlockWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layou
 			layout.Rigid(pllayout.HSpacer(tok.spacing.S3)),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return pllayout.Col(gtx,
-					textWidget(shaper, item.AuthorName, tok.color.Text, tok.body, font.SemiBold),
-					textWidget(shaper, item.AuthorRole, tok.color.Ramps.Neutral.Step(700), tok.small, font.Normal),
+					textWidget(shaper, item.AuthorName, vgcolor.Flatten(tok.color.Label, tok.color.CardFill), tok.body, font.SemiBold),
+					textWidget(shaper, item.AuthorRole, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.CardFill), tok.small, font.Normal),
 				)
 			}),
 		)
@@ -369,15 +367,15 @@ func avatarWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Wid
 }
 
 // drawPlaceholder paints a hollow circle of diameter `size` and, when name is
-// non-empty, the first rune centred inside it in BodyMedium neutral 700. The
-// circle is hollow, so the surface on both sides of its line is the card's own
-// Surface fill — level 1 — and the line is derived against that
-// rather than named at a level.
+// non-empty, the first rune centred inside it in the platform's secondary
+// label. The circle is hollow, so the surface on both sides of its line is
+// the card's own fill, which is what the platform's separator is flattened
+// onto.
 func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size int, tok resolvedTokens) {
 	r := size / 2
 	stroke := float32(gtx.Dp(unit.Dp(1)))
 	circle := clip.RRect{Rect: image.Rectangle{Max: image.Pt(size, size)}, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, outline.Color(tok.color, tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)).Fill), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
+	paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.Separator, tok.color.CardFill), clip.Stroke{Path: circle.Path(gtx.Ops), Width: stroke}.Op())
 	if name == "" {
 		return
 	}
@@ -390,7 +388,7 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 	letterGtx := gtx
 	letterGtx.Constraints = layout.Constraints{Max: image.Pt(size, size)}
 	mColor := op.Record(gtx.Ops)
-	paint.ColorOp{Color: tok.color.Ramps.Neutral.Step(700)}.Add(gtx.Ops)
+	paint.ColorOp{Color: vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.CardFill)}.Add(gtx.Ops)
 	material := mColor.Stop()
 	mLabel := op.Record(gtx.Ops)
 	wl := typeset.Label(tok.body, 1)

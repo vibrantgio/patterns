@@ -119,13 +119,13 @@ func TestPopoverGolden(t *testing.T) {
 	cases := []struct {
 		name      string
 		placement popover.Placement
-		colors    tokens.ColorTokens
+		colors    tokens.PlatformColors
 		bg        color.NRGBA
 	}{
-		{"top-light", popover.Top, tokens.DefaultLight, lightBG},
-		{"bottom-light", popover.Bottom, tokens.DefaultLight, lightBG},
-		{"left-dark", popover.Left, tokens.DefaultDark, darkBG},
-		{"right-dark", popover.Right, tokens.DefaultDark, darkBG},
+		{"top-light", popover.Top, tokens.PlatformLight, lightBG},
+		{"bottom-light", popover.Bottom, tokens.PlatformLight, lightBG},
+		{"left-dark", popover.Left, tokens.PlatformDark, darkBG},
+		{"right-dark", popover.Right, tokens.PlatformDark, darkBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -146,10 +146,10 @@ func TestPopoverGolden(t *testing.T) {
 func TestPopoverOpenAndClosedDiffer(t *testing.T) {
 	anchor := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	props := popover.Props{Anchor: anchor, Content: textContent(t, tokens.DefaultLight.Text), Placement: popover.Top}
+	props := popover.Props{Anchor: anchor, Content: textContent(t, tokens.PlatformLight.Text), Placement: popover.Top}
 
-	open := popover.Render(props, true, tokens.DefaultLight, tokens.Spacing, sharpRadius)
-	closed := popover.Render(props, false, tokens.DefaultLight, tokens.Spacing, sharpRadius)
+	open := popover.Render(props, true, tokens.PlatformLight, tokens.Spacing, sharpRadius)
+	closed := popover.Render(props, false, tokens.PlatformLight, tokens.Spacing, sharpRadius)
 
 	imgOpen := golden.Capture(t, frameSize, scene(open, bg))
 	imgClosed := golden.Capture(t, frameSize, scene(closed, bg))
@@ -582,7 +582,7 @@ func drawnRun(img *image.RGBA, y int, bg color.NRGBA) (lo, hi int, ok bool) {
 // standard scene and returns the capture plus the surface fill to look for.
 func placementScene(t *testing.T, align popover.Alignment, contentW float32, room int) (*image.RGBA, color.NRGBA) {
 	t.Helper()
-	colors := tokens.DefaultLight
+	colors := tokens.PlatformLight
 	props := popover.Props{
 		Anchor:    fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
 		Content:   fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, contentW, 36),
@@ -591,7 +591,7 @@ func placementScene(t *testing.T, align popover.Alignment, contentW float32, roo
 	}
 	w := popover.Render(props, true, colors, tokens.Spacing, sharpRadius)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	return golden.Capture(t, frameSize, scene(inRoom(w, room), bg)), colors.SurfaceAt(tokens.Level3)
+	return golden.Capture(t, frameSize, scene(inRoom(w, room), bg)), colors.WindowBackground
 }
 
 // TestSurfaceIsNudgedBackInsideTheFrame is the reflow contract: a surface
@@ -733,8 +733,8 @@ func coveredScene(w layout.Widget, bg color.NRGBA) layout.Widget {
 // surface and its tail stand above the sibling laid out after the popover's
 // slot, so not one pixel of the cover survives inside the surface.
 func TestSurfaceIsWholeOverALaterSibling(t *testing.T) {
-	colors := tokens.DefaultLight
-	fill := colors.SurfaceAt(tokens.Level3)
+	colors := tokens.PlatformLight
+	fill := colors.WindowBackground
 	content := color.NRGBA{R: 120, G: 120, B: 120, A: 255}
 	props := popover.Props{
 		Anchor:    fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),

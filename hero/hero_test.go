@@ -112,31 +112,31 @@ func TestHeroGolden(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		bg     color.NRGBA
 		props  hero.Props
 	}{
 		{
 			name:   "light-text-only",
-			colors: tokens.DefaultLight,
+			colors: tokens.PlatformLight,
 			bg:     lightBG,
 			props:  heroText(shaper),
 		},
 		{
 			name:   "dark-text-only",
-			colors: tokens.DefaultDark,
+			colors: tokens.PlatformDark,
 			bg:     darkBG,
 			props:  heroText(shaper),
 		},
 		{
 			name:   "light-with-visual",
-			colors: tokens.DefaultLight,
+			colors: tokens.PlatformLight,
 			bg:     lightBG,
 			props:  withVisual(heroText(shaper), visual),
 		},
 		{
 			name:   "light-eyebrow-and-dual-cta",
-			colors: tokens.DefaultLight,
+			colors: tokens.PlatformLight,
 			bg:     lightBG,
 			props:  withEyebrowAndCTAs(heroText(shaper)),
 		},
@@ -158,8 +158,8 @@ func TestHeroVisualSlotShiftsLayout(t *testing.T) {
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	visual := fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 120)
 
-	textOnly := hero.Render(shaper, heroText(shaper), tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
-	split := hero.Render(shaper, withVisual(heroText(shaper), visual), tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+	textOnly := hero.Render(shaper, heroText(shaper), tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+	split := hero.Render(shaper, withVisual(heroText(shaper), visual), tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 
 	imgA := golden.Capture(t, frameSize, scene(textOnly, bg))
 	imgB := golden.Capture(t, frameSize, scene(split, bg))
@@ -175,8 +175,8 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
 	props := withEyebrowAndCTAs(heroText(shaper))
-	light := hero.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
-	dark := hero.Render(shaper, props, tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+	light := hero.Render(shaper, props, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+	dark := hero.Render(shaper, props, tokens.PlatformDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 
 	imgLight := golden.Capture(t, frameSize, scene(light, bg))
 	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
@@ -189,20 +189,20 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 // than a cap: a label wider than the floor must grow the button rather than
 // being clipped to it.
 //
-// The measurement is the filled CTA's own pixels: the widest unbroken run of
-// the Primary fill on any scanline is the button's width, since the button is
-// the only Primary-filled block in a hero and sharpRadius keeps its corners
-// square. A short label must sit at the 120 dp floor; a long one must be wider
-// than the floor and wide enough for its label plus both paddings.
+// The measurement is the default CTA's own pixels: the widest unbroken run of
+// the accent fill on any scanline is the button's width, since the default
+// action is the only accent-filled block in a hero and sharpRadius keeps its
+// corners square. A short label must sit at the 120 dp floor; a long one must
+// be wider than the floor and wide enough for its label plus both paddings.
 func TestLongCTALabelGrowsTheButton(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	fill := tokens.DefaultLight.SolidStateColor(tokens.RolePrimary, tokens.StateNormal)
+	fill := tokens.PlatformLight.ControlAccent
 
 	ctaWidth := func(label string) int {
 		p := heroText(shaper)
 		p.PrimaryCTA = &hero.CTA{Label: label}
-		w := hero.Render(shaper, p, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+		w := hero.Render(shaper, p, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 		img := golden.Capture(t, frameSize, scene(w, bg))
 		return widestRunOf(img, fill)
 	}
@@ -217,10 +217,13 @@ func TestLongCTALabelGrowsTheButton(t *testing.T) {
 		t.Errorf("short CTA drew %d px wide, want the %d px intrinsic floor", short, floor)
 	}
 
-	long := ctaWidth("Read the docs")
+	// Long enough to drive the width at the platform's 8 dp inset: the
+	// floor is 120 px and the label plus both insets has to beat it.
+	const longLabel = "Read the documentation"
+	long := ctaWidth(longLabel)
 	if long <= floor {
 		t.Errorf("CTA labelled %q drew %d px wide, still at or under the %d px floor: the label is being clipped to the cell instead of sizing it",
-			"Read the docs", long, floor)
+			longLabel, long, floor)
 	}
 	if long <= short {
 		t.Errorf("a long CTA label (%d px) is no wider than a short one (%d px)", long, short)

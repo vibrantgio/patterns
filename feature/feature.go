@@ -36,6 +36,7 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -80,7 +81,7 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	title   tokens.TextStyle // the TitleMedium role: typeface, weight, size, line height
 	body    tokens.TextStyle // the BodyMedium role
@@ -101,8 +102,8 @@ func Feature(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	// styles and the theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest3(t.Color, t.Spacing, t.Typography),
-			func(n rx.Tuple3[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography]) resolvedTokens {
+			rx.CombineLatest3(t.Platform, t.Spacing, t.Typography),
+			func(n rx.Tuple3[tokens.PlatformColors, tokens.SpacingScale, tokens.Typography]) resolvedTokens {
 				typ := n.Third
 				return resolvedTokens{
 					color:   n.First,
@@ -144,7 +145,7 @@ func Feature(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	typo tokens.Typography,
 ) layout.Widget {
@@ -333,13 +334,13 @@ func iconCellWidget(icon layout.Widget, tok resolvedTokens) layout.Widget {
 // titleWidget renders the title in the TitleMedium role in Text. A zero
 // style weight falls back to SemiBold.
 func titleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, tok.color.Text, tok.title, font.SemiBold)
+	return textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
 }
 
 // bodyWidget renders the body in the BodyMedium role in the low-contrast
 // text step (neutral 700).
 func bodyWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, tok.color.Ramps.Neutral.Step(700), tok.body, font.Normal)
+	return textWidget(shaper, label, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.body, font.Normal)
 }
 
 // textWidget renders a wrapped label in the supplied colour and text

@@ -55,8 +55,9 @@ func testIcon() layout.Widget {
 	}
 }
 
-// itemLabels names the navigation items in document order, twelve deep so the
-// overflow goldens read as twelve distinct rows rather than twelve copies.
+// itemLabels names the navigation items in document order, twenty deep so
+// the overflow goldens read as distinct rows rather than copies and so that
+// a rail of them overruns the test frame at the platform's 20 dp row.
 // Latin text in Roboto rasterises identically on every machine via
 // DeterministicShaper; ASCII only — no symbol reaches a stored image.
 //
@@ -67,6 +68,8 @@ func testIcon() layout.Widget {
 var itemLabels = []string{
 	"Overview", "Tokens", "Colour", "Type", "Density", "Motion",
 	"Elevation", "Icons", "Layout", "Forms", "Tables", "Charts",
+	"Lists", "Menus", "Panes", "Sheets", "Toasts", "Badges",
+	"Fields", "Buttons",
 }
 
 // navItems returns n items with the default icon, labelled in order, and the
@@ -99,14 +102,14 @@ func TestSidebarGolden(t *testing.T) {
 	cases := []struct {
 		name      string
 		collapsed bool
-		colors    tokens.ColorTokens
+		colors    tokens.PlatformColors
 		bg        color.NRGBA
 		size      image.Point
 		activeIdx int
 	}{
-		{"light-expanded", false, tokens.DefaultLight, lightBG, expandedSize, -1},
-		{"light-collapsed", true, tokens.DefaultLight, lightBG, collapsedSize, -1},
-		{"dark-expanded-active-second", false, tokens.DefaultDark, darkBG, expandedSize, 1},
+		{"light-expanded", false, tokens.PlatformLight, lightBG, expandedSize, -1},
+		{"light-collapsed", true, tokens.PlatformLight, lightBG, collapsedSize, -1},
+		{"dark-expanded-active-second", false, tokens.PlatformDark, darkBG, expandedSize, 1},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -132,7 +135,7 @@ func TestSidebarActiveTintIsVisible(t *testing.T) {
 	// unwinds the subtest's goroutine while marking the parent skipped, and the
 	// testing package reports it as "subtest may have called FailNow on a
 	// parent test" — a failure, not a skip.
-	render := func(t *testing.T, activeIdx int, colors tokens.ColorTokens) *image.RGBA {
+	render := func(t *testing.T, activeIdx int, colors tokens.PlatformColors) *image.RGBA {
 		t.Helper()
 		props := sidebar.Props{Items: navItems(2, activeIdx), Shaper: shaper}
 		w := sidebar.Render(shaper, props, false, colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
@@ -141,10 +144,10 @@ func TestSidebarActiveTintIsVisible(t *testing.T) {
 
 	for _, c := range []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 	}{
-		{"light", tokens.DefaultLight},
-		{"dark", tokens.DefaultDark},
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			def := render(t, -1, c.colors)
@@ -222,10 +225,11 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 	driveFrame(w, ops, r, expandedSize)
 	driveFrame(w, ops, r, expandedSize)
 
-	// Click item 0 → fires item 0 and gives it focus. With the
-	// density pitch (Comfortable ControlHeight = 36) the toggle occupies
-	// y∈[0,36) and item 0 y∈[36,72); (96, 54) lands mid-item-0.
-	hit := f32.Pt(96, 54)
+	// Click item 0 → fires item 0 and gives it focus. The toggle is a
+	// control, the items are rows, so the two take different heights: the
+	// toggle occupies y∈[0,ControlHeight) and item 0 the RowHeight under
+	// it. The point is derived rather than written down.
+	hit := f32.Pt(96, float32(itemMid(0)))
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
@@ -264,18 +268,17 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 // TestSidebarKeyboardReachesAnItemNeverLaidOut verifies that keyboard
 // traversal reaches an item the scroll region has never laid out.
 //
-// Twelve items in a 256 px rail at Comfortable: the toggle takes the
-// first 36 px and each item 36 more, so the last row a frame could
-// possibly lay out starts at y=36+36×6=252 and item 11 would start at
-// y=432 — 176 px past the bottom of the frame. It is not merely
-// offscreen, it has never existed: no clip area, no focus tag, nothing
-// for Tab to find.
+// Twenty items in a 256 px rail at Comfortable: the toggle takes the
+// control height and each item the platform's row height, so the last item
+// starts well past the bottom of the frame. It is not merely offscreen, it
+// has never existed: no clip area, no focus tag, nothing for Tab to find.
+// The guard below states that in the tokens rather than in numbers.
 //
-// End must select item 11 anyway, and Enter must fire its OnClick.
+// End must select the last item anyway, and Enter must fire its OnClick.
 func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
-	const n = 12
-	const rowH = 36 // tokens.Comfortable.ControlHeight at PxPerDp=1
-	if top := rowH + rowH*(n-1); top <= frameH {
+	const n = 20
+	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(tokens.Comfortable.RowHeight)
+	if top := toggleH + rowH*(n-1); top <= frameH {
 		t.Fatalf("item %d starts at y=%d, inside the %d px frame; this test needs it to be unlaid-out",
 			n-1, top, frameH)
 	}
@@ -294,9 +297,8 @@ func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	driveFrame(w, ops, r, expandedSize)
 	driveFrame(w, ops, r, expandedSize)
 
-	// Seed the rail's focus the way a user does: click item 0, which sits
-	// at y∈[36,72).
-	hit := f32.Pt(96, 54)
+	// Seed the rail's focus the way a user does: click item 0.
+	hit := f32.Pt(96, float32(itemMid(0)))
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
@@ -362,7 +364,7 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 	// Active=1: the seed reaches the same highlight the Render path draws.
 	live := golden.Capture(t, expandedSize, scene(w, bg))
 	static := sidebar.Render(shaper, sidebar.Props{Items: navItems(3, 1), Shaper: shaper},
-		false, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		false, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 	want := golden.Capture(t, expandedSize, scene(static, bg))
 	if live != nil && want != nil {
 		if d := golden.PixelDiff(live, want); d != 0 {
@@ -411,7 +413,7 @@ func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 	driveFrame(w, ops, r, expandedSize)
 	driveFrame(w, ops, r, expandedSize)
 
-	hit := f32.Pt(96, 24)
+	hit := f32.Pt(96, float32(int(tokens.Comfortable.ControlHeight)/2))
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
 		pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
@@ -465,7 +467,10 @@ func indexIcon(i int) layout.Widget {
 // moving the list, the golden would silently pin the top view.
 func TestSidebarOverflowGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	const n = 12
+	// Enough rows to overrun the frame at BOTH densities: the platform's
+	// row is 20 dp Comfortable and 19 Compact, and the rail is 256 px less
+	// the toggle.
+	const n = 16
 
 	cases := []struct {
 		name      string
@@ -519,4 +524,12 @@ func TestSidebarOverflowGolden(t *testing.T) {
 			golden.Render(t, tc.name, tc.size, scene(w, lightBG))
 		})
 	}
+}
+
+// itemMid is the y of the middle of item i in a Comfortable rail at
+// PxPerDp 1: the toggle takes the control height at the top and every item
+// below it takes the platform's row height.
+func itemMid(i int) int {
+	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(tokens.Comfortable.RowHeight)
+	return toggleH + i*rowH + rowH/2
 }

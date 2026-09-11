@@ -77,7 +77,7 @@ func TestShellThreeColumnConcurrentWidthEmissions(t *testing.T) {
 	widthIn, widthObs := rx.Subject[unit.Dp](0, 1, 128)
 	props := shell.Props{
 		Layout:     shell.ThreeColumn,
-		Aside:      rx.Of[layout.Widget](fillRect(tokens.DefaultLight.Primary)),
+		Aside:      rx.Of[layout.Widget](fillRect(tokens.PlatformLight.SelectedContentBackground)),
 		AsideWidth: widthObs,
 	}
 	sh := shell.Shell(rx.Of(theme.Default()), props)

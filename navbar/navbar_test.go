@@ -77,12 +77,12 @@ func TestNavbarGolden(t *testing.T) {
 	cases := []struct {
 		name   string
 		links  []navbar.Link
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		bg     color.NRGBA
 	}{
-		{"light-default", defaultLinks, tokens.DefaultLight, lightBG},
-		{"dark-default", defaultLinks, tokens.DefaultDark, darkBG},
-		{"light-active-second-link", activeSecond, tokens.DefaultLight, lightBG},
+		{"light-default", defaultLinks, tokens.PlatformLight, lightBG},
+		{"dark-default", defaultLinks, tokens.PlatformDark, darkBG},
+		{"light-active-second-link", activeSecond, tokens.PlatformLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestNavbarActiveVsDefaultDiffer(t *testing.T) {
 
 	render := func(links []navbar.Link) *image.RGBA {
 		props := navbar.Props{Links: links, Shaper: shaper}
-		w := navbar.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		w := navbar.Render(shaper, props, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
@@ -414,12 +414,12 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 			Actions: []layout.Widget{fillRect(actionColor, 30, actionH)},
 			Shaper:  shaper,
 		}
-		w := navbar.Render(shaper, props, tokens.DefaultLight, tokens.Spacing, style, d)
+		w := navbar.Render(shaper, props, tokens.PlatformLight, tokens.Spacing, style, d)
 		img := golden.Capture(t, image.Pt(frameW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
 
 		brandTop, brandBottom := colorBand(img, brandColor)
 		actionTop, actionBottom := colorBand(img, actionColor)
-		_, underlineBottom := colorBand(img, tokens.DefaultLight.Primary)
+		_, underlineBottom := colorBand(img, tokens.PlatformLight.SelectedContentBackground)
 		if brandTop < 0 || actionTop < 0 || underlineBottom < 0 {
 			t.Fatalf("bar %d px: brand, action or underline did not draw (%d, %d, %d); this proves nothing",
 				h, brandTop, actionTop, underlineBottom)
@@ -454,7 +454,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 // report an overflow; only the pixels can. This reads them.
 func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 	style := tokens.DefaultTypography.LabelLarge
-	primary := tokens.DefaultLight.Primary
+	mark := tokens.PlatformLight.SelectedContentBackground
 
 	for _, d := range []tokens.Density{tokens.Comfortable, tokens.Compact} {
 		props := navbar.Props{
@@ -469,7 +469,7 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 		for y := 0; y < h; y++ {
 			for x := 0; x < frameW; x++ {
 				r, g, b, _ := img.At(x, y).RGBA()
-				if uint8(r>>8) == primary.R && uint8(g>>8) == primary.G && uint8(b>>8) == primary.B {
+				if uint8(r>>8) == mark.R && uint8(g>>8) == mark.G && uint8(b>>8) == mark.B {
 					lowest = y
 					break
 				}

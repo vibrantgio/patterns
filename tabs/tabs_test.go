@@ -20,6 +20,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/tabs"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -93,12 +94,12 @@ func TestTabsGolden(t *testing.T) {
 		name     string
 		tabs     []tabs.Tab
 		selected int
-		colors   tokens.ColorTokens
+		colors   tokens.PlatformColors
 		bg       color.NRGBA
 	}{
-		{"light-three-tabs-first-selected", threeTabs(), 0, tokens.DefaultLight, lightBG},
-		{"dark-three-tabs-second-selected", threeTabs(), 1, tokens.DefaultDark, darkBG},
-		{"light-single-tab", singleTab(), 0, tokens.DefaultLight, lightBG},
+		{"light-three-tabs-first-selected", threeTabs(), 0, tokens.PlatformLight, lightBG},
+		{"dark-three-tabs-second-selected", threeTabs(), 1, tokens.PlatformDark, darkBG},
+		{"light-single-tab", singleTab(), 0, tokens.PlatformLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -118,67 +119,60 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 
 	render := func(selected int) *image.RGBA {
 		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper}
-		w := tabs.Render(shaper, props, selected, tokens.DefaultLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		w := tabs.Render(shaper, props, selected, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
 	none := render(-1)
 	first := render(0)
 	if n := golden.PixelDiff(none, first); n == 0 {
-		t.Errorf("selected and unselected render identically; expected Primary underline pixels")
+		t.Errorf("selected and unselected render identically; expected the selection-coloured underline")
 	}
 }
 
-// TestTheStripStandsOneStepOverThePanel guards the pattern's two areas.
-// The panel is content and fills at `Props.Level`; the strip is trim and
-// is the raise walked from it — told by its own fill, or, where the scheme
-// has no step left, by the seam along the strip's foot.
-//
-// The claim is read off sampled pixels and never off token arithmetic: the
-// strip over a level-0 panel and the panel of a level-1 instance are the
-// same surface, so the capture says "one step up" by matching one fill
-// against the other through the same GPU round-trip that produced both.
-func TestTheStripStandsOneStepOverThePanel(t *testing.T) {
+// TestTheStripIsPartedFromThePanel guards the pattern's two areas. The
+// panel is the platform's content fill; the strip is a band of chrome over
+// it, and in the light appearance the chrome material IS that white, so the
+// separator along the strip's foot is the whole of what parts the two
+// there. The claim is read off sampled pixels and never off token
+// arithmetic.
+func TestTheStripIsPartedFromThePanel(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
 	// An out-of-range selection draws no content, so the whole panel below
 	// the strip is the pattern's own fill and nothing else.
 	stripH := int(tokens.Comfortable.ControlHeight)
-	fills := func(level tokens.ElevationLevel) (strip, seam, panel [3]uint8) {
-		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Level: level}
-		w := tabs.Render(shaper, props, -1, tokens.DefaultLight, tokens.Spacing,
-			tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-		img := golden.Capture(t, frameSize, scene(w, bg))
-		at := func(x, y int) [3]uint8 {
-			off := img.PixOffset(x, y)
-			return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
-		}
-		// Right of the last tab cell the strip is bare band; the strip's
-		// last row is where its seam would be; well below it the panel is
-		// bare plane.
-		return at(frameSize.X-1, stripH/2), at(frameSize.X-1, stripH-1), at(frameSize.X-1, stripH+8)
-	}
-
-	told := func(strip, seam, panel [3]uint8) bool {
-		return strip != panel || (seam != strip && seam != panel)
-	}
-
-	level0Strip, level0Seam, level0Panel := fills(tokens.Level0)
-	if !told(level0Strip, level0Seam, level0Panel) {
-		t.Errorf("strip and panel render the same fill %v on a level-0 surface and no seam parts them; the strip is trim and owes its panel a step or a seam", level0Strip)
-	}
-
-	raisedStrip, raisedSeam, raisedPanel := fills(tokens.Level1)
-	if !told(raisedStrip, raisedSeam, raisedPanel) {
-		t.Errorf("strip and panel render the same fill %v on a level-1 surface and no seam parts them", raisedStrip)
-	}
-	if level0Strip != raisedPanel {
-		t.Errorf("the strip over a level-0 panel is %v and a level-1 panel is %v; one step up from level 0 is level 1, so these are the same fill",
-			level0Strip, raisedPanel)
-	}
-	if level0Panel == raisedPanel {
-		t.Errorf("the panel level did not move: level 0 and level 1 both render %v", level0Panel)
+	for _, tc := range []struct {
+		name   string
+		colors tokens.PlatformColors
+	}{
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			props := tabs.Props{Tabs: threeTabs(), Shaper: shaper}
+			w := tabs.Render(shaper, props, -1, tc.colors, tokens.Spacing,
+				tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			img := golden.Capture(t, frameSize, scene(w, bg))
+			at := func(x, y int) [3]uint8 {
+				off := img.PixOffset(x, y)
+				return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
+			}
+			// Right of the last tab cell the strip is bare band; the
+			// strip's last row is its seam; well below it the panel is
+			// bare plane.
+			strip := at(frameSize.X-1, stripH/2)
+			seam := at(frameSize.X-1, stripH-1)
+			panel := at(frameSize.X-1, stripH+8)
+			if strip == panel && (seam == strip || seam == panel) {
+				t.Errorf("strip and panel render the same fill %v and no seam parts them; the strip owes its panel a fill or a seam", strip)
+			}
+			want := vgcolor.Flatten(tc.colors.Separator, tc.colors.SidebarMaterial)
+			if seam != [3]uint8{want.R, want.G, want.B} {
+				t.Errorf("the strip's foot is %v, want the platform's separator over the chrome %v", seam, [3]uint8{want.R, want.G, want.B})
+			}
+		})
 	}
 }
 

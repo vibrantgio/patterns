@@ -124,18 +124,18 @@ func TestModalGolden(t *testing.T) {
 		title    string
 		decision *modal.Decision
 		actions  []layout.Widget
-		colors   tokens.ColorTokens
+		colors   tokens.PlatformColors
 		bg       color.NRGBA
 	}{
-		{"light-open", true, panelTitle, nil, nil, tokens.DefaultLight, lightBG},
-		{"dark-open", true, panelTitle, nil, nil, tokens.DefaultDark, darkBG},
-		{"light-closed", false, panelTitle, nil, nil, tokens.DefaultLight, lightBG},
+		{"light-open", true, panelTitle, nil, nil, tokens.PlatformLight, lightBG},
+		{"dark-open", true, panelTitle, nil, nil, tokens.PlatformDark, darkBG},
+		{"light-closed", false, panelTitle, nil, nil, tokens.PlatformLight, lightBG},
 		// The destructive primary is marked, so Return would reach Cancel and
 		// not Discard. Nothing about that is visible here — the fixture states
 		// it because a fixture is also documentation of the intended call.
 		{"light-with-actions", true, decisionTitle,
 			&modal.Decision{Destructive: true}, []layout.Widget{cancel, discard},
-			tokens.DefaultLight, lightBG},
+			tokens.PlatformLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -160,8 +160,8 @@ func TestModalOpenAndClosedDiffer(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
-	open := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-	closed := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, false, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	open := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	closed := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, false, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
 	imgOpen := golden.Capture(t, frameSize, scene(open, bg))
 	imgClosed := golden.Capture(t, frameSize, scene(closed, bg))
@@ -938,7 +938,7 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 
 	render := func(p modal.Props) layout.Widget {
 		p.Title, p.Body, p.Shaper = modalTitle, body, shaper
-		return modal.Render(shaper, p, true, tokens.DefaultLight, tokens.Spacing, sharpRadius,
+		return modal.Render(shaper, p, true, tokens.PlatformLight, tokens.Spacing, sharpRadius,
 			tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	}
 
@@ -964,9 +964,9 @@ func TestHideCloseStillWorksOnAPanel(t *testing.T) {
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
 	with := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper},
-		true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	without := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper, HideClose: true},
-		true, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
 	if n := golden.PixelDiff(golden.Capture(t, frameSize, scene(with, bg)), golden.Capture(t, frameSize, scene(without, bg))); n == 0 {
 		t.Error("HideClose no longer hides a panel's close button; the deprecation window must keep it working")

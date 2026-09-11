@@ -101,8 +101,8 @@ func TestPricingGolden(t *testing.T) {
 	// The row stands on the content, and a group tier takes that surface's
 	// own fill — so the scene has to be that surface for the golden to show
 	// the tier the way a page does.
-	lightBG := tokens.DefaultLight.SurfaceAt(tokens.Level0)
-	darkBG := tokens.DefaultDark.SurfaceAt(tokens.Level0)
+	lightBG := tokens.PlatformLight.ControlBackground
+	darkBG := tokens.PlatformDark.ControlBackground
 
 	three := threeTiers(false)
 	threeRecommended := threeTiers(true)
@@ -110,15 +110,15 @@ func TestPricingGolden(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 		bg     color.NRGBA
 		tiers  []pricing.Tier
 	}{
-		{"light-three-tier", tokens.DefaultLight, lightBG, three},
-		{"dark-three-tier", tokens.DefaultDark, darkBG, three},
-		{"light-three-tier-recommended", tokens.DefaultLight, lightBG, threeRecommended},
-		{"dark-three-tier-recommended", tokens.DefaultDark, darkBG, threeRecommended},
-		{"light-single-tier", tokens.DefaultLight, lightBG, single},
+		{"light-three-tier", tokens.PlatformLight, lightBG, three},
+		{"dark-three-tier", tokens.PlatformDark, darkBG, three},
+		{"light-three-tier-recommended", tokens.PlatformLight, lightBG, threeRecommended},
+		{"dark-three-tier-recommended", tokens.PlatformDark, darkBG, threeRecommended},
+		{"light-single-tier", tokens.PlatformLight, lightBG, single},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -134,34 +134,34 @@ func TestPricingGolden(t *testing.T) {
 // flipped; the resulting images must differ.
 func TestPricingRecommendedDiffers(t *testing.T) {
 	shaper := defaultShaper(t)
-	bg := tokens.DefaultLight.SurfaceAt(tokens.Level0)
+	bg := tokens.PlatformLight.ControlBackground
 
 	plain := pricing.Props{Tiers: threeTiers(false), Shaper: shaper}
 	recommended := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
 
-	a := golden.Capture(t, frameSize, scene(pricing.Render(shaper, plain, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
-	b := golden.Capture(t, frameSize, scene(pricing.Render(shaper, recommended, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
+	a := golden.Capture(t, frameSize, scene(pricing.Render(shaper, plain, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
+	b := golden.Capture(t, frameSize, scene(pricing.Render(shaper, recommended, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), bg))
 	if n := golden.PixelDiff(a, b); n == 0 {
-		t.Error("plain and recommended pricing render identically; expected the middle tier's raise and its Popular badge to introduce differences")
+		t.Error("plain and recommended pricing render identically; expected the middle tier's box and its Popular badge to introduce differences")
 	}
 }
 
-// TestRecommendedTierIsRaisedAndTheRestAreNot holds the ruling in pixels:
-// the recommended tier is a card, so its interior is the raise walked from
-// the content; every other tier is a group, so its interior is the
-// content's own fill, byte for byte.
-func TestRecommendedTierIsRaisedAndTheRestAreNot(t *testing.T) {
+// TestRecommendedTierIsACardAndTheRestAreGroups holds the ruling in pixels:
+// the recommended tier is a card, so its interior is the platform's box;
+// every other tier is a group, so its interior is the content's own fill,
+// byte for byte.
+func TestRecommendedTierIsACardAndTheRestAreGroups(t *testing.T) {
 	shaper := defaultShaper(t)
 	for _, sc := range []struct {
 		name   string
-		colors tokens.ColorTokens
+		colors tokens.PlatformColors
 	}{
-		{"light", tokens.DefaultLight},
-		{"dark", tokens.DefaultDark},
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
 	} {
 		t.Run(sc.name, func(t *testing.T) {
-			page := sc.colors.SurfaceAt(tokens.Level0)
-			raise := sc.colors.RaisedOn(page).Fill
+			page := sc.colors.ControlBackground
+			box := sc.colors.CardFill
 			props := pricing.Props{Tiers: threeTiers(true), Shaper: shaper}
 			img := golden.Capture(t, frameSize, scene(
 				pricing.Render(shaper, props, sc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable), page))
@@ -181,7 +181,7 @@ func TestRecommendedTierIsRaisedAndTheRestAreNot(t *testing.T) {
 				what string
 			}{
 				{0, page, "a group tier takes the content's own fill"},
-				{1, raise, "the recommended tier is raised on the content"},
+				{1, box, "the recommended tier wears the platform's box"},
 				{2, page, "a group tier takes the content's own fill"},
 			} {
 				if got := at(tc.col); got != tc.want {
@@ -200,8 +200,8 @@ func TestPricingLightDarkDiffer(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 	tiers := threeTiers(true)
 
-	light := pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
-	dark := pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+	light := pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
+	dark := pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.PlatformDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 
 	imgLight := golden.Capture(t, frameSize, scene(light, bg))
 	imgDark := golden.Capture(t, frameSize, scene(dark, bg))
@@ -223,7 +223,7 @@ func TestPricingUnevenFeaturesMatchTallest(t *testing.T) {
 
 	size := image.Pt(720, 400)
 	render := func(tiers []pricing.Tier) layout.Dimensions {
-		return drawOnce(t, size, pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable))
+		return drawOnce(t, size, pricing.Render(shaper, pricing.Props{Tiers: tiers, Shaper: shaper}, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable))
 	}
 	uneven := render([]pricing.Tier{short, tall, mid})
 	allTall := render([]pricing.Tier{tall, tall, tall})

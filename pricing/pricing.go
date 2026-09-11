@@ -51,6 +51,7 @@ import (
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/patterns/internal/surface"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -108,7 +109,7 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	popular tokens.TextStyle // the badge type role the "Popular" label is set in, at the density
@@ -132,8 +133,8 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	// badge's own type role.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
-			func(n rx.Tuple5[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.Density]) resolvedTokens {
+			rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Density),
+			func(n rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
 					color:   n.First,
@@ -193,7 +194,7 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	typo tokens.Typography,
@@ -279,37 +280,16 @@ func layoutTiers(
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...), maxH
 }
 
-// checkForeground is the primary colour a tier draws its feature checkmarks in:
-// the primary pin when it clears the graphic floor against the surface the
-// checkmark is drawn on, and otherwise the step of the primary ramp that
-// does ([tokens.ColorTokens.ForegroundOnAtFloor]). A checkmark carries
-// meaning by itself, so it owes the graphic floor and derives against the
-// tier's own fill rather than against the page — the two are different
-// surfaces for the recommended tier, which is raised.
-func checkForeground(c tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
-	return c.ForegroundOnAtFloor(tokens.RolePrimary, fill, tokens.GraphicFloor)
-}
-
-// tierLevel is the level a tier's own content stands at: the recommended
-// tier is a card, so what it holds stands one step above the content;
-// every other tier is a group, which raises nothing.
-func tierLevel(tier Tier) tokens.ElevationLevel {
+// tierFill is the surface a tier's content is read against and flattened
+// onto: the platform's box for the recommended card, and the content's own
+// fill for a group, which takes the surface it is in. Every colour a tier
+// lays over its own fill asks here, so what a tier paints and what is read
+// on it cannot drift apart.
+func tierFill(c tokens.PlatformColors, tier Tier) color.NRGBA {
 	if tier.Recommended {
-		return tokens.Level1
+		return c.CardFill
 	}
-	return tokens.Level0
-}
-
-// tierFill is the surface a tier's content is read against: the raise
-// walked from the content for the recommended card, and the content's own
-// fill for a group, which takes the surface it is in. Every derivation a
-// tier makes asks here, so what a tier paints and what is read on it cannot
-// drift apart.
-func tierFill(c tokens.ColorTokens, tier Tier) color.NRGBA {
-	if tier.Recommended {
-		return c.RaisedOn(c.SurfaceAt(tokens.Level0)).Fill
-	}
-	return c.SurfaceAt(tokens.Level0)
+	return c.ControlBackground
 }
 
 // drawTier draws a single tier to its allocated width, with content height
@@ -348,9 +328,9 @@ func drawTier(
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	bounds := image.Rectangle{Max: image.Pt(width, height)}
 	if tier.Recommended {
-		surface.Card(gtx, bounds, r, tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0)))
+		surface.Card(gtx, bounds, r, tok.color.CardFill)
 	} else {
-		surface.Group(gtx, bounds, r, tok.color.SeamOn(tok.color.SurfaceAt(tokens.Level0)))
+		surface.Group(gtx, bounds, r, vgcolor.Flatten(tok.color.Separator, tok.color.ControlBackground))
 	}
 
 	off := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
@@ -372,14 +352,14 @@ func drawTierContent(
 ) layout.Dimensions {
 	var top []layout.Widget
 	top = append(top, nameRowWidget(shaper, tier, tok))
-	top = append(top, priceRowWidget(shaper, tier.Price, tier.Cadence, tok))
+	top = append(top, priceRowWidget(shaper, tier.Price, tier.Cadence, tier, tok))
 	for _, f := range tier.Features {
 		top = append(top, featureRowWidget(shaper, f, tier, tok))
 	}
 
 	gap := tok.spacing.S3
 	if tier.CTA != nil {
-		top = append(top, ctaWidget(shaper, tier.CTA, tok, click))
+		top = append(top, ctaWidget(shaper, tier.CTA, tier, tok, click))
 	}
 	if tier.CTA == nil || gtx.Constraints.Min.Y <= 0 {
 		return spacedCol(gtx, top, gap)
@@ -426,7 +406,7 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 // alignment is what "on the same line" means for text, and the badge reports
 // its label's baseline so that it can be asked.
 func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
-	name := tierNameWidget(shaper, tier.Name, tok)
+	name := tierNameWidget(shaper, tier.Name, tier, tok)
 	if !tier.Recommended {
 		return name
 	}
@@ -449,28 +429,28 @@ func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Wi
 // indicating Success on top of it would say it twice, in a vocabulary that
 // means something else.
 func popularBadgeWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
-	// The badge's fill is derived against the surface it stands on rather
-	// than against the page: on the recommended card that surface is the
-	// raise, not the content.
+	// The badge stands on the tier's own fill, not on the page: on the
+	// recommended tier that is the card's box.
 	return badge.Render(shaper, "Popular", nil, badge.Neutral, tok.color, tok.spacing,
-		tok.radius, tok.popular, badge.RenderState{Level: tierLevel(tier)})
+		tok.radius, tok.popular, badge.RenderState{Surface: tierFill(tok.color, tier)})
 }
 
 // tierNameWidget renders the tier name in the TitleLarge role in
 // Text. A zero style weight (the legacy Render path synthesizes
 // size-only styles) falls back to SemiBold.
-func tierNameWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, tok.color.Text, tok.name, font.SemiBold)
+func tierNameWidget(shaper *text.Shaper, label string, tier Tier, tok resolvedTokens) layout.Widget {
+	return textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.name, font.SemiBold)
 }
 
-// priceRowWidget renders the price (DisplaySmall Text) followed by
-// the muted cadence (BodyMedium neutral 700) in a horizontal row
-// with an S1 gap. Cross-axis Alignment.End approximates baseline
+// priceRowWidget renders the price (DisplaySmall, the platform's label)
+// followed by the cadence (BodyMedium, its secondary label) in a horizontal
+// row with an S1 gap. Cross-axis Alignment.End approximates baseline
 // alignment for the prominent price next to its smaller cadence suffix.
-func priceRowWidget(shaper *text.Shaper, price, cadence string, tok resolvedTokens) layout.Widget {
+func priceRowWidget(shaper *text.Shaper, price, cadence string, tier Tier, tok resolvedTokens) layout.Widget {
+	fill := tierFill(tok.color, tier)
 	return func(gtx layout.Context) layout.Dimensions {
-		priceW := textWidget(shaper, price, tok.color.Text, tok.price, font.SemiBold)
-		cadenceW := textWidget(shaper, cadence, tok.color.Ramps.Neutral.Step(700), tok.body, font.Normal)
+		priceW := textWidget(shaper, price, vgcolor.Flatten(tok.color.Label, fill), tok.price, font.SemiBold)
+		cadenceW := textWidget(shaper, cadence, vgcolor.Flatten(tok.color.SecondaryLabel, fill), tok.body, font.Normal)
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End}.Layout(gtx,
 			layout.Rigid(priceW),
 			layout.Rigid(pllayout.HSpacer(tok.spacing.S1)),
@@ -479,15 +459,15 @@ func priceRowWidget(shaper *text.Shaper, price, cadence string, tok resolvedToke
 	}
 }
 
-// featureRowWidget renders a single feature bullet: a Primary checkmark
-// glyph followed by the feature label in BodyMedium Text, joined
-// by an S2 gap and centered vertically.
+// featureRowWidget renders a single feature bullet: an accent checkmark
+// glyph followed by the feature label in BodyMedium, the platform's label,
+// joined by an S2 gap and centred vertically.
 func featureRowWidget(shaper *text.Shaper, label string, tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(checkmarkWidget(tier, tok)),
 			layout.Rigid(pllayout.HSpacer(tok.spacing.S2)),
-			layout.Rigid(textWidget(shaper, label, tok.color.Text, tok.body, font.Normal)),
+			layout.Rigid(textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.body, font.Normal)),
 		)
 	}
 }
@@ -506,7 +486,10 @@ func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 		path.MoveTo(f32.Pt(s*0.2, s*0.55))
 		path.LineTo(f32.Pt(s*0.45, s*0.8))
 		path.LineTo(f32.Pt(s*0.8, s*0.25))
-		paint.FillShape(gtx.Ops, checkForeground(tok.color, tierFill(tok.color, tier)), clip.Stroke{
+		// A checkmark carries meaning by itself, so it is the platform's
+		// accent — the colour the platform marks an affirmative with — and
+		// not a tint of the tier's fill.
+		paint.FillShape(gtx.Ops, tok.color.ControlAccent, clip.Stroke{
 			Path:  path.End(),
 			Width: stroke,
 		}.Op())
@@ -518,8 +501,9 @@ func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 // wrapped in widget.Clickable when a click target is provided. The
 // button fills the card's inner width (components/button's intrinsic
 // "fill Max.X" sizing), giving the typical full-width pricing CTA.
-func ctaWidget(shaper *text.Shaper, cta *CTA, tok resolvedTokens, click *widget.Clickable) layout.Widget {
-	rendered := button.Render(shaper, cta.Label, tok.color, tok.spacing, tok.radius, tok.label, tok.density, button.RenderState{})
+func ctaWidget(shaper *text.Shaper, cta *CTA, tier Tier, tok resolvedTokens, click *widget.Clickable) layout.Widget {
+	rendered := button.Render(shaper, cta.Label, tok.color, tok.spacing, tok.radius, tok.label, tok.density,
+		button.RenderState{Surface: tierFill(tok.color, tier)})
 	return func(gtx layout.Context) layout.Dimensions {
 		if click == nil {
 			return rendered(gtx)

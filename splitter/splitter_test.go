@@ -59,7 +59,7 @@ func (h *harness) props() splitter.Props {
 		Boundary: h.at,
 		Min:      boundMin,
 		Max:      boundMax,
-		Colors:   tokens.DefaultLight,
+		Colors:   tokens.PlatformLight,
 		HitSpan:  h.hit,
 		OnChange: func(at float32) {
 			h.at = at
@@ -334,7 +334,7 @@ func TestSplitterWithoutStateDrawsALineNothingTakes(t *testing.T) {
 			Boundary: boundary,
 			Min:      boundMin,
 			Max:      boundMax,
-			Colors:   tokens.DefaultLight,
+			Colors:   tokens.PlatformLight,
 		})
 	})
 	if got := paintedRun(img, frameShort/2, frameLong); got != 1 {
@@ -349,7 +349,7 @@ func TestSplitterWithoutStateDrawsALineNothingTakes(t *testing.T) {
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
 		Source:      r.Source(),
 	}
-	st.Layout(gtx, splitter.Props{Axis: layout.Horizontal, Boundary: boundary, Colors: tokens.DefaultLight})
+	st.Layout(gtx, splitter.Props{Axis: layout.Horizontal, Boundary: boundary, Colors: tokens.PlatformLight})
 	r.Frame(&ops)
 	r.Queue(pointer.Event{Kind: pointer.Move, Position: f32.Pt(boundary, frameShort/2), Source: pointer.Mouse})
 	if got := r.Cursor(); got != pointer.CursorDefault {

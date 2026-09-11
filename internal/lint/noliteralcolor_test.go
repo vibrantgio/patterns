@@ -20,16 +20,10 @@ type exception struct {
 	reason string
 }
 
-// exceptions lists the deliberate literal-colour sites in this repo.
-var exceptions = []exception{
-	{
-		path: "modal/modal.go",
-		// The scrim is black at 50% alpha in both themes by material
-		// convention: it dims the scene by reducing luminance, so it is
-		// theme-independent by design rather than a palette colour.
-		reason: "theme-independent black scrim, alpha-composited dimmer",
-	},
-}
+// exceptions lists the deliberate literal-colour sites in this repo. There
+// are none: the modal's scrim was the last, and it is the platform's
+// measured dim now.
+var exceptions []exception
 
 // TestNoLiteralColors enforces the design-token rule: library source must
 // not hard-code colour values. Every colour a component paints comes from

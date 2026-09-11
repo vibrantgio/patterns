@@ -35,7 +35,9 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/patterns/pane"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 )
 
@@ -61,11 +63,6 @@ const (
 	// stream after the regions, so the topmost area takes the hit — which
 	// is what should happen to a press this close to the boundary.
 	HitDp = 6
-
-	// firmStep is the neutral ramp step the line takes while grabbed: the
-	// strong border step, one the resting seam never reaches in either
-	// scheme, so the change is legible without the line changing hue.
-	firmStep = 500
 )
 
 // SeamWidth is what the line paints at rest, in pixels — never less than
@@ -81,14 +78,20 @@ func HitWidth(gtx layout.Context) int {
 	return max(gtx.Dp(unit.Dp(HitDp)), SeamWidth(gtx))
 }
 
-// SeamColor is the colour of the resting line: the Seam token, whose job
-// is the line between two regions.
-func SeamColor(c tokens.ColorTokens) color.NRGBA { return c.Seam }
+// SeamColor is the colour of the resting line: the platform's separator,
+// black or white at a tenth, flattened onto the surface the line is drawn
+// over. A zero surface is the platform's content fill, which is what a
+// boundary between two regions of a window usually crosses.
+func SeamColor(c tokens.PlatformColors, standsOn color.NRGBA) color.NRGBA {
+	return vgcolor.Flatten(c.Separator, surface.Or(standsOn, c.ControlBackground))
+}
 
 // GrabbedColor is the colour of the line while a hand is on it: the same
-// neutral ramp, firmer.
-func GrabbedColor(c tokens.ColorTokens) color.NRGBA {
-	return c.Ramps.Neutral.Step(firmStep)
+// line with the platform's hover overlay laid into it, which is what the
+// platform lays over a control the pointer is on. The line firms rather
+// than changing to a colour of its own.
+func GrabbedColor(c tokens.PlatformColors, standsOn color.NRGBA) color.NRGBA {
+	return vgcolor.Flatten(c.HoverOverlay, SeamColor(c, standsOn))
 }
 
 // Span is a range along the cross axis, in pixels from the origin of the
@@ -116,7 +119,13 @@ type Props struct {
 	Min, Max float32
 
 	// Colors resolves the line's two colours.
-	Colors tokens.ColorTokens
+	Colors tokens.PlatformColors
+
+	// Surface is the opaque fill the line is drawn over. The platform's
+	// separator is a coverage rather than a colour, so it is flattened onto
+	// this before it is painted. The zero value — no colour — is the
+	// platform's content fill.
+	Surface color.NRGBA
 
 	// HitSpan is the part of the cross extent a hand may take hold of,
 	// for a boundary whose line runs further than the boundary does: a
@@ -233,9 +242,9 @@ func (s *State) Layout(gtx layout.Context, p Props) layout.Dimensions {
 
 	// The line at rest and the line under a hand are the same line: the
 	// thickening grows from the resting pixel rather than replacing it.
-	width, fill := seamPx, SeamColor(p.Colors)
+	width, fill := seamPx, SeamColor(p.Colors, p.Surface)
 	if s.Grabbed() {
-		width, fill = max(gtx.Dp(unit.Dp(GrabbedDp)), seamPx), GrabbedColor(p.Colors)
+		width, fill = max(gtx.Dp(unit.Dp(GrabbedDp)), seamPx), GrabbedColor(p.Colors, p.Surface)
 	}
 	lineMin := at - (width-seamPx)/2
 	line := image.Rectangle{

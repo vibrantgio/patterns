@@ -17,11 +17,13 @@ observable, and the theme carries the whole look: colour, typography, density,
 elevation and motion. A window follows the OS between light and dark with no
 application code; switching an app to Compact density resizes the navbar,
 sidebar items, tabs and table rows as a theme change, not a sweep;
-overlay surfaces name their level on the elevation and fill from
-`SurfaceAt` — the modal at level 2, the popover at level 3, tonal in both
-modes — except the toast the notifications column presents, which is filled
-inverse instead; cast shadows are reserved, per ADR-005, for the surfaces
-that float and can leave (the toast; not the card).
+every fill, foreground and seam reads the platform's own name for what that
+element is on macOS — the chrome regions the sidebar material, the content
+`ControlBackground`, a card the platform's grouped box, a floating surface
+the window background under the measured floating shadow, every seam
+`Separator` flattened over what is beneath it; shadows are reserved for the
+surfaces that float and can leave (the modal, the popover, the toast; not
+the card).
 
 Every package has the same two entry points, and the split is deliberate:
 
@@ -54,8 +56,8 @@ Every package has the same two entry points, and the split is deliberate:
   `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
 
 Typography is theme-owned: in the live form every pattern that draws text
-shapes with the theme's `Typography.Shaper()` and the Material Design 3 text
-styles it carries, so leaving `Props.Shaper` nil is the normal case.
+shapes with the theme's `Typography.Shaper()` and the type roles it carries,
+so leaving `Props.Shaper` nil is the normal case.
 `Props.Shaper` is an explicit per-instance override for the rare pattern
 instance that must shape with a different shaper than the theme provides.
 
@@ -91,9 +93,9 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | Package | |
 | --- | --- |
 | `shell` | The top-level layout, in four variants: `SidebarHeaderMain`, `SplitPane` (draggable splitter on either axis), `ThreeColumn` (navbar, sidebar, main, resizable aside, footer strip) and `StackedPage` (pinned navbar over a shell-owned scroll of page sections). |
-| `navbar` | A horizontal surface bar with three slots — leading brand, centred links, trailing actions. The active link carries a Primary underline. |
-| `sidebar` | A collapsible vertical column that swaps between an expanded width (icon + label) and a collapsed width (icon only). The active item is tinted Primary. |
-| `tabs` | A tab strip with a Primary underline on the selection, plus the content panel below it. Click, Arrow-Left/Right (wrapping), Home and End all change the selection. |
+| `navbar` | A horizontal chrome bar with three slots — leading brand, centred links, trailing actions. The active link carries an underline in the platform's selection colour. |
+| `sidebar` | A collapsible vertical chrome column that swaps between an expanded width (icon + label) and a collapsed width (icon only). The active item is drawn as the platform draws a selected row. |
+| `tabs` | A tab strip with an underline in the platform's selection colour on the selection, plus the content panel below it. Click, Arrow-Left/Right (wrapping), Home and End all change the selection. |
 
 **Data and content** — the things that hold a screenful of stuff.
 
@@ -101,16 +103,16 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces the click's purpose through `OnSort`. Row heights follow the theme's density. |
 | `card` | The one thing that must stand apart: a rounded surface raised one step above the surface it is in, with optional Header / Body / Footer slots. The raise is the whole of how it singles something out — no hairline of its own, never outlined, never wearing a role, and what the developer wants to say about it is a badge in its header. Where the scheme has no lighter step left the raise is told by the seam at the card's edge, which is the elevation's rule for every raise. A card is raised, not floating, so it casts no shadow (ADR-005). |
-| `group` | The page dividing itself: a hairline around related components, drawn at the level of the surface the group is in and taking that surface's own fill, with an optional label top-leading inside it. It paints nothing inside and raises nothing, so what it holds stands on the surface the group is in and nothing derives against it. The hairline is the seam of two regions sharing one fill (`tokens.ColorTokens.SeamOn`), the understated line the platform draws — not the 3:1 mark a graphic carrying meaning owes. A group may hold a card; it never holds another group, and it wears no role. |
+| `group` | The page dividing itself: a hairline around related components, drawn on the surface the group is in and taking that surface's own fill, with an optional label top-leading inside it. It paints nothing inside and raises nothing, so what it holds stands on the surface the group is in. The hairline is the seam of two regions sharing one fill — the platform's `Separator` flattened over that fill — the understated line the platform draws — not the 3:1 mark a graphic carrying meaning owes. A group may hold a card; it never holds another group, and it wears no role. |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
 
 **Overlays and feedback** — the things that draw over everything else.
 
 | Package | |
 | --- | --- |
-| `modal` | A centred dialog over a full-window scrim, its surface a level-2 fill on the elevation: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's single arbiter it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the modal a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
+| `modal` | A centred dialog over a full-window scrim, its plane the platform's window background under the measured floating shadow and no hairline: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **panel** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the modal at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a modal stacks within — one per window — and unlike popover's single arbiter it is ordered, because a modal opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the modal a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring. |
 | `popover` | An anchored floating surface with a triangular tail pointing at a caller-supplied anchor. Outside-click dismissal and popover-vs-popover arbitration are frame state, not a bus: `Props.Arbiter` names the set a popover arbitrates within — one per window — and opening a second popover in that set dismisses the first, in the same frame, from inside the claimant's own layout pass. A nil `Arbiter` gets the popover one of its own, so sharing one is the explicit act. `Props.Open` carries open-ness on a stream; `Props.OpenNow` reads it during layout, for a caller that owns it as frame state. |
-| `notifications` | The position-anchored column that receives the application's notifications, places them, stacks them against each other, times them, and presents each one as a [`components/toast`](https://github.com/vibrantgio/components). The pattern owns the queue, the placement and the timing, not the presentation: the toast's inverse fill and its status-role leading edge are the component's, and what the column adds under each is the `effects/depth` cast shadow, because only the placement knows where the surface landed — and a shadow is what says it floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `notifications.Queue` in the model, `Props.Notifications` carries that queue back to the `Column`, and `Expire` brings the removal back as `Expired` at the end of the notification's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
+| `notifications` | The position-anchored column that receives the application's notifications, places them, stacks them against each other, times them, and presents each one as a [`components/toast`](https://github.com/vibrantgio/components). The pattern owns the queue, the placement and the timing, not the presentation: the toast's fill and its status-coloured leading edge are the component's, and what the column adds under each is the platform's floating shadow through `effects/depth`, because only the placement knows where the surface landed — and a shadow is what says it floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `notifications.Queue` in the model, `Props.Notifications` carries that queue back to the `Column`, and `Expire` brings the removal back as `Expired` at the end of the notification's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
 

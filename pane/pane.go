@@ -14,21 +14,18 @@
 // so together. This package is the second kind and only the second kind.
 //
 // THE PANE IS READ THROUGH ITS EDGES, NOT THROUGH ITS LIGHTNESS. A pane is
-// chrome, so it stands at the CHROME level in both schemes: darker than the
-// document beside it — and it stays darker for being dismissible — and
-// lighter than the backdrop it is set into. A pane does not climb the levels
-// by leaving the window's edge, and the chrome level's elevation is zero dp:
+// chrome, so it wears the platform's chrome material in both schemes, and
 // chrome lies flat on the backdrop and has nothing to cast onto, so there is
-// no shadow here. [Surface] is the fill and [SeamColor] the edge, both derived
-// from the palette rather than named as steps.
+// no shadow here. [Surface] is the fill and [SeamColor] the edge, both the
+// platform's own names rather than steps of a ramp.
 //
 // WHY THE HAIRLINE IS DRAWN AT ALL. An inset object needs no seam where the
-// backdrop showing around it does that work. Measured on a composed window
-// at the default palettes, the backdrop does not do that work: the pane's
-// fill stands 1.034:1 off the backdrop it is set into in the dark scheme —
-// 1.71 L*, a step the eye loses — and 1.210:1, 7.08 L*, in the light one.
-// One drawing serves both schemes, so the hairline stays, at the measured
-// 1.51:1 off the fill that [SeamRatio] records.
+// backdrop showing around it does that work. On macOS 26 the backdrop does
+// not do that work in the light appearance: the chrome material and the
+// window's plane are both white there, so a pane set into the backdrop is
+// told from it by the under-page grey alone. One drawing serves both
+// schemes, so the hairline stays, and it is the platform's separator laid
+// over what is beneath it.
 //
 // The edge is drawn INSIDE the pane's own rounded rectangle, never on the
 // backdrop outside it: half a line lying on the backdrop would blur the one
@@ -67,7 +64,6 @@ package pane
 import (
 	"image"
 	"image/color"
-	"math"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -77,6 +73,7 @@ import (
 
 	complayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/mvu/desktop"
+	"github.com/vibrantgio/patterns/internal/surface"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -125,21 +122,6 @@ const (
 	// pane's own edge, so the strip owes the margin back at both ends —
 	// which lands the buttons' centre line on the strip's own middle.
 	StripDp = 2*(ButtonInsetDp-MarginDp) + desktop.WindowButtonDiameter
-
-	// SeamRatio is how far the pane's edge stands from the fill it is drawn
-	// on: 1.51:1, and it is a MEASUREMENT of the platform rather than a
-	// floor anything has to clear. The platform draws this edge and draws it
-	// quietly — Voice Memos outlines its inset panel at #3A3A3A on a
-	// #1B1B1B panel, 1.514:1, while the flush side of the same window
-	// carries no outline at all. That number is deliberately NOT the 3:1
-	// graphic floor an object's outline derives to elsewhere in this system,
-	// because the two lines are not the same kind of thing: a 3:1 mark
-	// carries meaning by itself and owes what it is drawn on WCAG 1.4.11,
-	// while a pane's own edge is a decorative seam saying "this region is an
-	// object", read alongside the fill, the inset and the radius that say
-	// the same thing. For that reason 3:1 would answer with a line far more
-	// pronounced than anything the platform draws around a sidebar.
-	SeamRatio = 1.51
 )
 
 // Buttons is where a window that wears this pattern stands its three
@@ -150,59 +132,23 @@ const (
 // because a pane the reader dismissed used to be behind it.
 var Buttons = desktop.ButtonRunAt(ButtonInsetDp)
 
-// Surface is the fill the pane wears: the CHROME level, one step under the
-// content toward the scheme's dark extreme in both schemes. It is a
-// function of the palette rather than a field, so that code holding a whole
-// palette and code holding a frame-time snapshot can name the same fill.
-func Surface(c tokens.ColorTokens) color.NRGBA {
-	return c.SurfaceAt(tokens.LevelChrome)
+// Surface is the fill the pane wears: the platform's chrome material, the
+// fill every sidebar, toolbar and inspector on this platform carries. It is
+// a function of the set rather than a field, so that code holding a whole
+// set and code holding a frame-time snapshot can name the same fill.
+func Surface(c tokens.PlatformColors) color.NRGBA {
+	return c.SidebarMaterial
 }
 
-// `SeamColor` is the colour of the pane's own edge, resolved against the fill it
-// is drawn on rather than named as a step.
+// SeamColor is the colour of the pane's own edge: the platform's separator,
+// black or white at a tenth, flattened onto what lies beneath the edge.
 //
-// Two things are derived and neither names a scheme. The DISTANCE is
-// [SeamRatio], solved in the luminance a contrast ratio is taken in and
-// realized at the fill's own hue and chroma, the way elevation realizes a
-// level — so the edge carries whatever tint the palette carries and none
-// of its own. The DIRECTION is toward the scheme's own foreground: a dark scheme's
-// edge is lighter than its pane, as the platform draws it, and a light
-// scheme's is darker, which is the only direction a light pane has room in
-// — from a #E8E8E8 fill the whole distance left to white is 1.23:1, less
-// than the whisper itself.
-//
-// On the default palettes it answers #BEBEBE on the light fill, 1.52:1, and
-// #363636 on the dark one, 1.51:1 — the dark pairing within a level of the
-// platform's own #3A3A3A on #1B1B1B.
-func SeamColor(c tokens.ColorTokens) color.NRGBA {
-	fill := Surface(c)
-	y := vgcolor.RelativeLuminance(fill)
-	target := SeamRatio*(y+0.05) - 0.05
-	if foregroundL, fillL := lightness(c.Text), lightness(fill); foregroundL < fillL {
-		target = (y+0.05)/SeamRatio - 0.05
-	}
-	target = min(max(target, 0), 1)
-	_, chroma, hue := vgcolor.OKLChFromNRGBA(fill)
-	return vgcolor.NRGBAFromToneChromaHue(tone(target), chroma, hue)
-}
-
-// lightness is a colour's CIELAB L*, which is what "toward the foreground"
-// compares: the seam's direction is a question about lightness and nothing
-// else.
-func lightness(c color.NRGBA) float64 {
-	l, _, _ := vgcolor.LabFromNRGBA(c)
-	return l
-}
-
-// tone is the CIELAB lightness of a relative luminance — the inverse of the
-// Y a WCAG contrast ratio is taken on. A distance stated as a ratio is
-// solved in Y; the toolkit realizes a colour from a tone, a chroma and a
-// hue; this is the one step between them.
-func tone(y float64) float64 {
-	if y <= 216.0/24389.0 {
-		return y * 24389.0 / 27.0
-	}
-	return 116*math.Cbrt(y) - 16
+// What lies beneath is the backdrop, because the edge is painted as the
+// outermost ring of the pane's own rectangle and the pane stands on the
+// window's plane. The platform composites an alpha name in encoded sRGB, so
+// the flatten is taken there and Gio is handed an opaque line.
+func SeamColor(c tokens.PlatformColors) color.NRGBA {
+	return vgcolor.Flatten(c.Separator, surface.Backdrop(c))
 }
 
 // Bounds answers the pane's rectangle in the coordinates of a window of the
@@ -244,7 +190,7 @@ func Bounds(gtx layout.Context, size image.Point, width unit.Dp, hidden bool) im
 // poke through a corner, nor paint over the edge that says the pane is an
 // object. An empty rectangle draws nothing, which is the dismissed state; a
 // nil contents draws the pane and nothing in it.
-func Layout(gtx layout.Context, c tokens.ColorTokens, bounds image.Rectangle, contents layout.Widget) {
+func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle, contents layout.Widget) {
 	if bounds.Empty() {
 		return
 	}

@@ -91,15 +91,15 @@ func TestTestimonialGolden(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		colors  tokens.ColorTokens
+		colors  tokens.PlatformColors
 		bg      color.NRGBA
 		variant testimonial.Variant
 		items   []testimonial.Item
 	}{
-		{"light-single", tokens.DefaultLight, lightBG, testimonial.Single, one},
-		{"dark-single", tokens.DefaultDark, darkBG, testimonial.Single, one},
-		{"light-grid-three", tokens.DefaultLight, lightBG, testimonial.Grid, three},
-		{"dark-grid-three", tokens.DefaultDark, darkBG, testimonial.Grid, three},
+		{"light-single", tokens.PlatformLight, lightBG, testimonial.Single, one},
+		{"dark-single", tokens.PlatformDark, darkBG, testimonial.Single, one},
+		{"light-grid-three", tokens.PlatformLight, lightBG, testimonial.Grid, three},
+		{"dark-grid-three", tokens.PlatformDark, darkBG, testimonial.Grid, three},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,12 +120,12 @@ func TestTestimonialVariantsDiffer(t *testing.T) {
 	single := testimonial.Render(
 		shaper,
 		testimonial.Props{Variant: testimonial.Single, Items: three, Shaper: shaper},
-		tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
+		tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
 	)
 	grid := testimonial.Render(
 		shaper,
 		testimonial.Props{Variant: testimonial.Grid, Items: three, Shaper: shaper},
-		tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
+		tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
 	)
 	a := golden.Capture(t, frameSize, scene(single, bg))
 	b := golden.Capture(t, frameSize, scene(grid, bg))
@@ -144,12 +144,12 @@ func TestTestimonialLightDarkDiffer(t *testing.T) {
 	light := testimonial.Render(
 		shaper,
 		testimonial.Props{Variant: testimonial.Grid, Items: three, Shaper: shaper},
-		tokens.DefaultLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
+		tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
 	)
 	dark := testimonial.Render(
 		shaper,
 		testimonial.Props{Variant: testimonial.Grid, Items: three, Shaper: shaper},
-		tokens.DefaultDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
+		tokens.PlatformDark, tokens.Spacing, sharpRadius, tokens.DefaultTypography,
 	)
 	imgLight := golden.Capture(t, frameSize, scene(light, bg))
 	imgDark := golden.Capture(t, frameSize, scene(dark, bg))

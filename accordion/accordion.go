@@ -30,6 +30,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -89,7 +90,7 @@ const (
 )
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	style   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
@@ -109,8 +110,8 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest3(t.Color, t.Spacing, t.Typography),
-			func(n rx.Tuple3[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography]) resolvedTokens {
+			rx.CombineLatest3(t.Platform, t.Spacing, t.Typography),
+			func(n rx.Tuple3[tokens.PlatformColors, tokens.SpacingScale, tokens.Typography]) resolvedTokens {
 				typ := n.Third
 				return resolvedTokens{
 					color:   n.First,
@@ -153,7 +154,7 @@ func Render(
 	shaper *text.Shaper,
 	props Props,
 	open map[int]bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 ) layout.Widget {
@@ -225,16 +226,14 @@ func drawAccordion(
 	props Props,
 	clicks []widget.Clickable,
 	openMap map[int]bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The stack fills at the chrome level: an accordion is a navigation
-	// construct that lives in the window's chrome, so what shows between
-	// and behind its header rows is that chrome rather than a plane
-	// above the document.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect{Max: size}.Op())
+	// An accordion holds content, so its own plane is the content's fill
+	// and what shows between and behind its header rows is that.
+	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
 
 	headerH := gtx.Dp(unit.Dp(headerHDp))
 	bodyH := gtx.Dp(unit.Dp(bodyHDp))
@@ -277,7 +276,7 @@ func drawHeader(
 	click *widget.Clickable,
 	open bool,
 	size image.Point,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 ) layout.Dimensions {
@@ -288,7 +287,8 @@ func drawHeader(
 	padH := gtx.Dp(unit.Dp(sp.S3))
 
 	inner := func(gtx layout.Context) layout.Dimensions {
-		drawChevron(gtx, open, image.Pt(chevW, size.Y), colors.Text)
+		plane := colors.ControlBackground
+		drawChevron(gtx, open, image.Pt(chevW, size.Y), vgcolor.Flatten(colors.SecondaryLabel, plane))
 
 		labelMaxW := size.X - chevW - padH
 		if labelMaxW > 0 {
@@ -298,7 +298,7 @@ func drawHeader(
 			labelGtx.Constraints.Max.Y = size.Y
 
 			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: colors.Text}.Add(gtx.Ops)
+			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, plane)}.Add(gtx.Ops)
 			material := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
@@ -326,7 +326,7 @@ func drawHeader(
 			seamH = 1
 		}
 		seamRect := image.Rect(0, size.Y-seamH, size.X, size.Y)
-		paint.FillShape(gtx.Ops, colors.Seam, clip.Rect(seamRect).Op())
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, plane), clip.Rect(seamRect).Op())
 
 		return layout.Dimensions{Size: size}
 	}

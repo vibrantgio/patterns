@@ -2,14 +2,14 @@
 // surface dialog over a full-window scrim backdrop, with a header (title +
 // close affordance), padded body, and optional footer action row.
 //
-// The dialog surface fills at SurfaceAt(Level2), one level above the
-// standing level-1 content panes it covers, with a 1 dp stroke at the same
-// level. Level 2 rather than the deeper level used by unscrimmed overlays
-// (popover, dropdown menu), because the modal does not separate by fill
-// alone: the scrim dims everything beneath it and is the modal's isolating
-// cue, so its surface needs only one tonal level. It casts no shadow: a
-// cast shadow is reserved for surfaces that float and can leave without a
-// scrim.
+// The dialog's plane is the platform's window background — what every
+// floating surface on this platform is filled with — under the platform's
+// measured floating shadow, and it carries no hairline: the platform tells a
+// floating surface by its shadow and draws no edge around a sheet. The scrim
+// is the dim the platform lays over the window a sheet interrupts, measured
+// off the reference. Its footer's actions are the caller's
+// components/button visuals, which is where the default action's accent fill
+// and the ordinary button's push-button fill come from.
 //
 // Modal is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and
@@ -60,11 +60,10 @@
 // of it and a title — not a control — on the third, so there is nothing for
 // the slop to be taken from and no reason to accept less than the floor.
 //
-// Measured on the default seed, from the rendered pixels rather than from the
-// tokens that produced them, the mark reads 4.51:1 against the light scheme's
-// level-2 surface and 8.46:1 against the dark scheme's — clear in both of
-// WCAG 1.4.11's 3:1 for a non-text graphic, and in the light scheme clear of
-// the 4.5:1 that text would owe. close_test.go re-measures all of it.
+// Measured from the rendered pixels rather than from the tokens that
+// produced them, the mark reads |Lc| 102 against the light appearance's
+// dialog plane and |Lc| 84 against the dark one. close_test.go re-measures
+// it every run.
 //
 // # Arrival is not this package's business
 //
@@ -113,7 +112,8 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
-	"github.com/vibrantgio/patterns/internal/outline"
+	"github.com/vibrantgio/effects/depth"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -341,14 +341,14 @@ func (p Props) onEscape() func(gtx layout.Context) {
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
 	title   tokens.TextStyle // the TitleMedium role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 	// elevation is snapshotted so a theme elevation change re-emits the
-	// layout.Widget; the surface fill resolves through SurfaceAt, which reads
-	// the default tokens.Elevation scale.
+	// layout.Widget; the shadow's reach resolves through effects/depth,
+	// which reads the default tokens.Elevation scale.
 	elevation tokens.ElevationScale
 }
 
@@ -368,8 +368,8 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 	// theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Elevation),
-			func(n rx.Tuple5[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.ElevationScale]) resolvedTokens {
+			rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Elevation),
+			func(n rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.ElevationScale]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
 					color:     n.First,
@@ -401,12 +401,10 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 				Icon:        crossIcon,
 				Description: "Close",
 				Emphasis:    button.Ghost,
-				// The dialog is a level-2 surface (drawModal fills
-				// SurfaceAt(Level2)), and a ghost's state fill is its host
-				// surface's own walk — so the close X names the
-				// level it sits on, and its hover reads against the
-				// raised fill instead of dissolving into it.
-				Level:     tokens.Level2,
+				// The dialog's plane is the window background, which is
+				// also what a button assumes when it is told no surface —
+				// so a borderless close X lays its press overlay onto the
+				// right fill without being told.
 				Clickable: &st.closeClick,
 				OnClick:   props.OnClose,
 				// Pass the override through untouched: a nil Shaper lets
@@ -458,7 +456,7 @@ func Render(
 	shaper *text.Shaper,
 	props Props,
 	open bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	title tokens.TextStyle,
@@ -472,7 +470,7 @@ func Render(
 	// through (callers pass a sharp radius for golden determinism).
 	var closeW layout.Widget
 	if props.showsClose() {
-		closeW = button.RenderIcon(crossIcon, colors, sp, rad, d, button.RenderState{Emphasis: button.Ghost, Level: tokens.Level2})
+		closeW = button.RenderIcon(crossIcon, colors, sp, rad, d, button.RenderState{Emphasis: button.Ghost, Surface: colors.WindowBackground})
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		if !open {
@@ -583,7 +581,7 @@ func drawModal(
 
 	// Scrim — full-frame dimmer. Pointer events that miss the surface
 	// hit the scrim tag and trigger OnClose.
-	scrimColor := scrimColor(tok.color)
+	scrimColor := tok.color.Scrim
 	scrimRect := image.Rectangle{Max: frame}
 	scrimClip := clip.Rect(scrimRect).Push(gtx.Ops)
 	paint.FillShape(gtx.Ops, scrimColor, clip.Rect(scrimRect).Op())
@@ -624,18 +622,12 @@ func drawModal(
 
 	// Surface — rounded rectangle, registered as a pointer absorber so
 	// presses on its area do not reach the scrim and dismiss the modal.
-	// Level 2 on the elevation: one tonal level above the level-1
-	// panes underneath; the scrim, not the fill, is the isolating cue
-	// (see the package doc).
+	// It floats, so it wears the window background under the platform's
+	// shadow and no hairline: the shadow is what says a surface floats here.
 	off := op.Offset(surfPos).Push(gtx.Ops)
 	surfRRect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(surfW, surfH)}, SE: r, SW: r, NE: r, NW: r}
-	paint.FillShape(gtx.Ops, tok.color.SurfaceAt(tokens.Level2), surfRRect.Op(gtx.Ops))
-	// The surface's edge is derived against the level it circles — the same
-	// Level2 the fill above is painted at, named once for both.
-	paint.FillShape(gtx.Ops, outline.Color(tok.color, tok.color.SurfaceAt(tokens.Level2)), clip.Stroke{
-		Path:  surfRRect.Path(gtx.Ops),
-		Width: float32(gtx.Dp(unit.Dp(1))),
-	}.Op())
+	castShadow(gtx, image.Rectangle{Max: image.Pt(surfW, surfH)}, r, tok.color)
+	paint.FillShape(gtx.Ops, tok.color.WindowBackground, surfRRect.Op(gtx.Ops))
 
 	// Absorb pointer events on the surface.
 	if live {
@@ -700,7 +692,7 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, 0)}
 			}
 			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: tok.color.Text}.Add(gtx.Ops)
+			paint.ColorOp{Color: vgcolor.Flatten(tok.color.Label, tok.color.WindowBackground)}.Add(gtx.Ops)
 			material := mColor.Stop()
 			// Shape with the TitleMedium role's typeface, weight, size and
 			// line height. The legacy Render path synthesizes a size-only
@@ -965,12 +957,20 @@ func crossIcon(gtx layout.Context, sizePx int, col color.NRGBA) {
 	paint.FillShape(gtx.Ops, col, clip.Stroke{Path: p.End(), Width: stroke}.Op())
 }
 
-// scrimColor returns a translucent dim laid over the scene background.
-// Light themes get a black scrim; dark themes also use black for
-// consistency with material-style scrims that dim by reducing luminance.
-func scrimColor(_ tokens.ColorTokens) color.NRGBA {
-	return color.NRGBA{R: 0, G: 0, B: 0, A: 0x80}
+// castShadow paints the platform's floating shadow under a surface.
+//
+// effects/depth still states its shadow as a fraction of a Material key
+// shadow, so the platform's measured coverage is passed as that fraction:
+// FloatingShadow's alpha over depth's own peak, which lands the shadow on
+// the measured black at 0.075 exactly. The shadow's REACH is still depth's
+// 6 dp for the floating level, not the 24 px the reference measures; that
+// geometry is effects' to move (CE2.4).
+func castShadow(gtx layout.Context, bounds image.Rectangle, radius int, c tokens.PlatformColors) {
+	depth.Shadow(gtx, bounds, tokens.Level3, radius, float32(c.FloatingShadow.A)/depthPeakAlpha)
 }
+
+// depthPeakAlpha is the alpha effects/depth paints at opacity 1.
+const depthPeakAlpha = 76
 
 // spacerV returns a vertical-spacer layout.Widget that consumes hPx pixels in
 // the Y axis and zero pixels in X. Used inside the vertical Flex stack.

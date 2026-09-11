@@ -34,10 +34,10 @@ var windowSize = image.Pt(windowW, windowH)
 // not the other would be a rule that is not derived.
 var themeCases = []struct {
 	name   string
-	colors tokens.ColorTokens
+	colors tokens.PlatformColors
 }{
-	{"light", tokens.DefaultLight},
-	{"dark", tokens.DefaultDark},
+	{"light", tokens.PlatformLight},
+	{"dark", tokens.PlatformDark},
 }
 
 // ctx is a bare layout context at one pixel per dp, which is what the
@@ -84,8 +84,8 @@ func TestHiddenTakesNoWidth(t *testing.T) {
 	// And nothing is drawn for it either, so a caller that leans on Layout
 	// rather than on the rectangle gets the same answer: no edge, no fill,
 	// and the contents never run.
-	col := tokens.DefaultLight
-	backdrop := col.SurfaceAt(tokens.LevelBackdrop)
+	col := tokens.PlatformLight
+	backdrop := vgcolor.Flatten(col.UnderPageBackground, col.WindowBackground)
 	w := func(gtx layout.Context) layout.Dimensions {
 		pane.Layout(gtx, col, pane.Bounds(gtx, gtx.Constraints.Max, paneW, true),
 			func(gtx layout.Context) layout.Dimensions {
@@ -204,48 +204,28 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 	}
 }
 
-// TestSeamColorIsThePlatformsWhisper pins the derivation of the pane's own
-// edge: how far it stands from the fill it is drawn on, which way it goes,
-// and that it is a whisper rather than a mark.
-//
-// The number is the platform's. Voice Memos outlines its inset panel at
-// #3A3A3A on a #1B1B1B panel — 1.514:1 — and leaves the flush side of the
-// same window unoutlined. Both halves are checked here: the derived colour
-// lands on that ratio against the fill in BOTH schemes, and it lands
-// nowhere near the 3:1 graphic floor an object's outline is derived to
-// elsewhere in the system.
-func TestSeamColorIsThePlatformsWhisper(t *testing.T) {
-	const tolerance = 0.02 // eight bits' worth of slack, no more
+// TestSeamColorIsTheSeparator pins the pane's own edge to the platform's
+// name for it: separatorColor, black or white at a tenth, flattened onto
+// the backdrop the pane stands on — not a ratio solved against the fill.
+func TestSeamColorIsTheSeparator(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fill := pane.Surface(tc.colors)
-			seam := pane.SeamColor(tc.colors)
-			got := vgcolor.LuminanceRatio(seam, fill)
-			if got < pane.SeamRatio-tolerance || got > pane.SeamRatio+tolerance {
-				t.Errorf("the pane's edge stands %.3f:1 off its fill (%v on %v), want the measured %.2f:1",
-					got, seam, fill, pane.SeamRatio)
-			}
-			towardForeground := lightness(tc.colors.Text) > lightness(fill)
-			if lighter := lightness(seam) > lightness(fill); lighter != towardForeground {
-				t.Errorf("the pane's edge is %v against a fill of %v and a foreground of %v; the edge steps toward the foreground",
-					seam, fill, tc.colors.Text)
-			}
-			if mark := vgcolor.Magnitude(seam, fill); mark >= tokens.GraphicFloor {
-				t.Errorf("the pane's edge reads |Lc| %.2f, at or over the graphic floor — this is a seam, not a mark", mark)
+			backdrop := vgcolor.Flatten(tc.colors.UnderPageBackground, tc.colors.WindowBackground)
+			want := vgcolor.Flatten(tc.colors.Separator, backdrop)
+			if got := pane.SeamColor(tc.colors); got != want {
+				t.Errorf("the pane's edge is %v, want the platform's separator over the backdrop %v", got, want)
 			}
 		})
 	}
 }
 
-// TestSurfaceIsTheChromeLevel: a pane is chrome, so its
-// level is the chrome level, under the content, in both schemes. A pane
-// that read lighter than the document beside it would be claiming a level
-// it does not have.
-func TestSurfaceIsTheChromeLevel(t *testing.T) {
+// TestSurfaceIsTheChromeMaterial: a pane is chrome, so it wears the
+// platform's chrome material in both appearances.
+func TestSurfaceIsTheChromeMaterial(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got, want := pane.Surface(tc.colors), tc.colors.SurfaceAt(tokens.LevelChrome); got != want {
-				t.Errorf("the pane fills %v, want the chrome level %v", got, want)
+			if got, want := pane.Surface(tc.colors), tc.colors.SidebarMaterial; got != want {
+				t.Errorf("the pane fills %v, want the chrome material %v", got, want)
 			}
 		})
 	}
@@ -268,7 +248,7 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 				pane.Layout(gtx, tc.colors, bounds, nil)
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			backdrop := tc.colors.SurfaceAt(tokens.LevelBackdrop)
+			backdrop := vgcolor.Flatten(tc.colors.UnderPageBackground, tc.colors.WindowBackground)
 			img := golden.Capture(t, windowSize, scene(w, backdrop))
 			seam, fill := pane.SeamColor(tc.colors), pane.Surface(tc.colors)
 			// A row clear of the corners' arcs: the middle of the strip.
@@ -284,7 +264,7 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 					t.Errorf("the pane's %s edge at x=%d draws %v, want the seam %v", probe.what, probe.edge, got, seam)
 				}
 				if got := img.RGBAAt(probe.in, y); !sameColor(got, fill) {
-					t.Errorf("one pixel inside the pane's %s edge draws %v, want the chrome level %v — the hairline is wider than a hairline",
+					t.Errorf("one pixel inside the pane's %s edge draws %v, want the chrome material %v — the hairline is wider than a hairline",
 						probe.what, got, fill)
 				}
 			}
@@ -332,10 +312,10 @@ func TestPaneGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := func(gtx layout.Context) layout.Dimensions {
 				b := pane.Bounds(gtx, gtx.Constraints.Max, paneW, false)
-				pane.Layout(gtx, tc.colors, b, contents(tc.colors.Ramps.Primary.Step(300)))
+				pane.Layout(gtx, tc.colors, b, contents(tc.colors.SelectedContentBackground))
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			golden.Render(t, tc.name+"-pane", windowSize, scene(w, tc.colors.SurfaceAt(tokens.LevelBackdrop)))
+			golden.Render(t, tc.name+"-pane", windowSize, scene(w, vgcolor.Flatten(tc.colors.UnderPageBackground, tc.colors.WindowBackground)))
 		})
 	}
 }

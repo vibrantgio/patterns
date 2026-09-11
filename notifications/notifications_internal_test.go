@@ -25,7 +25,7 @@ var intFrame = image.Pt(intFrameW, intFrameH)
 
 func intTok() resolvedTokens {
 	return resolvedTokens{
-		color:   tokens.DefaultLight,
+		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
 		style:   tokens.DefaultTypography.LabelMedium,

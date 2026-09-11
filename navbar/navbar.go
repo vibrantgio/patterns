@@ -1,7 +1,7 @@
-// Package navbar provides the Patterns Navbar pattern: a horizontal
-// Surface bar with three slots — a leading Brand, a centred row of
-// Links, and trailing Actions. The active link is marked with a
-// Primary-coloured underline.
+// Package navbar provides the Patterns Navbar pattern: a horizontal chrome
+// bar with three slots — a leading Brand, a centred row of Links, and
+// trailing Actions. The active link is marked with an underline in the
+// platform's selection colour.
 //
 // Navbar is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. Source is intentionally short and
@@ -52,6 +52,7 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -59,8 +60,8 @@ import (
 
 // Link is one entry in the navbar's link row. OnClick may be nil, in
 // which case the link is treated as non-interactive and does not
-// participate in focus traversal. Active selects the Primary-underline
-// indicator and is independent of OnClick.
+// participate in focus traversal. Active selects the underline indicator
+// and is independent of OnClick.
 type Link struct {
 	Label   string
 	OnClick func(gtx layout.Context)
@@ -75,6 +76,12 @@ type Props struct {
 	Brand   layout.Widget
 	Links   []Link
 	Actions []layout.Widget
+
+	// Unemphasized draws the active link's mark the way the platform draws
+	// a selection in a window that is not frontmost: the unemphasized grey
+	// rather than the accent-following selection colour. The zero value is
+	// the frontmost window.
+	Unemphasized bool
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
 	// it nil in normal use: the navbar then shapes its link labels with the
@@ -100,8 +107,8 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Typography, t.Density),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Third
 				return resolvedTokens{
 					color:   n.First,
@@ -147,7 +154,7 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -158,7 +165,7 @@ func Render(
 }
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density   // bar inset and link padding source
@@ -168,14 +175,13 @@ type resolvedTokens struct {
 // underlineDp is the thickness of the Active-link Primary indicator.
 const underlineDp = 2
 
-func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
+func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.PlatformColors, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// A navigation bar is chrome, so it fills at the chrome
-	// level: the level beneath the content, in both schemes. Do not fill
-	// with colors.Surface: it is a neutral-ramp alias, not a level — it
-	// coincides with the chrome level only in the light scheme, not the
-	// dark one.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect{Max: size}.Op())
+	// A navigation bar is chrome, so it wears the platform's chrome
+	// material: the sidebar and toolbar fill, which in the light appearance
+	// is the content's white exactly and in the dark one a blue-grey
+	// lighter than the content.
+	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: size}.Op())
 
 	// The vertical inset is the density's control padding, so a
 	// ControlHeight control in a density-pinned slot (ControlHeight +
@@ -189,10 +195,22 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 	inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return centredRow(gtx,
 			brandSlot(props.Brand),
-			linksRow(shaper, props.Links, clicks, colors, sp, style, d),
+			linksRow(shaper, props.Links, clicks, activeMark(colors, props.Unemphasized), colors, sp, style, d),
 			actionsRow(props.Actions, sp),
 		)
 	})
+
+	// The bar's foot. Two flush regions, so the one above draws the
+	// hairline that says where it ends — once, inside its own bounds. It is
+	// what parts the bar from the content under it: in the light appearance
+	// the platform's chrome material IS the content's white, so without
+	// this line the two regions are one blank page. Drawn last, so a slot
+	// that overran its inset cannot erase it.
+	seamH := max(gtx.Dp(unit.Dp(1)), 1)
+	if size.Y > seamH {
+		foot := image.Rect(0, size.Y-seamH, size.X, size.Y)
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, colors.SidebarMaterial), clip.Rect(foot).Op())
+	}
 
 	return layout.Dimensions{Size: size}
 }
@@ -264,7 +282,7 @@ func emptyWidget(layout.Context) layout.Dimensions {
 	return layout.Dimensions{}
 }
 
-func linksRow(shaper *text.Shaper, links []Link, clicks []widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
+func linksRow(shaper *text.Shaper, links []Link, clicks []widget.Clickable, mark color.NRGBA, colors tokens.PlatformColors, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		if len(links) == 0 {
 			return layout.Dimensions{}
@@ -274,7 +292,7 @@ func linksRow(shaper *text.Shaper, links []Link, clicks []widget.Clickable, colo
 			if i > 0 {
 				children = append(children, layout.Rigid(pllayout.HSpacer(sp.S2)))
 			}
-			children = append(children, layout.Rigid(linkWidget(shaper, l, clickFor(clicks, i), colors, sp, style, d)))
+			children = append(children, layout.Rigid(linkWidget(shaper, l, clickFor(clicks, i), mark, colors, sp, style, d)))
 		}
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
 	}
@@ -308,13 +326,17 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 	return &clicks[i]
 }
 
-// activeUnderlineForeground is the colour an active link's underline is drawn in:
-// the primary pin while it clears the graphic floor against the bar's own
-// fill — the surface the underline stands on, since the bar is chrome
-// filled at tokens.LevelChrome (see drawNavbar) — and otherwise the step of
-// the primary ramp that does ([tokens.ColorTokens.ForegroundOnAtFloor]).
-func activeUnderlineForeground(colors tokens.ColorTokens) color.NRGBA {
-	return colors.ForegroundOnAtFloor(tokens.RolePrimary, colors.SurfaceAt(tokens.LevelChrome), tokens.GraphicFloor)
+// activeMark is the colour an active link's underline is drawn in: the
+// platform's selection colour, which follows the accent, or its unemphasized
+// grey where the window is not the frontmost one. The platform marks where
+// the user is with the same colour it fills a selected row with; the mark is
+// a line here because a tab strip and a navbar mark a title rather than a
+// row.
+func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
+	if unemphasized {
+		return colors.UnemphasizedSelectedContentBackground
+	}
+	return colors.SelectedContentBackground
 }
 
 // linkWidget renders a single link as a label centred inside
@@ -324,8 +346,8 @@ func activeUnderlineForeground(colors tokens.ColorTokens) color.NRGBA {
 // rasterises to zero width, which an empty Link.Label does. Links are
 // adjacent cells in a row, so their hit area stays the cell bounds
 // (extension would steal a neighbour's slop). The underline itself is
-// [activeUnderlineForeground].
-func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tokens.ColorTokens, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
+// [activeMark].
+func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color.NRGBA, colors tokens.PlatformColors, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		inner := func(gtx layout.Context) layout.Dimensions {
 			padH := gtx.Dp(unit.Dp(sp.S3))
@@ -340,7 +362,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tok
 			}
 
 			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: colors.Text}.Add(gtx.Ops)
+			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.SidebarMaterial)}.Add(gtx.Ops)
 			textMaterial := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
@@ -362,7 +384,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, colors tok
 
 			if l.Active {
 				underline := image.Rect(0, cellH-underlineH, cellW, cellH)
-				paint.FillShape(gtx.Ops, activeUnderlineForeground(colors), clip.Rect(underline).Op())
+				paint.FillShape(gtx.Ops, mark, clip.Rect(underline).Op())
 			}
 			return layout.Dimensions{Size: image.Pt(cellW, cellH)}
 		}

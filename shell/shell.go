@@ -30,6 +30,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/splitter"
 	"github.com/vibrantgio/theme/theme"
@@ -234,7 +235,7 @@ func Render(
 	shaper *text.Shaper,
 	props Props,
 	sidebarW layout.Widget,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -275,7 +276,7 @@ func staticSidebarHeaderMain(
 	sidebarW layout.Widget,
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -332,13 +333,13 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 	if ratioObs == nil {
 		ratioObs = rx.Of(float32(0.5))
 	}
-	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.ColorTokens] {
-		return t.Color
+	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.PlatformColors] {
+		return t.Platform
 	})
 	inputs := rx.CombineLatest2(colorObs, ratioObs)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		ds := &splitState{current: 0.5}
-		return rx.Map(inputs, func(next rx.Tuple2[tokens.ColorTokens, float32]) layout.Widget {
+		return rx.Map(inputs, func(next rx.Tuple2[tokens.PlatformColors, float32]) layout.Widget {
 			colors := next.First
 			ext := clampRatio(next.Second)
 			left := props.Left
@@ -367,7 +368,7 @@ func splitPaneObservable(th rx.Observable[theme.Theme], props Props) rx.Observab
 	})
 }
 
-func staticSplitPane(left, right layout.Widget, ratio float32, colors tokens.ColorTokens, axis layout.Axis) layout.Widget {
+func staticSplitPane(left, right layout.Widget, ratio float32, colors tokens.PlatformColors, axis layout.Axis) layout.Widget {
 	r := clampRatio(ratio)
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawSplitPane(gtx, r, left, right, colors, nil, axis, nil)
@@ -381,7 +382,7 @@ func processDrag(
 	gtx layout.Context,
 	ds *splitState,
 	axis layout.Axis,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	onChange func(gtx layout.Context, ratio float32),
 ) {
 	inner, boundary := splitGeometry(gtx, axis, ds.current)
@@ -405,7 +406,7 @@ func splitProps(
 	gtx layout.Context,
 	ds *splitState,
 	axis layout.Axis,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	inner, boundary int,
 	onChange func(gtx layout.Context, ratio float32),
 ) splitter.Props {
@@ -448,7 +449,7 @@ func drawSplitPane(
 	gtx layout.Context,
 	ratio float32,
 	left, right layout.Widget,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	ds *splitState,
 	axis layout.Axis,
 	onChange func(gtx layout.Context, ratio float32),
@@ -463,7 +464,7 @@ func drawSplitPane(
 	// BACKDROP: whatever a split pane does not cover is the bare window
 	// plane, which nothing is drawn at and which is darker than the chrome
 	// standing on it in both schemes.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, surface.Backdrop(colors), clip.Rect{Max: size}.Op())
 
 	// Leading pane.
 	if left != nil {

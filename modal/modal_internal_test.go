@@ -55,7 +55,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 	t.Cleanup(func() { st.arb.pop(st) })
 
 	tok := resolvedTokens{
-		color:   tokens.DefaultLight,
+		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
 		title:   tokens.DefaultTypography.TitleMedium,

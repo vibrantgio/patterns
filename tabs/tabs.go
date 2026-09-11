@@ -1,11 +1,13 @@
-// Package tabs provides the Patterns Tabs pattern: a horizontal tab
-// strip with a Primary-coloured underline on the selected tab, plus
-// a content panel rendered below that shows the selected tab's content.
+// Package tabs provides the Patterns Tabs pattern: a horizontal tab strip
+// with an underline in the platform's selection colour on the selected tab,
+// plus a content panel rendered below that shows the selected tab's
+// content.
 //
-// The two are different kinds of area and stand at different levels. The
-// panel is content and fills at the `Level` field of [Props], whose zero
-// value is the window's own content; the strip is trim and fills exactly
-// one step above it. See that field for why the level is the caller's to say.
+// The two are different kinds of area. The panel is content and wears the
+// platform's content fill; the strip is a row of handles on it and wears the
+// platform's chrome material, parted from the panel by a separator seam —
+// which is how the platform tells a band of chrome from the document it caps
+// in either appearance.
 //
 // Tabs is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. Source is intentionally short and
@@ -30,6 +32,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -51,26 +54,11 @@ type Props struct {
 	// "no tab selected" (no underline, empty content area).
 	Selected rx.Observable[int]
 
-	// `Level` is the level the content panel fills at — the surface the
-	// selected tab's content is read on. The zero value is Level0, the window's
-	// own content, because a tab panel holds what the window exists to show rather
-	// than something standing around it. Set Level1 where the panel genuinely
-	// rests on chrome — inside a dialog, on a pane, or as a specimen
-	// lifted off a page — and the strip above it moves with it.
-	//
-	// The strip is NOT this level. It is a row of handles on the panel, so
-	// it fills exactly one step above it, walked from the panel's own
-	// fill rather than named as an absolute step
-	// ([tokens.ColorTokens.RaisedOn]). Where the scheme has no step left the
-	// strip is flush with its panel and says so with the seam its raise
-	// owes, drawn along its own foot.
-	//
-	// patterns/table's Props carries the identical field for the identical
-	// reason, and the two patterns are meant to keep saying it the same way.
-	// The one difference is [Render]: table's static path takes no Props and
-	// pins its own specimen level, while this one is handed the whole Props
-	// and honours this field like the observable path does.
-	Level tokens.ElevationLevel
+	// Unemphasized draws the selected tab's mark the way the platform draws
+	// a selection in a window that is not frontmost: the unemphasized grey
+	// rather than the accent-following selection colour. The zero value is
+	// the frontmost window.
+	Unemphasized bool
 
 	// OnSelect is invoked when the user changes the selection via click,
 	// Arrow-Left/Right (wrapping), Home, or End. May be nil.
@@ -100,7 +88,7 @@ type Props struct {
 const underlineDp = 2
 
 type resolvedTokens struct {
-	color   tokens.ColorTokens
+	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density   // strip height source
@@ -121,8 +109,8 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 	// theme's cached shaper; the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Color, t.Spacing, t.Typography, t.Density),
-			func(n rx.Tuple4[tokens.ColorTokens, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Typography, t.Density),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Third
 				return resolvedTokens{
 					color:   n.First,
@@ -164,16 +152,11 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // Density.PaddingY around each tab label). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
 // default desktop look.
-//
-// The `Level` field of [Props] is read here exactly as the observable path
-// reads it: this function is handed the whole Props, so a specimen that is
-// deliberately lifted off the page it is shown on says Level1 at its own call
-// site rather than having a level pinned behind its back.
 func Render(
 	shaper *text.Shaper,
 	props Props,
 	selected int,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -249,36 +232,34 @@ func drawTabs(
 	props Props,
 	clicks []widget.Clickable,
 	selected int,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 	d tokens.Density,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The panel plane first, at the caller's level, then the strip band one
-	// step over it.
-	panel := colors.SurfaceAt(props.Level)
-	paint.FillShape(gtx.Ops, panel, clip.Rect{Max: size}.Op())
+	// The panel plane first — the platform's content fill — then the strip
+	// band over it in the chrome material.
+	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	// The strip is trim over the panel it caps, so its band is the raise
-	// walked from the panel's own fill and not an absolute step
-	// ([tokens.ColorTokens.RaisedOn]). An absolute Surface here would leave
-	// the strip level with its own panel the moment the panel is printed on
-	// the window's content.
-	strip := colors.RaisedOn(panel)
-	paint.FillShape(gtx.Ops, strip.Fill, clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
-	if strip.Seamed && stripH < size.Y {
+	// The strip is a band of chrome capping the panel, so it wears the
+	// platform's chrome material. In the light appearance that material is
+	// the content's white exactly, so the seam along the strip's foot is
+	// the whole of what parts the two there; it is drawn in either
+	// appearance, because one drawing serves both.
+	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
+	if stripH < size.Y {
 		// Two flush regions, so the one above draws the hairline that says
 		// where it ends — once, inside its own foot.
 		seamH := gtx.Dp(unit.Dp(1))
 		if seamH < 1 {
 			seamH = 1
 		}
-		paint.FillShape(gtx.Ops, strip.Seam,
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, colors.SidebarMaterial),
 			clip.Rect(image.Rect(0, stripH-seamH, size.X, stripH)).Op())
 	}
 
@@ -304,22 +285,20 @@ func drawStrip(
 	props Props,
 	clicks []widget.Clickable,
 	selected int,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 ) layout.Dimensions {
 	if len(props.Tabs) == 0 {
 		return layout.Dimensions{Size: gtx.Constraints.Max}
 	}
-	// The underline is drawn on the strip band, one step above the panel
-	// (see drawTabs), so that is the surface its colour is measured against.
-	stripFill := colors.RaisedOn(colors.SurfaceAt(props.Level)).Fill
+	mark := activeMark(colors, props.Unemphasized)
 	children := make([]layout.FlexChild, 0, len(props.Tabs))
 	for i := range props.Tabs {
 		i := i
 		children = append(children, layout.Rigid(tabCell(
 			shaper, props.Tabs[i].Label, clickFor(clicks, i), i == selected,
-			colors, sp, style, stripFill,
+			colors, sp, style, mark,
 		)))
 	}
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
@@ -332,32 +311,32 @@ func clickFor(clicks []widget.Clickable, i int) *widget.Clickable {
 	return &clicks[i]
 }
 
-// underlineForeground is the colour a selected tab's underline is drawn in: the
-// primary pin while it clears the graphic floor against `fill` — the strip
-// band the underline actually sits on, handed in as the fill it is rather
-// than as a level, because the band is a raise and has no level to name —
-// and otherwise the step of the primary ramp that does
-// ([tokens.ColorTokens.ForegroundOnAtFloor]).
-func underlineForeground(colors tokens.ColorTokens, fill color.NRGBA) color.NRGBA {
-	return colors.ForegroundOnAtFloor(tokens.RolePrimary, fill, tokens.GraphicFloor)
+// activeMark is the colour a selected tab's underline is drawn in: the
+// platform's selection colour, which follows the accent, or its unemphasized
+// grey where the window is not the frontmost one. The platform marks the
+// one-of-many the user is on with the same colour it fills a selected row
+// with; a tab strip marks a title rather than a row, so the mark is a line.
+func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
+	if unemphasized {
+		return colors.UnemphasizedSelectedContentBackground
+	}
+	return colors.SelectedContentBackground
 }
 
 // tabCell renders a single tab label centred inside (S3, S2) padding,
 // with a strip-height cell. When selected, an underline of underlineDp px
-// is drawn along the cell's bottom edge in [underlineForeground], measured
-// against `fill` — the fill of the strip band the underline actually sits
-// on, passed in rather than assumed. The cell width is at least 2×S3 so the
-// underline is visible even when the label rasterises to zero width,
-// which an empty Tab.Label does.
+// is drawn along the cell's bottom edge in mark ([activeMark]). The cell
+// width is at least 2×S3 so the underline is visible even when the label
+// rasterises to zero width, which an empty Tab.Label does.
 func tabCell(
 	shaper *text.Shaper,
 	label string,
 	click *widget.Clickable,
 	selected bool,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
-	fill color.NRGBA,
+	mark color.NRGBA,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		stripH := gtx.Constraints.Max.Y
@@ -373,7 +352,7 @@ func tabCell(
 			}
 
 			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: colors.Text}.Add(gtx.Ops)
+			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.SidebarMaterial)}.Add(gtx.Ops)
 			textMaterial := mColor.Stop()
 
 			// Shape with the LabelLarge role's typeface, weight, size and
@@ -398,7 +377,7 @@ func tabCell(
 
 			if selected {
 				underline := image.Rect(0, cellH-underlineH, cellW, cellH)
-				paint.FillShape(gtx.Ops, underlineForeground(colors, fill), clip.Rect(underline).Op())
+				paint.FillShape(gtx.Ops, mark, clip.Rect(underline).Op())
 			}
 			return layout.Dimensions{Size: image.Pt(cellW, cellH)}
 		}

@@ -28,7 +28,6 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
@@ -37,7 +36,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
-	"github.com/vibrantgio/patterns/internal/outline"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -95,7 +94,7 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color    tokens.ColorTokens
+	color    tokens.PlatformColors
 	spacing  tokens.SpacingScale
 	radius   tokens.RadiusScale
 	eyebrow  tokens.TextStyle // the LabelSmall role the kicker is set in
@@ -117,8 +116,8 @@ func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 	// sizes both CTAs.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest5(t.Color, t.Spacing, t.Radius, t.Typography, t.Density),
-			func(n rx.Tuple5[tokens.ColorTokens, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.Density]) resolvedTokens {
+			rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Density),
+			func(n rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
 					color:    n.First,
@@ -176,7 +175,7 @@ func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
 	typo tokens.Typography,
@@ -254,24 +253,23 @@ func textColumn(
 // foreground, and the S3 gap under it is the whole of what separates it from
 // the title.
 //
-// The foreground is the neutral ramp's own measured answer for that surface
-// at the text floor, not a named step: the kicker is the smallest type on the
-// block and a step that reads at BodyLarge need not read at LabelSmall.
+// The foreground is the platform's secondary label, flattened onto the
+// content the hero is printed on.
 func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	foreground := tok.color.MarkOn(tokens.RoleNeutral, tok.color.SurfaceAt(tokens.Level0), tokens.TextFloor)
+	foreground := vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground)
 	return textWidget(shaper, label, foreground, tok.eyebrow, font.Normal)
 }
 
-// titleWidget renders the DisplaySmall-role title in Text. A zero style
-// weight falls back to SemiBold.
+// titleWidget renders the DisplaySmall-role title in the platform's label.
+// A zero style weight falls back to SemiBold.
 func titleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, tok.color.Text, tok.title, font.SemiBold)
+	return textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
 }
 
 // subtitleWidget renders the BodyLarge-role subtitle in the low-contrast
 // text step (neutral 700).
 func subtitleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, tok.color.Ramps.Neutral.Step(700), tok.subtitle, font.Normal)
+	return textWidget(shaper, label, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.subtitle, font.Normal)
 }
 
 func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
@@ -332,15 +330,15 @@ func primaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, cli
 	}
 }
 
-// secondaryCTAWidget renders the Secondary CTA as a locally-painted
-// outlined button. Geometry mirrors components/button (Density.ControlHeight
-// tall, Density.PaddingX/PaddingY inside, Md corner radius) so the two CTAs
-// line up; the fill is Surface and the perimeter carries a 1 dp Outline
-// stroke.
+// secondaryCTAWidget renders the Secondary CTA as the platform's ordinary
+// push button beside the default action — components/button's Tonal — so the
+// pair is the two buttons a dialog draws rather than one button and a
+// hand-painted lookalike. The hero drew its own before the platform's set
+// answered for it, and the geometry it was mirroring is components/button's
+// anyway.
 func secondaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, click *widget.Clickable) layout.Widget {
-	draw := func(gtx layout.Context) layout.Dimensions {
-		return drawOutlinedButton(gtx, shaper, label, tok)
-	}
+	draw := button.Render(shaper, label, tok.color, tok.spacing, tok.radius, tok.label, tok.density,
+		button.RenderState{Emphasis: button.Tonal, Surface: tok.color.ControlBackground})
 	return func(gtx layout.Context) layout.Dimensions {
 		cgtx := ctaGtx(gtx, shaper, label, tok)
 		if click == nil {
@@ -355,58 +353,8 @@ func secondaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, c
 	}
 }
 
-func drawOutlinedButton(gtx layout.Context, shaper *text.Shaper, label string, tok resolvedTokens) layout.Dimensions {
-	// Mirror components/button exactly — the drawn height is the density's
-	// ControlHeight and the inner padding is its PaddingX/PaddingY.
-	padH := gtx.Dp(unit.Dp(tok.density.PaddingX))
-	padV := gtx.Dp(unit.Dp(tok.density.PaddingY))
-	minH := gtx.Dp(unit.Dp(tok.density.ControlHeight))
-	rad := gtx.Dp(unit.Dp(tok.radius.Md))
-	stroke := float32(gtx.Dp(unit.Dp(1)))
-
-	mColor := op.Record(gtx.Ops)
-	paint.ColorOp{Color: tok.color.Primary}.Add(gtx.Ops)
-	material := mColor.Stop()
-
-	labelGtx := gtx
-	labelGtx.Constraints.Min = image.Point{}
-	maxLabelW := gtx.Constraints.Max.X - 2*padH
-	if maxLabelW > 0 {
-		labelGtx.Constraints.Max.X = maxLabelW
-	}
-	mLabel := op.Record(gtx.Ops)
-	wl := typeset.Label(tok.label, 1)
-	labelDims := typeset.Layout(labelGtx, shaper, wl, typeset.Font(tok.label, font.Normal), unit.Sp(tok.label.Size), label, material)
-	labelCall := mLabel.Stop()
-
-	w := labelDims.Size.X + 2*padH
-	h := labelDims.Size.Y + 2*padV
-	if h < minH {
-		h = minH
-	}
-	if w < minH {
-		w = minH
-	}
-
-	// The outlined CTA is an edge around a raised fill and nothing else, so
-	// the edge is derived rather than named: the neutral step that reaches
-	// the graphic floor against that fill. The fill is the raise walked from
-	// the content the hero is printed on.
-	raise := tok.color.RaisedOn(tok.color.SurfaceAt(tokens.Level0))
-	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(w, h)}, SE: rad, SW: rad, NE: rad, NW: rad}
-	paint.FillShape(gtx.Ops, raise.Fill, rrect.Op(gtx.Ops))
-	paint.FillShape(gtx.Ops, outline.Color(tok.color, raise.Fill), clip.Stroke{Path: rrect.Path(gtx.Ops), Width: stroke}.Op())
-
-	offX := (w - labelDims.Size.X) / 2
-	offY := (h - labelDims.Size.Y) / 2
-	st := op.Offset(image.Pt(offX, offY)).Push(gtx.Ops)
-	labelCall.Add(gtx.Ops)
-	st.Pop()
-	return layout.Dimensions{Size: image.Pt(w, h)}
-}
-
-// ctaGtx sizes a CTA cell: [ctaIntrinsicWidth] as the floor, so the Primary
-// filled CTA (which fills its Max.X) and the Secondary outlined CTA share a
+// ctaGtx sizes a CTA cell: [ctaIntrinsicWidth] as the floor, so the two CTAs
+// — both components/button visuals, which fill their Max.X — share a
 // deterministic footprint inside the CTA row, and label + 2×PaddingX when the
 // label needs more than that, so no CTA is ever ellipsised by its own cell.
 // The row's available width caps both: a label too long for the hero still

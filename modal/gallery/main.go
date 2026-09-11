@@ -43,6 +43,7 @@ import (
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/mvu/stream"
 	"github.com/vibrantgio/patterns/modal"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -188,7 +189,7 @@ func run(w *app.Window) error {
 // body is the modal's content: a short instructional paragraph.
 func (d *demo) body(gtx layout.Context) layout.Dimensions {
 	m := op.Record(gtx.Ops)
-	paint.ColorOp{Color: tokens.DefaultLight.Ramps.Neutral.Step(700)}.Add(gtx.Ops)
+	paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.SecondaryLabel, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
 	mat := m.Stop()
 	lbl := widget.Label{}
 	return lbl.Layout(gtx, d.shaper, font.Font{}, unit.Sp(15),

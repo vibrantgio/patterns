@@ -14,7 +14,9 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/patterns/navbar"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -38,11 +40,11 @@ type asideDragState struct {
 // tag for the aside splitter's pointer hit area.
 type asideDragTag struct{ _ byte }
 
-// seamColor is the semantic Seam token: one step past the Surface
-// fill, so it still registers a pixel delta against Surface on both
-// light and dark schemes.
-func seamColor(c tokens.ColorTokens) color.NRGBA {
-	return c.Seam
+// seamColor is the platform's separator, flattened onto the content the
+// splitter parts from the aside beside it: a seam is a coverage over
+// whatever is beneath, and the rasterizer is handed the composite.
+func seamColor(c tokens.PlatformColors) color.NRGBA {
+	return vgcolor.Flatten(c.Separator, c.ControlBackground)
 }
 
 func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -53,8 +55,8 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 	nb := navbar.Navbar(th, props.Navbar)
 	// Colour and density fold into one snapshot stream so the five-way
 	// CombineLatest keeps room for the layout.Widget and width inputs.
-	tokObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[rx.Tuple2[tokens.ColorTokens, tokens.Density]] {
-		return rx.CombineLatest2(t.Color, t.Density)
+	tokObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[rx.Tuple2[tokens.PlatformColors, tokens.Density]] {
+		return rx.CombineLatest2(t.Platform, t.Density)
 	})
 	hasAside := props.Aside != nil
 	aside := props.Aside
@@ -68,7 +70,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 	inputs := rx.CombineLatest5(tokObs, sb, nb, aside, widthObs)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		ds := &asideDragState{current: defaultAsideDp}
-		return rx.Map(inputs, func(next rx.Tuple5[rx.Tuple2[tokens.ColorTokens, tokens.Density], layout.Widget, layout.Widget, layout.Widget, unit.Dp]) layout.Widget {
+		return rx.Map(inputs, func(next rx.Tuple5[rx.Tuple2[tokens.PlatformColors, tokens.Density], layout.Widget, layout.Widget, layout.Widget, unit.Dp]) layout.Widget {
 			tok, sbW, nbW, asW, wdp := next.First, next.Second, next.Third, next.Fourth, next.Fifth
 			colors, navH := tok.First, NavbarHeight(tok.Second)
 			ext := clampAsideWidth(wdp)
@@ -120,7 +122,7 @@ func RenderThreeColumn(
 	shaper *text.Shaper,
 	props Props,
 	sidebarW, asideW layout.Widget,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
 	d tokens.Density,
@@ -187,7 +189,7 @@ func drawThreeColumn(
 	gtx layout.Context,
 	nb, sb, main, aside, footer layout.Widget,
 	asideDp unit.Dp,
-	colors tokens.ColorTokens,
+	colors tokens.PlatformColors,
 	ds *asideDragState, // nil disables the splitter hit area (static path)
 	hasAside bool,
 	navbarH unit.Dp,
@@ -209,7 +211,7 @@ func drawThreeColumn(
 	// Backstop so the splitter and the empty slots read against something.
 	// It is the BACKDROP — the bare window plane, which is what a
 	// three-column frame shows wherever nothing stands.
-	paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelBackdrop), clip.Rect{Max: size}.Op())
+	paint.FillShape(gtx.Ops, surface.Backdrop(colors), clip.Rect{Max: size}.Op())
 
 	// Navbar spans the full width — unlike SidebarHeaderMain, where the
 	// sidebar claims the full height and the navbar starts after it.
@@ -253,11 +255,11 @@ func drawThreeColumn(
 	}
 
 	// Main. The frame states where the document stands even when the slot
-	// is empty: the content region is level 0, not the bare window plane
-	// the backstop paints.
+	// is empty: the content region is the platform's content fill, not the
+	// bare window plane the backstop paints.
 	if rowH > 0 && mainW > 0 {
 		mainRect := image.Rect(sbW, navH, sbW+mainW, navH+rowH)
-		paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.Level0), clip.Rect(mainRect).Op())
+		paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect(mainRect).Op())
 	}
 	if main != nil && rowH > 0 {
 		st := op.Offset(image.Pt(sbW, navH)).Push(gtx.Ops)
@@ -290,12 +292,19 @@ func drawThreeColumn(
 		}
 	}
 
-	// Footer. A footer strip is a status bar, which is chrome,
-	// so the frame fills it at the chrome level under whatever
-	// the caller draws there.
+	// Footer. A footer strip is a status bar, which is chrome, so the frame
+	// fills it with the platform's chrome material under whatever the caller
+	// draws there.
 	if footH > 0 {
 		footRect := image.Rect(0, navH+rowH, size.X, navH+rowH+footH)
-		paint.FillShape(gtx.Ops, colors.SurfaceAt(tokens.LevelChrome), clip.Rect(footRect).Op())
+		paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect(footRect).Op())
+		// The strip's top. The region above it is the caller's content, so
+		// the frame draws the seam the content owes: in the light
+		// appearance the chrome material is the content's white, and the
+		// line is the whole of what parts the two.
+		seamH := max(gtx.Dp(unit.Dp(1)), 1)
+		top := image.Rect(0, footRect.Min.Y, size.X, footRect.Min.Y+seamH)
+		paint.FillShape(gtx.Ops, seamColor(colors), clip.Rect(top).Op())
 	}
 	if footer != nil && footH > 0 {
 		st := op.Offset(image.Pt(0, navH+rowH)).Push(gtx.Ops)
