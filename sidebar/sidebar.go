@@ -1,9 +1,9 @@
 // Package sidebar provides the Patterns Sidebar pattern: a collapsible
 // vertical chrome column that swaps between an expanded width
 // (label+icon) and a collapsed width (icon-only) on demand. The active
-// Item is drawn as the platform draws a selected row: filled with the
-// selection colour, its label in the foreground the platform pairs with
-// that fill.
+// Item is drawn as the platform draws a selected sidebar row: the pill
+// [PaintSelection] fills, its label in the foreground the platform pairs
+// with that fill.
 //
 // Sidebar is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is
@@ -22,8 +22,8 @@
 // OnToggleCollapse is the request to change it, so wiring the
 // affordance to nothing leaves a sidebar that cannot collapse.
 //
-// Items are stacked at the density's row pitch — exactly
-// Density.RowHeight, the platform's own list row — in a
+// Items are stacked at the sidebar's own row pitch — [RowHeight], 32 dp,
+// which is not the platform's list row — in a
 // components/list scroll region filling the column below the toggle: a
 // list longer than the column is tall scrolls by wheel or touch
 // instead of painting past the bottom edge. No scrollbar is drawn — the
@@ -63,6 +63,7 @@ package sidebar
 
 import (
 	"image"
+	"image/color"
 
 	"gioui.org/font"
 	"gioui.org/gesture"
@@ -154,12 +155,38 @@ type Props struct {
 // SpacingScale tops out at S24 = 96 dp, so the 192 dp expanded width
 // (≈ 4 × S12) is a local constant rather than a new spacing-token field.
 // Widths do not follow density (the column contract is fixed — see the
-// package comment); the item and toggle heights do — both are exactly
+// package comment); the toggle's height does — it is exactly
 // Density.ControlHeight.
 const (
 	expandedDp  = 192
 	collapsedDp = 48
 	iconColDp   = 48
+)
+
+// RowHeight, SelectionInset and SelectionRadius are the sidebar's own
+// geometry, and they are this package's rather than the density scale's:
+// a chrome rail draws a taller row than a content list, so Density.RowHeight
+// (20 dp, the platform's list row) does not answer for it and neither
+// corrects the other.
+//
+// MEASURED off the organization's macOS reference, every reading a 1x window
+// capture where one pixel is one point:
+//
+//   - RowHeight 32: Finder's selected sidebar row spans y 78–109 in
+//     finder-window-untinted-light.png and y 90–121 in
+//     finder-window-untinted-dark.png, and Voice Memos' spans y 363–394 in
+//     voicememos-sidebar-light.png — 32 rows in all three.
+//   - SelectionInset 10: that Finder pill spans x 52–341 inside a sidebar
+//     whose fill spans x 42–351, so it is inset 10 from each edge of the
+//     rail; the Voice Memos pill reads the same 10 against its own rail.
+//   - SelectionRadius 8: a circular fit to the sub-pixel coverage of the
+//     pill's top-left corner reads 7.9 in the Finder capture and 8.4 in the
+//     Voice Memos one. The platform's own corner is a continuous curve, which
+//     is why the two fits differ; 8 is what a circular corner draws.
+const (
+	RowHeight       unit.Dp = 32
+	SelectionInset  unit.Dp = 10
+	SelectionRadius unit.Dp = 8
 )
 
 type resolvedTokens struct {
@@ -392,13 +419,12 @@ func drawSidebar(
 	// Items below the toggle, in a components/list scroll region filling the
 	// rest of the column — no scrollbar, like table's body: wheel/touch
 	// scrolling plus the list's own keyboard traversal. Each row is a
-	// full-width row at the density's pitch: exactly RowHeight, the
-	// platform's own list row.
+	// full-width row at the sidebar's own pitch, [RowHeight].
 	listH := h - toggleH
 	if listH <= 0 {
 		return layout.Dimensions{Size: size}
 	}
-	itemH := gtx.Dp(unit.Dp(d.RowHeight))
+	itemH := gtx.Dp(RowHeight)
 	stk := op.Offset(image.Pt(0, toggleH)).Push(gtx.Ops)
 	lGtx := gtx
 	lGtx.Constraints = layout.Exact(image.Pt(w, listH))
@@ -429,6 +455,60 @@ func drawTrailingSeam(gtx layout.Context, size image.Point, colors tokens.Platfo
 	}
 	edge := image.Rect(size.X-w, 0, size.X, size.Y)
 	paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, colors.SidebarMaterial), clip.Rect(edge).Op())
+}
+
+// SelectionFill is the fill the platform lays under a selected sidebar row:
+// the accent in a frontmost window, and the unemphasized selection grey in a
+// window that is not.
+//
+// It is deliberately not SelectedContentBackground, which is what a content
+// list's selected row wears: the platform draws the two in different colours.
+// The sidebar's pill follows the user's accent, so it reads ControlAccent and
+// moves with the theme colour. The stored reference measures that pill at
+// #178bfb in the light appearance — voicememos-sidebar-light.png, x 74–273,
+// y 363–394 — against ControlAccent's #007aff, a lift the platform's
+// vibrancy adds over the sidebar material and that no recorded name carries.
+// Recording it would take a dark reading beside the light one, and no stored
+// capture holds a dark sidebar with a frontmost window's selected row.
+func SelectionFill(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
+	if unemphasized {
+		return colors.UnemphasizedSelectedContentBackground
+	}
+	return colors.ControlAccent
+}
+
+// SelectionLabel is the foreground the platform pairs with [SelectionFill]:
+// the label it draws on an accent fill where the window is frontmost, and the
+// ordinary label on the unemphasized grey where it is not. The caller
+// flattens it onto the fill.
+func SelectionLabel(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
+	if unemphasized {
+		return colors.Label
+	}
+	return colors.AlternateSelectedControlText
+}
+
+// PaintSelection fills the selected row's pill into a row of the given size
+// at the current offset: [SelectionFill], inset [SelectionInset] from each
+// edge of the rail, cornered at [SelectionRadius], filling the row's height.
+//
+// It is exported so an application drawing its own chrome rail — a file tree,
+// a list of feeds — draws the platform's pill rather than one of its own.
+func PaintSelection(gtx layout.Context, size image.Point, colors tokens.PlatformColors, unemphasized bool) {
+	inset := gtx.Dp(SelectionInset)
+	if 2*inset >= size.X {
+		inset = 0
+	}
+	bounds := image.Rect(inset, 0, size.X-inset, size.Y)
+	if bounds.Dx() <= 0 || bounds.Dy() <= 0 {
+		return
+	}
+	r := gtx.Dp(SelectionRadius)
+	if half := min(bounds.Dx(), bounds.Dy()) / 2; r > half {
+		r = half
+	}
+	rr := clip.RRect{Rect: bounds, NE: r, NW: r, SE: r, SW: r}
+	paint.FillShape(gtx.Ops, SelectionFill(colors, unemphasized), rr.Op(gtx.Ops))
 }
 
 func clickFor(st *liveState, i int) *gesture.Click {
@@ -479,25 +559,20 @@ func drawItem(
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 ) layout.Dimensions {
-	// The selected row is the platform's: the accent-following selection
-	// colour under the foreground the platform pairs with an accent fill,
-	// or the unemphasized grey under the ordinary label where the window is
-	// not frontmost. A row that is not selected takes no fill of its own and
-	// no hover tint either — the platform tints neither a list row nor a
-	// sidebar row under the pointer, which the reference captures measure.
+	// The selected row is the platform's pill, and a row that is not selected
+	// takes no fill of its own and no hover tint either — the platform tints
+	// neither a list row nor a sidebar row under the pointer, which the
+	// reference captures measure.
 	rowFill := colors.SidebarMaterial
 	label := colors.Label
 	if selected {
-		rowFill, label = colors.SelectedContentBackground, colors.AlternateSelectedControlText
-		if unemphasized {
-			rowFill, label = colors.UnemphasizedSelectedContentBackground, colors.Label
-		}
+		rowFill, label = SelectionFill(colors, unemphasized), SelectionLabel(colors, unemphasized)
 	}
 	foreground := vgcolor.Flatten(label, rowFill)
 
 	inner := func(gtx layout.Context) layout.Dimensions {
 		if selected {
-			paint.FillShape(gtx.Ops, rowFill, clip.Rect{Max: size}.Op())
+			PaintSelection(gtx, size, colors, unemphasized)
 		}
 
 		iconW := gtx.Dp(unit.Dp(iconColDp))

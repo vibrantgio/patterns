@@ -120,11 +120,11 @@ func TestSidebarGolden(t *testing.T) {
 	}
 }
 
-// TestSidebarActiveTintIsVisible guards the visual contract that the
-// Active item adds Primary-tinted pixels on both light and dark
-// schemes. A tint that drops below the alpha threshold and becomes a
-// no-op would silently break the active-item indicator.
-func TestSidebarActiveTintIsVisible(t *testing.T) {
+// TestSidebarActiveSelectionIsVisible guards the visual contract that the
+// Active item adds the platform's selection pill on both light and dark
+// schemes. A pill that resolved to the chrome material and became a no-op
+// would silently break the active-item indicator.
+func TestSidebarActiveSelectionIsVisible(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
@@ -153,7 +153,7 @@ func TestSidebarActiveTintIsVisible(t *testing.T) {
 			def := render(t, -1, c.colors)
 			act := render(t, 0, c.colors)
 			if n := golden.PixelDiff(def, act); n == 0 {
-				t.Errorf("%s: active and default render identically; expected Primary tint pixels", c.name)
+				t.Errorf("%s: active and default render identically; expected the selection pill's pixels", c.name)
 			}
 		})
 	}
@@ -226,9 +226,10 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 	driveFrame(w, ops, r, expandedSize)
 
 	// Click item 0 → fires item 0 and gives it focus. The toggle is a
-	// control, the items are rows, so the two take different heights: the
-	// toggle occupies y∈[0,ControlHeight) and item 0 the RowHeight under
-	// it. The point is derived rather than written down.
+	// control, the items are the sidebar's own rows, so the two take
+	// different heights: the toggle occupies y∈[0,ControlHeight) and item 0
+	// the sidebar's RowHeight under it. The point is derived rather than
+	// written down.
 	hit := f32.Pt(96, float32(itemMid(0)))
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
@@ -277,7 +278,7 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 // End must select the last item anyway, and Enter must fire its OnClick.
 func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	const n = 20
-	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(tokens.Comfortable.RowHeight)
+	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(sidebar.RowHeight)
 	if top := toggleH + rowH*(n-1); top <= frameH {
 		t.Fatalf("item %d starts at y=%d, inside the %d px frame; this test needs it to be unlaid-out",
 			n-1, top, frameH)
@@ -467,9 +468,9 @@ func indexIcon(i int) layout.Widget {
 // moving the list, the golden would silently pin the top view.
 func TestSidebarOverflowGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	// Enough rows to overrun the frame at BOTH densities: the platform's
-	// row is 20 dp Comfortable and 19 Compact, and the rail is 256 px less
-	// the toggle.
+	// Enough rows to overrun the frame at BOTH densities: the sidebar's row
+	// is 32 dp whatever the density, and the rail is 256 px less the
+	// toggle, whose height is the density's control height.
 	const n = 16
 
 	cases := []struct {
@@ -528,8 +529,8 @@ func TestSidebarOverflowGolden(t *testing.T) {
 
 // itemMid is the y of the middle of item i in a Comfortable rail at
 // PxPerDp 1: the toggle takes the control height at the top and every item
-// below it takes the platform's row height.
+// below it takes the sidebar's own row height.
 func itemMid(i int) int {
-	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(tokens.Comfortable.RowHeight)
+	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(sidebar.RowHeight)
 	return toggleH + i*rowH + rowH/2
 }
