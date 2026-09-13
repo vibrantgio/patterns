@@ -23,7 +23,7 @@ import (
 
 // Card paints the platform's box: one rounded fill and nothing else. The
 // platform's grouped box carries no hairline and no shadow — its edge is a
-// two-to-three pixel ramp straight from the plane to the fill — so the
+// two-to-three pixel antialiased blend straight from the plane to the fill — so the
 // caller hands in the fill and the box is that fill.
 func Card(gtx layout.Context, bounds image.Rectangle, r int, fill color.NRGBA) {
 	rrect := clip.RRect{Rect: bounds, SE: r, SW: r, NE: r, NW: r}

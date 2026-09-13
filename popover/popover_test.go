@@ -690,7 +690,7 @@ func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 	)
 	// Across the surface's own width, where the shadow's band is flat: the
 	// corner tiles either side of it are a ramp of their own, and the tail's
-	// tip is a sliver the ramp's steps would drown.
+	// tip is a sliver a coarser measure would drown.
 	surfLo, surfHi, ok := fillRun(img, edge+8, fill)
 	if !ok {
 		t.Fatalf("no surface fill %d px below its top edge; the scene is not what this reads", 8)

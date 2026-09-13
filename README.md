@@ -273,7 +273,7 @@ Honest about what does not work yet:
   New call: `…, tokens.Spacing, tokens.DefaultTypography.LabelLarge,
   tokens.Comfortable)`. The live entry points are unchanged.
 - **`hero`'s outlined Secondary CTA was 8 dp too tall until v0.3.0.** It
-  hardcoded 44 dp to line up with the filled Primary, which was
+  hardcoded 44 dp to line up with the filled CTA, which was
   prism/button's height until E1.3 re-cut that to the density's
   `ControlHeight` (36 dp Comfortable). Both CTAs now follow the density and
   line up again.

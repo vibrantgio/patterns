@@ -189,7 +189,7 @@ func (i Purpose) String() string {
 // # The default action, and why it is derived
 //
 // Apple's rule, adopted wholesale: a destructive primary is never the
-// Return-bound default. When the primary destroys something, Cancel takes the
+// Return-bound default. When the primary action destroys something, Cancel takes the
 // default — "Discard changes?" answering Return with Discard is the exact
 // failure this forbids.
 //

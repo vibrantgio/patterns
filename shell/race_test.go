@@ -23,7 +23,7 @@ import (
 // frames, the shape of any model-driven app (drag → message → model →
 // re-emission). Drag state must only ever be touched on the frame
 // goroutine, so `go test -race` fails if an emission projector writes
-// it. The dims assertions are secondary; the real check is -race.
+// it. The dims assertions are incidental; the real check is -race.
 
 // raceHarness subscribes sh on the Goroutine scheduler and returns a
 // getter for the most recent layout.Widget, waiting for the first emission

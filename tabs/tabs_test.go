@@ -111,7 +111,7 @@ func TestTabsGolden(t *testing.T) {
 }
 
 // TestTabsSelectionUnderlineIsVisible guards the visual contract that
-// the selected tab adds Primary-coloured pixels to the strip relative
+// the selected tab adds selection-coloured pixels to the strip relative
 // to an unselected (out-of-range index) baseline.
 func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	shaper := defaultShaper(t)

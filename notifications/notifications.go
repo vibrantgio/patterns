@@ -91,7 +91,7 @@ const DefaultLifetime = 4 * time.Second
 
 // The trailing slice of Lifetime during which a toast tweens its alpha
 // from 1.0 to 0.0 resolves from the theme's motion scale: Theme.Motion's
-// DurSlow stop (MD3 medium4, 400 ms). Short enough that the dismiss feels
+// DurSlow stop (400 ms). Short enough that the dismiss feels
 // snappy but long enough that the fade is perceptible at 60 fps. It
 // reaches the frame path as resolvedTokens.fade.
 

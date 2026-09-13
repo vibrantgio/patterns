@@ -9,7 +9,7 @@
 //
 // Layout: each Item renders as a rounded Surface card with a 1 dp strong
 // border and S5 padding on all sides. The card stacks (top to bottom) an
-// opening double-quotation glyph in Primary rendered from a clip.Path,
+// opening double-quotation glyph in the accent rendered from a clip.Path,
 // the Quote body in body-large typography in Text, and a horizontal
 // author block — the AuthorAvatar (or, when nil, a border-stroked
 // circular placeholder containing the first letter of AuthorName) sized
@@ -273,7 +273,7 @@ func drawCardContent(gtx layout.Context, shaper *text.Shaper, item Item, tok res
 	return pllayout.Col(gtx, spaced...)
 }
 
-// quoteGlyphWidget paints an opening double-quotation glyph in Primary
+// quoteGlyphWidget paints an opening double-quotation glyph in the accent
 // using a clip.Path. Two filled "comma" shapes — each a pentagon with a
 // rectangular cap and a tail tapering down — sit side-by-side, separated
 // by an S1 gap. The total size is roughly (2 × S3 + S1) × S4.
@@ -367,7 +367,7 @@ func avatarWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Wid
 }
 
 // drawPlaceholder paints a hollow circle of diameter `size` and, when name is
-// non-empty, the first rune centred inside it in the platform's secondary
+// non-empty, the first rune centred inside it in the platform's secondary label
 // label. The circle is hollow, so the surface on both sides of its line is
 // the card's own fill, which is what the platform's separator is flattened
 // onto.

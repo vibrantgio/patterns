@@ -17,7 +17,7 @@
 // chrome, so it wears the platform's chrome material in both schemes, and
 // chrome lies flat on the backdrop and has nothing to cast onto, so there is
 // no shadow here. [Surface] is the fill and [SeamColor] the edge, both the
-// platform's own names rather than steps of a ramp.
+// platform's own names.
 //
 // WHY THE HAIRLINE IS DRAWN AT ALL. An inset object needs no seam where the
 // backdrop showing around it does that work. On macOS 26 the backdrop does

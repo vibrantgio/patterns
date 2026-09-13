@@ -94,7 +94,7 @@ func TestNavbarGolden(t *testing.T) {
 }
 
 // TestNavbarActiveVsDefaultDiffer guards the visual contract that an
-// Active link adds Primary-coloured pixels in the link row.
+// Active link adds selection-coloured pixels in the link row.
 func TestNavbarActiveVsDefaultDiffer(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
@@ -108,7 +108,7 @@ func TestNavbarActiveVsDefaultDiffer(t *testing.T) {
 	def := render(links(-1))
 	act := render(links(1))
 	if n := golden.PixelDiff(def, act); n == 0 {
-		t.Errorf("active and default render identically; expected Primary underline pixels")
+		t.Errorf("active and default render identically; expected the underline's pixels")
 	}
 }
 
@@ -330,7 +330,7 @@ func barHeight(d tokens.Density, style tokens.TextStyle) int {
 }
 
 // navbarUnderlineDp mirrors the unexported underlineDp in the navbar
-// package: the thickness of the Active link's Primary indicator.
+// package: the thickness of the Active link's indicator.
 const navbarUnderlineDp = 2
 
 // TestNavbarCompactGolden records or diffs the compact-density golden
@@ -476,7 +476,7 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 			}
 		}
 		if lowest < 0 {
-			t.Fatalf("density %+v: no Primary pixel in the bar; the Active underline did not draw, so this proves nothing", d)
+			t.Fatalf("density %+v: no selection-coloured pixel in the bar; the Active underline did not draw, so this proves nothing", d)
 		}
 		if want := h - int(d.PaddingY); lowest >= want {
 			t.Errorf("density %+v: the underline reaches row %d of a %d px bar, inside the %d dp bottom padding",
