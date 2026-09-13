@@ -111,6 +111,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
+	"github.com/vibrantgio/components/composite"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/effects/depth"
 	vgcolor "github.com/vibrantgio/theme/color"
@@ -579,12 +580,13 @@ func drawModal(
 		processDefaultAction(gtx, props, st)
 	}
 
-	// Scrim — full-frame dimmer. Pointer events that miss the surface
-	// hit the scrim tag and trigger OnClose.
-	scrimColor := tok.color.Scrim
+	// Scrim — full-frame dimmer, composited over the page it interrupts
+	// rather than handed to Gio as a coverage: the page is mixed content, so
+	// there is no one fill to flatten the scrim onto. Pointer events that
+	// miss the surface hit the scrim tag and trigger OnClose.
 	scrimRect := image.Rectangle{Max: frame}
 	scrimClip := clip.Rect(scrimRect).Push(gtx.Ops)
-	paint.FillShape(gtx.Ops, scrimColor, clip.Rect(scrimRect).Op())
+	composite.Flatten(gtx, scrimRect, tok.color.Scrim)
 	if live {
 		event.Op(gtx.Ops, &st.scrimTag)
 	}
@@ -963,7 +965,6 @@ func crossIcon(gtx layout.Context, sizePx int, col color.NRGBA) {
 func castShadow(gtx layout.Context, bounds image.Rectangle, radius int, c tokens.PlatformColors) {
 	depth.Shadow(gtx, bounds, radius, c.FloatingShadow)
 }
-
 
 // spacerV returns a vertical-spacer layout.Widget that consumes hPx pixels in
 // the Y axis and zero pixels in X. Used inside the vertical Flex stack.

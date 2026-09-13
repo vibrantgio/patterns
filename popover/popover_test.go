@@ -572,14 +572,15 @@ func fillRun(img *image.RGBA, y int, c color.NRGBA) (lo, hi int, ok bool) {
 // the surface. Darker than that is something drawn — the tail's tip and its
 // outline; lighter than it is the shadow thinning out towards the room's edge,
 // which is not.
-func drawnRun(img *image.RGBA, y, room int) (lo, hi int, ok bool) {
-	right := min(img.Bounds().Max.X, room)
+func drawnRun(img *image.RGBA, y, from, to int) (lo, hi int, ok bool) {
+	from = max(from, img.Bounds().Min.X)
+	to = min(to, img.Bounds().Max.X)
 	sum := func(x int) int {
 		r, g, b, _ := img.At(x, y).RGBA()
 		return int(r>>8) + int(g>>8) + int(b>>8)
 	}
 	count := map[int]int{}
-	for x := img.Bounds().Min.X; x < right; x++ {
+	for x := from; x < to; x++ {
 		count[sum(x)]++
 	}
 	bg, best := 0, -1
@@ -588,8 +589,8 @@ func drawnRun(img *image.RGBA, y, room int) (lo, hi int, ok bool) {
 			bg, best = v, n
 		}
 	}
-	for x := img.Bounds().Min.X; x < right; x++ {
-		if sum(x) >= bg {
+	for x := from; x < to; x++ {
+		if sum(x) == bg {
 			continue
 		}
 		if !ok {
@@ -687,7 +688,14 @@ func TestTailMeetsTheAnchorAndTheSurface(t *testing.T) {
 		edge     = 142 // and the surface stands S2 below it
 		drawnMid = roomW - 30
 	)
-	lo, hi, ok := drawnRun(img, foot, roomW)
+	// Across the surface's own width, where the shadow's band is flat: the
+	// corner tiles either side of it are a ramp of their own, and the tail's
+	// tip is a sliver the ramp's steps would drown.
+	surfLo, surfHi, ok := fillRun(img, edge+8, fill)
+	if !ok {
+		t.Fatalf("no surface fill %d px below its top edge; the scene is not what this reads", 8)
+	}
+	lo, hi, ok := drawnRun(img, foot, surfLo, surfHi+1)
 	if !ok {
 		t.Fatalf("the row at the anchor's foot (y=%d) is bare; the tail floats above the anchor", foot)
 	}
