@@ -231,11 +231,6 @@ func TestSurfaceIsTheChromeMaterial(t *testing.T) {
 	}
 }
 
-func lightness(c color.NRGBA) float64 {
-	l, _, _ := vgcolor.LabFromNRGBA(c)
-	return l
-}
-
 // TestPaneOutlineAndBackdrop reads a drawn pane: the hairline is one pixel
 // of the seam's own colour down each straight run with the fill immediately
 // inside it, and what shows around the pane is the bare backdrop, with

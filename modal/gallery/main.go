@@ -212,7 +212,7 @@ func footerSlot(w layout.Widget) layout.Widget {
 }
 
 func (d *demo) frame(gtx layout.Context) layout.Dimensions {
-	paint.FillShape(gtx.Ops, tokens.DefaultLight.Background, clip.Rect{Max: gtx.Constraints.Max}.Op())
+	paint.FillShape(gtx.Ops, tokens.PlatformLight.WindowBackground, clip.Rect{Max: gtx.Constraints.Max}.Op())
 
 	// Trigger button + dismissal counter, near the top. Visible whenever the
 	// modal is closed; when open, the scrim is painted over them and absorbs
@@ -231,7 +231,7 @@ func (d *demo) frame(gtx layout.Context) layout.Dimensions {
 				n := d.closes
 				d.mu.Unlock()
 				m := op.Record(gtx.Ops)
-				paint.ColorOp{Color: tokens.DefaultLight.Text}.Add(gtx.Ops)
+				paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.Label, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
 				mat := m.Stop()
 				lbl := widget.Label{MaxLines: 1}
 				return lbl.Layout(gtx, d.shaper, font.Font{}, unit.Sp(14),

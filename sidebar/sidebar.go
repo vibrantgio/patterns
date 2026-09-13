@@ -461,20 +461,16 @@ func drawTrailingSeam(gtx layout.Context, size image.Point, colors tokens.Platfo
 // the accent in a frontmost window, and the unemphasized selection grey in a
 // window that is not.
 //
-// It is deliberately not SelectedContentBackground, which is what a content
-// list's selected row wears: the platform draws the two in different colours.
-// The sidebar's pill follows the user's accent, so it reads ControlAccent and
-// moves with the theme colour. The stored reference measures that pill at
-// #178bfb in the light appearance — voicememos-sidebar-light.png, x 74–273,
-// y 363–394 — against ControlAccent's #007aff, a lift the platform's
-// vibrancy adds over the sidebar material and that no recorded name carries.
-// Recording it would take a dark reading beside the light one, and no stored
-// capture holds a dark sidebar with a frontmost window's selected row.
+// It is deliberately neither SelectedContentBackground, which is what a
+// content list's selected row wears, nor ControlAccent: the platform lifts
+// the pill above the accent's own blue over the chrome material. Both
+// readings are recorded as SidebarSelection, which follows the theme colour
+// through PlatformColors.WithAccent.
 func SelectionFill(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 	if unemphasized {
 		return colors.UnemphasizedSelectedContentBackground
 	}
-	return colors.ControlAccent
+	return colors.SidebarSelection
 }
 
 // SelectionLabel is the foreground the platform pairs with [SelectionFill]:
