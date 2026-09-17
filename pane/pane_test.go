@@ -58,16 +58,18 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// TestBoundsSetsThePaneInsideTheWindow reads the inset itself: one margin
-// in from the leading, top and bottom edges, the asked-for width, and
-// nothing above or below it but the backdrop.
-func TestBoundsSetsThePaneInsideTheWindow(t *testing.T) {
+// TestBoundsRunsToTheWindowsEdges reads the whole of the column's
+// geometry: the window's own leading, top and bottom edges, the asked-for
+// width, and nothing between the column and any of them. MEASURED off
+// Finder's untinted captures, where the sidebar's fill runs to the window's
+// bounds on three sides and gives way to the content on the fourth.
+func TestBoundsRunsToTheWindowsEdges(t *testing.T) {
 	var ops op.Ops
 	gtx := ctx(&ops, windowSize)
 	got := pane.Bounds(gtx, windowSize, paneW, false)
-	want := image.Rect(pane.MarginDp, pane.MarginDp, pane.MarginDp+paneW, windowH-pane.MarginDp)
+	want := image.Rect(0, 0, paneW, windowH)
 	if got != want {
-		t.Errorf("the pane stands at %v, want %v — one margin inside the window's leading, top and bottom edges", got, want)
+		t.Errorf("the column stands at %v, want %v — the window's own leading, top and bottom edges", got, want)
 	}
 }
 
@@ -112,41 +114,37 @@ func TestBoundsNeverTakesMoreThanHalfTheWindow(t *testing.T) {
 	narrow := image.Pt(200, windowH)
 	gtx := ctx(&ops, narrow)
 	got := pane.Bounds(gtx, narrow, 400, false)
-	if want := narrow.X/2 - pane.MarginDp; got.Dx() != want {
-		t.Errorf("in a %d-wide window the pane took %d, want the half-window clamp %d", narrow.X, got.Dx(), want)
-	}
-	if got.Max.X+pane.MarginDp > narrow.X/2+pane.MarginDp {
-		t.Errorf("the pane and its margin reach x=%d, past half of a %d-wide window", got.Max.X, narrow.X)
+	if want := narrow.X / 2; got.Dx() != want {
+		t.Errorf("in a %d-wide window the column took %d, want the half-window clamp %d", narrow.X, got.Dx(), want)
 	}
 	for _, tc := range []struct {
 		what string
 		size image.Point
 	}{
 		{"no area", image.Pt(0, 0)},
-		{"no height to stand in", image.Pt(windowW, 2*pane.MarginDp)},
-		{"no width to stand in", image.Pt(2*pane.MarginDp-1, windowH)},
+		{"no width to stand in", image.Pt(1, windowH)},
 	} {
 		sgtx := ctx(&ops, tc.size)
 		if got := pane.Bounds(sgtx, tc.size, paneW, false); !got.Empty() {
-			t.Errorf("a window with %s laid out a pane at %v", tc.what, got)
+			t.Errorf("a window with %s laid out a column at %v", tc.what, got)
 		}
 	}
 }
 
 // TestStripHoldsTheWindowButtons pins the strip's arithmetic against the
-// run it is cut for. The buttons are measured from the window's own glass;
-// the strip is measured from the pane's edge, one margin inside it. So the
-// strip must reach past both of the buttons' edges in window coordinates,
-// and its middle line must BE their centre line — that is what puts a
-// control standing in the strip level with them.
+// run it is cut for. The buttons are measured from the window's own glass
+// and the strip from the column's top edge, which is that same glass, so
+// the strip must reach past both of the buttons' edges and its middle line
+// must BE their centre line — that is what puts a control standing in the
+// strip level with them.
 func TestStripHoldsTheWindowButtons(t *testing.T) {
 	buttonsTop, buttonsBottom := pane.ButtonInsetDp, pane.ButtonInsetDp+desktop.WindowButtonDiameter
-	stripTop, stripBottom := pane.MarginDp, pane.MarginDp+pane.StripDp
+	stripTop, stripBottom := 0, pane.StripDp
 	if stripTop > buttonsTop {
-		t.Errorf("the strip begins at y=%d, below the buttons' top edge at y=%d — the pane's content would start under them", stripTop, buttonsTop)
+		t.Errorf("the strip begins at y=%d, below the buttons' top edge at y=%d — the column's content would start under them", stripTop, buttonsTop)
 	}
 	if stripBottom < buttonsBottom {
-		t.Errorf("the strip ends at y=%d, above the buttons' bottom edge at y=%d — the pane's content would run under them", stripBottom, buttonsBottom)
+		t.Errorf("the strip ends at y=%d, above the buttons' bottom edge at y=%d — the column's content would run under them", stripBottom, buttonsBottom)
 	}
 	if mid := stripTop + pane.StripDp/2; unit.Dp(mid) != pane.Buttons.Center {
 		t.Errorf("the strip's middle line is y=%d and the buttons' is y=%v; a control centred in the strip would sit off their line", mid, pane.Buttons.Center)
@@ -155,8 +153,9 @@ func TestStripHoldsTheWindowButtons(t *testing.T) {
 
 // TestStripSkipsTheButtonsAndEndsOnTheMargin reads the band's own
 // arrangement: the leading skip is the buttons' window-coordinate trailing
-// edge less the margin the pane stands off, the controls stand at the
-// trailing corner, and one margin of drag follows them to the pane's edge.
+// edge, unchanged, because the column starts at the window's own leading
+// edge; the controls stand at the trailing corner, and one margin of drag
+// follows them to the column's edge.
 func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 	const (
 		buttonsEnd = 90 // where the window's buttons end, in window coordinates
@@ -172,7 +171,7 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 	// the control and the trailing margin need. The first says where the
 	// control lands; the second says the leading skip is really there,
 	// since with no slack the flexed middle has nothing to give.
-	lead := buttonsEnd - pane.MarginDp
+	lead := buttonsEnd
 	for _, tc := range []struct {
 		what           string
 		width          int
@@ -204,16 +203,15 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 	}
 }
 
-// TestSeamColorIsTheSeparator pins the pane's own edge to the platform's
+// TestSeamColorIsTheSeparator pins the column's one line to the platform's
 // name for it: separatorColor, black or white at a tenth, flattened onto
-// the backdrop the pane stands on — not a ratio solved against the fill.
+// the fill the line is painted inside — not a ratio solved against it.
 func TestSeamColorIsTheSeparator(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
-			backdrop := vgcolor.Flatten(tc.colors.UnderPageBackground, tc.colors.WindowBackground)
-			want := vgcolor.Flatten(tc.colors.Separator, backdrop)
+			want := vgcolor.Flatten(tc.colors.Separator, tc.colors.SidebarMaterial)
 			if got := pane.SeamColor(tc.colors); got != want {
-				t.Errorf("the pane's edge is %v, want the platform's separator over the backdrop %v", got, want)
+				t.Errorf("the column's seam is %v, want the platform's separator over its own fill %v", got, want)
 			}
 		})
 	}
@@ -231,14 +229,15 @@ func TestSurfaceIsTheChromeMaterial(t *testing.T) {
 	}
 }
 
-// TestPaneOutlineAndBackdrop reads a drawn pane: the hairline is one pixel
-// of the seam's own colour down each straight run with the fill immediately
-// inside it, and what shows around the pane is the bare backdrop, with
-// nothing cast onto it — the chrome level's elevation is zero.
-func TestPaneOutlineAndBackdrop(t *testing.T) {
+// TestTheColumnDrawsOneSeamAndNothingElse reads a drawn column: one pixel
+// of the seam's own colour down the inside of its trailing edge, the chrome
+// chrome material everywhere else inside it, and — the whole of the change
+// CG1.1 made — no line and no plane on the other three sides, where the
+// column runs to the window's own edges.
+func TestTheColumnDrawsOneSeamAndNothingElse(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bounds := image.Rect(pane.MarginDp, pane.MarginDp, pane.MarginDp+paneW, windowH-pane.MarginDp)
+			bounds := image.Rect(0, 0, paneW, windowH)
 			w := func(gtx layout.Context) layout.Dimensions {
 				pane.Layout(gtx, tc.colors, bounds, nil)
 				return layout.Dimensions{Size: gtx.Constraints.Max}
@@ -246,30 +245,37 @@ func TestPaneOutlineAndBackdrop(t *testing.T) {
 			backdrop := vgcolor.Flatten(tc.colors.UnderPageBackground, tc.colors.WindowBackground)
 			img := golden.Capture(t, windowSize, scene(w, backdrop))
 			seam, fill := pane.SeamColor(tc.colors), pane.Surface(tc.colors)
-			// A row clear of the corners' arcs: the middle of the strip.
-			y := bounds.Min.Y + pane.StripDp/2
+
+			y := pane.StripDp / 2
+			if got := img.RGBAAt(bounds.Max.X-pane.SeamDp, y); !sameColor(got, seam) {
+				t.Errorf("the column's trailing edge draws %v, want the seam %v", got, seam)
+			}
+			if got := img.RGBAAt(bounds.Max.X-pane.SeamDp-1, y); !sameColor(got, fill) {
+				t.Errorf("one pixel inside the trailing edge draws %v, want the chrome material %v — the hairline is wider than a hairline", got, fill)
+			}
+
+			// The other three sides: the column's fill stands on the window's
+			// own edge, so the first column, the first row and the last row
+			// inside the bounds are all fill and never a line.
 			for _, probe := range []struct {
-				what     string
-				edge, in int
+				what string
+				x, y int
 			}{
-				{"leading", bounds.Min.X, bounds.Min.X + pane.SeamDp},
-				{"trailing", bounds.Max.X - pane.SeamDp, bounds.Max.X - pane.SeamDp - 1},
+				{"leading", bounds.Min.X, y},
+				{"top", paneW / 2, bounds.Min.Y},
+				{"bottom", paneW / 2, bounds.Max.Y - 1},
 			} {
-				if got := img.RGBAAt(probe.edge, y); !sameColor(got, seam) {
-					t.Errorf("the pane's %s edge at x=%d draws %v, want the seam %v", probe.what, probe.edge, got, seam)
-				}
-				if got := img.RGBAAt(probe.in, y); !sameColor(got, fill) {
-					t.Errorf("one pixel inside the pane's %s edge draws %v, want the chrome material %v — the hairline is wider than a hairline",
-						probe.what, got, fill)
+				if got := img.RGBAAt(probe.x, probe.y); !sameColor(got, fill) {
+					t.Errorf("the column's %s edge at (%d,%d) draws %v, want the chrome material %v — nothing is drawn round a flush column",
+						probe.what, probe.x, probe.y, got, fill)
 				}
 			}
-			// The gap the pane is set into, its whole height: bare backdrop.
-			for x := 0; x < bounds.Min.X; x++ {
-				for y := 0; y < windowH; y++ {
-					if got := img.RGBAAt(x, y); !sameColor(got, backdrop) {
-						t.Fatalf("the gap at (%d,%d) draws %v, want the backdrop %v — the pane is casting something onto the plane it stands on",
-							x, y, got, backdrop)
-					}
+
+			// And nothing of the window's plane is left showing beside it:
+			// every row of the leading column carries the column's own fill.
+			for y := 0; y < windowH; y++ {
+				if got := img.RGBAAt(0, y); !sameColor(got, fill) {
+					t.Fatalf("the column's leading edge draws %v at (0,%d); it runs to the window's own edge", got, y)
 				}
 			}
 		})
@@ -289,8 +295,8 @@ func sameColor(got color.RGBA, want color.NRGBA) bool {
 }
 
 // TestPaneGolden stores the pattern's own picture in both schemes: the
-// inset, the rounded outline, the chrome fill and a column standing inside
-// it, on the window's backdrop.
+// chrome fill running to the window's leading, top and bottom edges, one
+// seam down its trailing edge, and a column standing inside it.
 func TestPaneGolden(t *testing.T) {
 	contents := func(c color.NRGBA) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {

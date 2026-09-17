@@ -77,7 +77,7 @@ func hairline(gtx layout.Context) int {
 }
 
 // Backdrop is the window's own plane where nothing stands on it — the
-// slivers showing around an inset pane. The platform's under-page
+// slivers showing around an inset object. The platform's under-page
 // background carries a coverage in the light appearance, so it is flattened
 // onto the window background it lies on.
 func Backdrop(p tokens.PlatformColors) color.NRGBA {
