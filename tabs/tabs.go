@@ -79,12 +79,11 @@ type Props struct {
 	Shaper *text.Shaper
 }
 
-// Strip dimensions. The strip height is exactly Density.ControlHeight
-// — 36 dp Comfortable, 28 dp Compact — and the tab cells fill it;
-// a density-fixed value keeps the layout deterministic across goldens
-// regardless of label content. Tab cells tile the strip edge to edge, so
-// each cell's hit area stays the cell bounds (extending it to the 44 dp
-// pointer floor would steal the neighbouring tab's slop).
+// Strip dimensions. The strip height is exactly Density.ControlHeight and the
+// tab cells fill it; a density-fixed value keeps the layout deterministic
+// across goldens regardless of label content. Tab cells tile the strip edge to
+// edge, so each cell's pointer area is the cell bounds: anything added to one
+// would be taken off the tab beside it.
 const underlineDp = 2
 
 type resolvedTokens struct {

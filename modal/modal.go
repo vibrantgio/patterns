@@ -46,19 +46,14 @@
 //
 // The mark is a cross 12 dp corner to corner at a 2 dp stroke, which lands
 // 14 dp on each axis — the size of this platform's own window close
-// control — centred in the 20 dp icon box of a ghost components/button,
-// itself a 36 dp square at the comfortable density. See [crossPadDp] for why
-// the mark fills 60% of that box. The pointer target under it is 44 dp on
-// each axis: tokens.MinHitTarget, the
-// floor for a STANDALONE control, which is the one that applies here.
+// control — centred in the icon box of a ghost components/button, itself a
+// square the density's control height on a side. See [crossPadDp] for why the
+// mark fills 60% of that box. The pointer target under it is that square: the
+// affordance is an ordinary button, and a button's target is the button.
 //
-// Which floor applies is a question about neighbours rather than about how
-// large the mark is drawn. The smaller floor an inline mark takes exists
-// because a mark riding inside another control spends its slop on that
-// control and on whatever sits beside it. This mark rides on nothing: it
-// stands at the corner of a surface with the header's own inset on two sides
-// of it and a title — not a control — on the third, so there is nothing for
-// the slop to be taken from and no reason to accept less than the floor.
+// The mark is drawn smaller than the control carrying it because the platform
+// draws its own window close control that size; what a pointer lands on is
+// the control, which is what makes a mark this small reachable at all.
 //
 // Measured from the rendered pixels rather than from the tokens that
 // produced them, the mark reads |Lc| 102 against the light appearance's

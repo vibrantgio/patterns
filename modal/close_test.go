@@ -28,20 +28,13 @@ import (
 // derivation: nothing here walks a ramp to reach it.
 const closeMarkFloor = tokens.GraphicFloor
 
-// closeTargetDp is the pointer target the mark is owed on each axis. It is
-// tokens.MinHitTarget, the STANDALONE-control floor, and not the smaller one
-// an inline mark inside a chip takes.
-//
-// Which of the two applies is a question about neighbours, not about how
-// large the mark is drawn. The smaller floor exists for a mark riding inside
-// another control, where every dp of slop is taken off the thing it rides on
-// and off whatever sits next to that. This mark rides on nothing: it stands
-// alone at the corner of a surface, with the header's own inset on two sides
-// of it and a title that is not a control on the third. There is nothing here
-// for the slop to be stolen from, so the standalone floor is the one to meet,
-// and the affordance meets it by being an ordinary components/button — the
-// square it draws is smaller than the target it answers to.
-const closeTargetDp = int(tokens.MinHitTarget)
+// closeTargetDp is the pointer target the mark is owed on each axis: the
+// control it is drawn in, which is an ordinary components/button at the
+// density's control height. A control's target is the control, so the square
+// the button draws is the square a pointer lands on — and it is larger than
+// the 14 dp cross drawn inside it, which is what makes a mark that small
+// reachable.
+var closeTargetDp = int(tokens.Comfortable.ControlHeight)
 
 // markOnly is the fixture both measurements below are taken from: a panel
 // with no title and no body, so the only thing drawn inside its surface is

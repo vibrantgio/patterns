@@ -504,8 +504,8 @@ func drawHeaderCell[T any](
 // rowH is the density's row height (Density.RowHeight, the platform's own
 // list row), not the cell's intrinsic size, so per-row layout cost stays
 // bounded regardless of cell content. Rows are stacked full-width strips:
-// their hit area stays the row bounds (no 44 dp extension — rows would steal
-// each other's slop).
+// their pointer area is the row bounds, since rows that tile would otherwise
+// take each other's pixels.
 //
 // odd stripes the row: the platform lays its alternating content background
 // under every second row of a list, which is what Finder's list view draws.

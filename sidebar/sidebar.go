@@ -28,9 +28,8 @@
 // list longer than the column is tall scrolls by wheel or touch
 // instead of painting past the bottom edge. No scrollbar is drawn — the
 // bare list.Layout, the same idiom patterns/table's body uses. Items are
-// stacked full-width rows, so each row's hit area stays the row bounds
-// (extending it to the 44 dp pointer floor would steal the neighbouring
-// row's slop).
+// stacked full-width rows, so each row's pointer area is the row bounds:
+// anything added to one would be taken off the row beside it.
 //
 // The whole rail is one keyboard stop, and the stop is the scroll region
 // itself (components/list's [list.State.Focus]) rather than any row. Arrow-Up
@@ -640,8 +639,8 @@ func drawItem(
 	}
 	dims := inner(gtx)
 	// The pointer target is the row bounds exactly. Rows tile edge to edge,
-	// so extending one to tokens.MinHitTarget would only take the slop off
-	// its neighbours; the row's full width is what makes it easy to hit.
+	// so anything added to one would be taken off its neighbours; the row's
+	// full width is what makes it easy to land on.
 	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	semantic.LabelOp(item.Label).Add(gtx.Ops)
 	semantic.EnabledOp(true).Add(gtx.Ops)
