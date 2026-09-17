@@ -158,21 +158,38 @@ The props are plain data — `hero.Props{Eyebrow, Title, Subtitle, PrimaryCTA,
 SecondaryCTA}`, `feature.Props{Columns, Items}` — so the copy lives in its own
 file and the layout file stays structural.
 
-A table is columns plus a row stream. This is condensed from `maincontent.go`
-in an application, where the rows are one page of a watchlist and every
-interaction lands an MVU message:
+A table is columns plus a row stream: `Columns` plus an `Items` observable,
+sort and filter left to the consumer. This is `ExampleTable`, verbatim, from
+[`table/example_test.go`](./table/example_test.go):
 
 ```go
-columns := []table.Column[symbolRow]{
-	{Header: "", Width: unit.Dp(selColWDp), Cell: checkboxCell}, // leading gutter
-	{Header: "Symbol", Cell: symbolCell},                        // zero Width flexes
-	{Header: "Exchange", Width: unit.Dp(exchColWDp), Cell: cellText(...)},
-	{Header: "Notes", Width: unit.Dp(notesColWDp), Cell: cellText(...)},
+type row struct {
+	ID    int
+	Name  string
+	Value float64
 }
 
-tableObs := table.Table(th, table.Props[symbolRow]{
+shaper := tokens.DefaultTypography.DeterministicShaper()
+textCell := func(s string) layout.Widget {
+	return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, s)
+}
+
+columns := []table.Column[row]{
+	{Header: "ID", Width: unit.Dp(60), Cell: func(r row) layout.Widget { return textCell(strconv.Itoa(r.ID)) }},
+	{Header: "Name", Cell: func(r row) layout.Widget { return textCell(r.Name) }},
+	{Header: "Value", Width: unit.Dp(120), Cell: func(r row) layout.Widget { return textCell(strconv.FormatFloat(r.Value, 'f', 2, 64)) }},
+}
+
+rows := []row{
+	{ID: 1, Name: "Alpha", Value: 1.5},
+	{ID: 2, Name: "Beta", Value: 3},
+	{ID: 3, Name: "Gamma", Value: 4.5},
+	{ID: 4, Name: "Delta", Value: 6},
+}
+
+_ = table.Table(rx.Of(theme.Default()), table.Props[row]{
 	Columns: columns,
-	Items:   rowsObs, // already paged, sorted and filtered by the consumer
+	Items:   rx.Of(rows),
 })
 ```
 
@@ -185,7 +202,7 @@ sort, filter and pagination:
 ```go
 checkClicks := keyed.Defer(func(int) *widget.Clickable { return &widget.Clickable{} })
 
-checkboxCell := func(r symbolRow) layout.Widget {
+checkboxCell := func(r row) layout.Widget {
 	click := checkClicks.For(r.idx) // r.idx is the absolute row index
 	return func(gtx layout.Context) layout.Dimensions {
 		if click.Clicked(gtx) {
@@ -275,8 +292,8 @@ Honest about what does not work yet:
 - **`table` has no per-header slot of its own.** Headers are drawn internally from
   `Column.Header` strings, so anything else on a header — a tooltip, a filter
   affordance — has to be positioned by arithmetic over the column widths from
-  outside. One application does this, and duplicates the table's private
-  header height to do it. No phase of the current plan fixes it.
+  outside, duplicating the table's private header height to do it. No phase
+  of the current plan fixes it.
 - **`shell`'s slots are inconsistent.** `Sidebar`, `Aside` and `Sections` are
   `rx.Observable[layout.Widget]`, but `Main`, `Left`, `Right` and `Footer` are
   plain `layout.Widget`s. A live main pane therefore has to be bridged into the static
