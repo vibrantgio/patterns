@@ -53,7 +53,7 @@
 //
 // The mark is drawn smaller than the control carrying it because the platform
 // draws its own window close control that size; what a pointer lands on is
-// the control, which is what makes a mark this small reachable at all.
+// the control, which is what makes a mark this small operable at all.
 //
 // Measured from the rendered pixels rather than from the tokens that
 // produced them, the mark reads |Lc| 102 against the light appearance's

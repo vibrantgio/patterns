@@ -43,7 +43,7 @@
 // virtualised row is laid out only while it is in view, so it has a
 // focus tag only while it is in view, and Arrow traversal would reach
 // the visible rows and stop dead at the viewport edge with the rest of
-// the list unreachable. One tag for the list survives virtualisation;
+// the list inoperable. One tag for the list survives virtualisation;
 // per-row tags cannot. Rows are consequently pointer targets only, and
 // Tab passes the rail in a single step, which is also what a list of
 // navigation choices should do.

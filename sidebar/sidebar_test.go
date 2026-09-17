@@ -462,7 +462,7 @@ func indexIcon(i int) layout.Widget {
 // width and density (comfortable fits ~6 rows under the toggle, compact
 // ~8). Each case scrolls to the bottom through the live pipeline's
 // pointer path before capturing, and the last item is Active, so the
-// golden shows the previously unreachable end of the list — the
+// golden shows the previously inoperable end of the list — the
 // highlighted row against the bottom edge. A pixel diff against the
 // unscrolled frame guards the scroll itself: if the wheel event stopped
 // moving the list, the golden would silently pin the top view.

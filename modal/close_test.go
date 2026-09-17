@@ -33,7 +33,7 @@ const closeMarkFloor = tokens.GraphicFloor
 // density's control height. A control's target is the control, so the square
 // the button draws is the square a pointer lands on — and it is larger than
 // the 14 dp cross drawn inside it, which is what makes a mark that small
-// reachable.
+// operable.
 var closeTargetDp = int(tokens.Comfortable.ControlHeight)
 
 // markOnly is the fixture both measurements below are taken from: a panel
