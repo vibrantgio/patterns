@@ -75,9 +75,9 @@ alongside [markdown](https://github.com/vibrantgio/markdown). patterns imports
 [components](https://github.com/vibrantgio/components), plus `depth` and `tween` from
 [effects](https://github.com/vibrantgio/effects); [mvu](https://github.com/vibrantgio/mvu)
 it uses only indirectly, through those. Nothing inside the design system
-imports patterns — the [workbench](https://github.com/vibrantgio/workbench)
-applications are its consumers. The
-[organization page](https://github.com/vibrantgio) has the full tier table.
+imports patterns — the applications built on the design system are its
+consumers. The [organization page](https://github.com/vibrantgio) has the
+full tier table.
 
 ```sh
 go get github.com/vibrantgio/patterns
@@ -131,7 +131,7 @@ Return-bound default and its inert backdrop. Run it with `go run
 ## Usage
 
 Patterns compose by handing one pattern's stream to another's slot. Here a
-landing page mounts the marketing patterns as the scrolling sections of a
+landing page mounts the Marketing patterns as the scrolling sections of a
 `StackedPage` shell, which pins the navbar, owns the scroll region and re-emits
 whenever any section emits. Note that nothing passes a shaper — the theme
 carries the typography:
@@ -159,10 +159,8 @@ SecondaryCTA}`, `feature.Props{Columns, Items}` — so the copy lives in its own
 file and the layout file stays structural.
 
 A table is columns plus a row stream. This is condensed from `maincontent.go`
-in
-[workbench/watchlist](https://github.com/vibrantgio/workbench/tree/master/watchlist),
-where the rows are one page of a watchlist and every interaction lands an MVU
-message:
+in an application, where the rows are one page of a watchlist and every
+interaction lands an MVU message:
 
 ```go
 columns := []table.Column[symbolRow]{
@@ -200,7 +198,7 @@ checkboxCell := func(r symbolRow) layout.Widget {
 
 Overlays are folded onto the shell stream and drawn after it, reporting the
 shell's dimensions — the modal scrim and the notifications column both need
-the whole window. Both `feeds` and `watchlist` do exactly this:
+the whole window. Two different applications do exactly this:
 
 ```go
 notesObs := rx.Map(modelObs, func(m Model) []notifications.Notification { return m.notes.Items() })
@@ -250,11 +248,8 @@ reach one, so there is no shim — every call site takes a `gtx` now.
 
 ## For coding assistants
 
-Read the canonical guide before writing code against this module — the module
-inventory with current versions, the application skeleton, MVU and rx semantics,
-typography, and the pitfalls that are not guessable:
-
-<https://raw.githubusercontent.com/vibrantgio/workbench/master/llms.txt>
+Read the org guide before you write code against this module: the plan
+root's [`AGENTS.md`](https://github.com/vibrantgio/.github/blob/master/AGENTS.md).
 
 [`AGENTS.md`](./AGENTS.md) in this repository has the build, test and
 golden-image commands. The golden line there is exact and both halves of it
@@ -280,13 +275,13 @@ Honest about what does not work yet:
 - **`table` has no per-header slot of its own.** Headers are drawn internally from
   `Column.Header` strings, so anything else on a header — a tooltip, a filter
   affordance — has to be positioned by arithmetic over the column widths from
-  outside. `workbench/watchlist` does this, and duplicates the table's private
+  outside. One application does this, and duplicates the table's private
   header height to do it. No phase of the current plan fixes it.
 - **`shell`'s slots are inconsistent.** `Sidebar`, `Aside` and `Sections` are
   `rx.Observable[layout.Widget]`, but `Main`, `Left`, `Right` and `Footer` are
   plain `layout.Widget`s. A live main pane therefore has to be bridged into the static
   slot through a cell the consumer folds onto another stream — the idiom every
-  workbench app repeats. Same for `navbar.Props.Actions`.
+  application repeats. Same for `navbar.Props.Actions`.
 - **Overlays open and close instantly.** `modal` and `popover` have
   no entrance or exit transition; only `notifications` animates, and only the
   toast's fade-out
