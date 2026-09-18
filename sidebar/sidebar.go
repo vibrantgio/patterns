@@ -586,14 +586,21 @@ func clickFor(st *liveState, i int) *gesture.Click {
 // The glyph is the icon set's sidebar mark — the control that shows and
 // hides a window's sidebar, resolved to the host platform's drawing —
 // at the icon rule's size for the density (icon.Size: the control's
-// inner content box), in the platform's secondary label over the chrome.
+// inner content box), in what a toolbar draws its own glyphs in.
+//
+// MEASURED, voicememos-multi-folder-2026-09-18.png: the panel's own bare marks
+// — a new-folder mark and this very toggle, standing at its top trailing
+// corner with no capsule, no fill and no rim — reach #4b4b4b at their darkest,
+// a floor a 1 px stroke at 1x cannot pass, against the #4d4d4d the band's own
+// glyphs plateau at. The platform's secondary label over the light chrome
+// would land near #818181, forty levels lighter than the capture.
 func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.PlatformColors, d tokens.Density) {
 	g := gtx.Dp(icon.Size(d))
 	gx := (size.X - g) / 2
 	gy := (size.Y - g) / 2
 	if mark := icons.Mark(icons.Sidebar); mark != nil {
 		st := op.Offset(image.Pt(gx, gy)).Push(gtx.Ops)
-		mark(gtx, g, vgcolor.Flatten(colors.SecondaryLabel, colors.SidebarMaterial))
+		mark(gtx, g, colors.ToolbarLabel)
 		st.Pop()
 	}
 
