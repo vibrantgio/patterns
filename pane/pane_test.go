@@ -230,10 +230,11 @@ func TestSurfaceIsTheChromeMaterial(t *testing.T) {
 }
 
 // TestTheColumnDrawsOneSeamAndNothingElse reads a drawn column: one pixel
-// of the seam's own colour down the inside of its trailing edge, the chrome
-// chrome material everywhere else inside it, and — the whole of the change
-// CG1.1 made — no line and no plane on the other three sides, where the
-// column runs to the window's own edges.
+// of the seam's own colour down the inside of its trailing edge BELOW the
+// toolbar band, the chrome material everywhere else inside it — the band's
+// own rows at that edge included, since no line crosses the band — and no
+// line and no plane on the other three sides, where the column runs to the
+// window's own edges.
 func TestTheColumnDrawsOneSeamAndNothingElse(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -246,12 +247,24 @@ func TestTheColumnDrawsOneSeamAndNothingElse(t *testing.T) {
 			img := golden.Capture(t, windowSize, scene(w, backdrop))
 			seam, fill := pane.SeamColor(tc.colors), pane.Surface(tc.colors)
 
-			y := pane.StripDp / 2
+			y := pane.StripDp + (windowH-pane.StripDp)/2
 			if got := img.RGBAAt(bounds.Max.X-pane.SeamDp, y); !sameColor(got, seam) {
 				t.Errorf("the column's trailing edge draws %v, want the seam %v", got, seam)
 			}
 			if got := img.RGBAAt(bounds.Max.X-pane.SeamDp-1, y); !sameColor(got, fill) {
 				t.Errorf("one pixel inside the trailing edge draws %v, want the chrome material %v — the hairline is wider than a hairline", got, fill)
+			}
+
+			// The band: the toolbar band is one across the window's columns,
+			// so the trailing edge carries the column's own fill for every
+			// row of it and the seam's first row is the one under it.
+			for _, y := range []int{bounds.Min.Y, pane.StripDp / 2, pane.StripDp - 1} {
+				if got := img.RGBAAt(bounds.Max.X-pane.SeamDp, y); !sameColor(got, fill) {
+					t.Errorf("the trailing edge at row %d draws %v, want the chrome material %v — no seam is drawn across the toolbar band", y, got, fill)
+				}
+			}
+			if got := img.RGBAAt(bounds.Max.X-pane.SeamDp, pane.StripDp); !sameColor(got, seam) {
+				t.Errorf("the trailing edge at row %d draws %v, want the seam %v — the seam starts at the band's lower edge", pane.StripDp, got, seam)
 			}
 
 			// The other three sides: the column's fill stands on the window's

@@ -42,6 +42,25 @@
 // in the strip centres — so the strip's own controls and the window's read
 // as one row of chrome.
 //
+// THE BAND IS ONE ACROSS THE WINDOW'S COLUMNS. The platform's window is
+// columns running top to bottom, and the toolbar band runs across all of
+// them: the sidebar's column passes through it and the fill change alone
+// says where. MEASURED, finder-window-light.png, the boundary at x 316-318:
+// below the band (y=80, 200, 400 alike) the sidebar's #f9f9f9 steps to
+// #fdfdfd, #ffffff and then #f3f3f3 recovering rightward, and inside the
+// band (y=30 through y=51) to #f9f9f9, #fafafa and then #efefef recovering
+// — no row anywhere carries a darker pixel than the two beside it, so the
+// platform draws no seam at that boundary in either place; the pixel ON the
+// boundary is LIGHTER than both sides, which is a highlight and never a
+// seam, and what darkens away from it is the shadow the column casts, 24 px
+// of reach and not one line. So [PaintSeam] starts the line at the band's
+// lower edge. Where the band ends is [StripDp] and needs no caller to say
+// so: the strip this column already cuts for the window buttons IS the
+// platform's unified toolbar band. Nineteen pixels of inset either side of a
+// fourteen pixel circle makes 52, and 52 is the band every stored toolbar
+// capture measures — 8 px above a 36 px control and 8 below it. Below the
+// band the boundary keeps the line it has.
+//
 // THE RECALL CONVENTION. A control that travels with the column cannot be
 // the one that recalls it. The column's own dismiss control rides the
 // strip; the control that brings it back must stand somewhere that survives
@@ -112,6 +131,12 @@ const (
 	// column starts at the window's own top edge and the buttons are
 	// measured from that same edge, so the strip owes nothing back at either
 	// end — which lands the buttons' centre line on the strip's own middle.
+	//
+	// The arithmetic lands on the platform's own toolbar band: 52, the depth
+	// every stored toolbar capture measures — a 36 px control with 8 px above
+	// it and 8 below. So this one number is both the strip the buttons stand
+	// in and the band the window's columns run through, which is what
+	// [SeamTop] reads it as.
 	StripDp = 2*ButtonInsetDp + desktop.WindowButtonDiameter
 )
 
@@ -174,7 +199,8 @@ func Bounds(gtx layout.Context, size image.Point, width unit.Dp, hidden bool) im
 }
 
 // Layout draws the column at bounds — its fill, then the one seam down its
-// trailing edge — and lays contents inside it at the column's full size.
+// trailing edge below the toolbar band — and lays contents inside it at the
+// column's full size.
 //
 // The contents are clipped to the column, so a scrolled row that runs its
 // full width cannot paint over the seam that says where the column stops.
@@ -198,16 +224,34 @@ func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle,
 	PaintSeam(gtx, c, bounds)
 }
 
+// SeamTop answers the first row the column's seam is drawn on: the toolbar
+// band's lower edge, which is [StripDp] down from the column's own top. The
+// band is one across the window's columns and no line crosses it, so the
+// seam starts under it. A column shorter than the band has no row left to
+// draw on and this answers its foot.
+//
+// It is exported so a splitter riding this boundary draws over the same rows
+// the seam does rather than beside it or through the band.
+func SeamTop(gtx layout.Context, bounds image.Rectangle) int {
+	top := bounds.Min.Y + gtx.Dp(unit.Dp(StripDp))
+	return min(top, bounds.Max.Y)
+}
+
 // PaintSeam draws the column's one line: a hairline down the inside of its
-// trailing edge, in [SeamColor]. It is exported so a frame that draws the
-// column's contents itself still draws the boundary this pattern owns, and
-// so a splitter riding that boundary can find the pixel it stands on.
+// trailing edge, in [SeamColor], from [SeamTop] to the column's foot. It is
+// exported so a frame that draws the column's contents itself still draws
+// the boundary this pattern owns, and so a splitter riding that boundary can
+// find the pixel it stands on.
 func PaintSeam(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle) {
 	w := max(gtx.Dp(unit.Dp(SeamDp)), 1)
 	if bounds.Dx() <= w || bounds.Dy() <= 0 {
 		return
 	}
-	edge := image.Rect(bounds.Max.X-w, bounds.Min.Y, bounds.Max.X, bounds.Max.Y)
+	top := SeamTop(gtx, bounds)
+	if top >= bounds.Max.Y {
+		return
+	}
+	edge := image.Rect(bounds.Max.X-w, top, bounds.Max.X, bounds.Max.Y)
 	paint.FillShape(gtx.Ops, SeamColor(c), clip.Rect(edge).Op())
 }
 
