@@ -36,19 +36,20 @@ import (
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/patterns/internal/surface"
-	"github.com/vibrantgio/patterns/pane"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 )
 
 const (
 	// SeamDp is what the splitter paints at rest: the seam's own width,
-	// the pane pattern's hairline, which is the width the platform's own
-	// splitters take. A seam runs a whole edge, so its width is the width
-	// of the scar it leaves across everything it crosses: at a hairline it
-	// crosses a band the way a platform splitter does, and anything wider
-	// severs the band into two pieces.
-	SeamDp = pane.SeamDp
+	// which is the width the platform's own splitters take. A seam runs a
+	// whole edge, so its width is the width of the scar it leaves across
+	// everything it crosses: at a hairline it crosses a band the way a
+	// platform splitter does, and anything wider severs the band into two
+	// pieces. It is the width a pane's rim is drawn at too, so a window
+	// whose boundaries are drawn for different reasons still draws them at
+	// one weight.
+	SeamDp = 1
 
 	// GrabbedDp is what it paints while a hand is on it: the same line,
 	// thick enough to read as a change of state rather than as a second
@@ -126,6 +127,17 @@ type Props struct {
 	// this before it is painted. The zero value — no colour — is the
 	// platform's content fill.
 	Surface color.NRGBA
+
+	// Rest is the colour the resting line paints instead of the seam over
+	// Surface, for a boundary that is not a seam: a pane's trailing edge,
+	// where what parts the two regions is the panel's own rim and the
+	// splitter rides that pixel rather than laying a second line beside it.
+	// The zero value — no colour — is the seam.
+	//
+	// It reaches the resting line alone. Under a hand the line firms the
+	// way every other splitter's does, so a boundary the reader has taken
+	// hold of reads the same wherever it is.
+	Rest color.NRGBA
 
 	// HitSpan is the part of the cross extent a hand may take hold of,
 	// for a boundary whose line runs further than the boundary does: a
@@ -243,6 +255,9 @@ func (s *State) Layout(gtx layout.Context, p Props) layout.Dimensions {
 	// The line at rest and the line under a hand are the same line: the
 	// thickening grows from the resting pixel rather than replacing it.
 	width, fill := seamPx, SeamColor(p.Colors, p.Surface)
+	if p.Rest.A != 0 {
+		fill = p.Rest
+	}
 	if s.Grabbed() {
 		width, fill = max(gtx.Dp(unit.Dp(GrabbedDp)), seamPx), GrabbedColor(p.Colors, p.Surface)
 	}
