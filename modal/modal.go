@@ -575,6 +575,22 @@ func drawModal(
 		processDefaultAction(gtx, props, st)
 	}
 
+	// Everything the modal paints goes into one macro handed to op.Defer, so
+	// the scrim and the surface land on the floating level: above every
+	// operation the window's content recorded, the deferred ones included —
+	// a bordered toolbar control's drop shadow, a focused control's halo —
+	// and above nothing of its own. Ruling of 2026-09-18, the Level entry:
+	// the floating level stands above everything in the window, and a modal
+	// is on it, so it defers as the popover, the tooltip and the menu do.
+	// Deferred ops run in the order they were deferred and the modal is laid
+	// out after the page it interrupts, so it lands above them.
+	//
+	// Only the painting moves. The content is laid out into its own macro
+	// before this one is recorded — stateful components process their events
+	// exactly once — and processInput drains this frame's events after the
+	// defer, where the ops it reads have already been recorded.
+	floating := op.Record(gtx.Ops)
+
 	// Scrim — full-frame dimmer, composited over the page it interrupts
 	// rather than handed to Gio as a coverage: the page is mixed content, so
 	// there is no one fill to flatten the scrim onto. Pointer events that
@@ -641,6 +657,8 @@ func drawModal(
 	contentOff.Pop()
 	contentClip.Pop()
 	off.Pop()
+
+	op.Defer(gtx.Ops, floating.Stop())
 
 	if live {
 		processInput(gtx, props, st)
