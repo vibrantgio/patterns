@@ -71,7 +71,7 @@ func TestScrimLandsThePlatformsByteOverAPage(t *testing.T) {
 				want color.NRGBA
 			}{
 				{"the white half", image.Pt(8, 8), tc.wantOverPage[0]},
-				{"the accent half", image.Pt(frameW - 8, 8), tc.wantOverPage[1]},
+				{"the accent half", image.Pt(frameW-8, 8), tc.wantOverPage[1]},
 				{"the last white pixel", image.Pt(frameW/2-1, 8), tc.wantOverPage[0]},
 				{"the first accent pixel", image.Pt(frameW/2, 8), tc.wantOverPage[1]},
 			} {

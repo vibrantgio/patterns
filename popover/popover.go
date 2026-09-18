@@ -599,4 +599,3 @@ func fire(gtx layout.Context, cb func(gtx layout.Context)) {
 func castShadow(gtx layout.Context, bounds image.Rectangle, radius int, c tokens.PlatformColors) {
 	depth.Shadow(gtx, bounds, radius, c.FloatingShadow)
 }
-
