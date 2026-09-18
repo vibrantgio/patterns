@@ -138,6 +138,19 @@ const (
 	// in and the band the window's columns run through, which is what
 	// [SeamTop] reads it as.
 	StripDp = 2*ButtonInsetDp + desktop.WindowButtonDiameter
+
+	// ButtonGapDp is the air the strip owes the window's control buttons:
+	// the clear band between the third circle's trailing edge and the
+	// leading edge of the first control standing beside it.
+	//
+	// MEASURED at 1x, voicememos-window.png — the one stored window that
+	// keeps a toolbar control beside its buttons over the sidebar region:
+	// the three circles run x 19-78 and the sidebar toggle's capsule begins
+	// at x=96, so seventeen columns of band stand between them. What
+	// [desktop.LeadingInset] reports is the bare glass the third circle ends
+	// at and carries no breathing room of its own, which is why the air is a
+	// number of the strip's own.
+	ButtonGapDp = 17
 )
 
 // Buttons is where a window that wears this pattern stands its three
@@ -255,17 +268,27 @@ func PaintSeam(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectang
 	paint.FillShape(gtx.Ops, SeamColor(c), clip.Rect(edge).Op())
 }
 
-// Strip lays out the pane's top band: the window control buttons' span
-// skipped at the leading end, a stretch that moves the window across the
-// middle, and the caller's controls at the trailing corner, one margin in
-// from the pane's trailing edge.
+// Strip lays out the pane's top band: the leading run skipped, the caller's
+// controls standing at the leading end of the band, and a stretch that moves
+// the window filling everything after them.
 //
-// buttonsEnd is where the buttons end in WINDOW coordinates — what the
-// platform reports, or the window's own edge inset where it has no such
-// controls. The column starts at the window's own leading edge, so the
-// column-local skip is that measurement unchanged. The span is skipped
-// rather than claimed because a move action declared over the buttons would
-// fight them for the press.
+// lead is where the strip's own content may start, in WINDOW coordinates —
+// [desktop.BandLead] over [ButtonGapDp], which is the buttons' trailing edge
+// plus the air the platform leaves after it, or the window's own edge inset
+// where it has no such controls. The column starts at the window's own
+// leading edge, so the column-local skip is that measurement unchanged. The
+// leading run is skipped rather than claimed because a move action declared
+// over the buttons would fight them for the press.
+//
+// The controls stand at the leading end because that is where the platform
+// keeps them and because a control may not move under the pointer: the same
+// control stands in the window's chrome row once the pane is away, and the
+// row leads past the same buttons, so the two halves of one switch land on
+// one window column whichever way the pane goes. MEASURED,
+// voicememos-window.png: the sidebar toggle stands at x 96-135 against
+// buttons ending at x=78, the leading end of the band. (notes-window.png and
+// reminders-window.png keep theirs at the sidebar's trailing corner instead,
+// which is the placement this pattern used to take.)
 //
 // The controls are handed over in reading order and each takes its own
 // width; a caller wanting air between two of them passes a spacer between
@@ -273,19 +296,16 @@ func PaintSeam(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectang
 // should be [StripDp] — the strip is reserved by the pane's own vertical
 // arrangement, and whether it is drawn in place or after the rest is a
 // question about focus order that belongs to the caller.
-func Strip(gtx layout.Context, buttonsEnd unit.Dp, controls ...layout.Widget) layout.Dimensions {
-	lead := buttonsEnd
+func Strip(gtx layout.Context, lead unit.Dp, controls ...layout.Widget) layout.Dimensions {
 	if lead < 0 {
 		lead = 0
 	}
-	children := make([]layout.FlexChild, 0, len(controls)+3)
-	children = append(children,
-		layout.Rigid(complayout.HSpacer(float32(lead))),
-		layout.Flexed(1, DragFill))
+	children := make([]layout.FlexChild, 0, len(controls)+2)
+	children = append(children, layout.Rigid(complayout.HSpacer(float32(lead))))
 	for _, w := range controls {
 		children = append(children, layout.Rigid(w))
 	}
-	children = append(children, layout.Rigid(DragSpacer(MarginDp)))
+	children = append(children, layout.Flexed(1, DragFill))
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
 }
 

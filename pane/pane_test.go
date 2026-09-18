@@ -152,11 +152,11 @@ func TestStripHoldsTheWindowButtons(t *testing.T) {
 }
 
 // TestStripSkipsTheButtonsAndEndsOnTheMargin reads the band's own
-// arrangement: the leading skip is the buttons' window-coordinate trailing
-// edge, unchanged, because the column starts at the window's own leading
-// edge; the controls stand at the trailing corner, and one margin of drag
-// follows them to the column's edge.
-func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
+// arrangement: the leading skip is the strip's own lead in window
+// coordinates, unchanged, because the column starts at the window's own
+// leading edge; the controls stand at the leading end of the band, directly
+// after that skip, and the drag fills everything after them.
+func TestStripStandsItsControlsAtTheLeadingEnd(t *testing.T) {
 	const (
 		buttonsEnd = 90 // where the window's buttons end, in window coordinates
 		markW      = 24
@@ -167,18 +167,18 @@ func TestStripSkipsTheButtonsAndEndsOnTheMargin(t *testing.T) {
 		paint.FillShape(gtx.Ops, mark, clip.Rect{Max: size}.Op())
 		return layout.Dimensions{Size: size}
 	}
-	// A strip with room to spare, and one cut to the exact width the skip,
-	// the control and the trailing margin need. The first says where the
-	// control lands; the second says the leading skip is really there,
-	// since with no slack the flexed middle has nothing to give.
+	// A strip with room to spare, and one cut to the exact width the skip
+	// and the control need. Both say the same thing now that the control
+	// stands at the leading end: it lands directly after the skip, and the
+	// drag takes whatever is left.
 	lead := buttonsEnd
 	for _, tc := range []struct {
 		what           string
 		width          int
 		wantLo, wantHi int
 	}{
-		{"with room to spare", paneW, paneW - pane.MarginDp - markW, paneW - pane.MarginDp},
-		{"cut to the exact fit", lead + markW + pane.MarginDp, lead, lead + markW},
+		{"with room to spare", paneW, lead, lead + markW},
+		{"cut to the exact fit", lead + markW, lead, lead + markW},
 	} {
 		t.Run(tc.what, func(t *testing.T) {
 			size := image.Pt(tc.width, pane.StripDp)
