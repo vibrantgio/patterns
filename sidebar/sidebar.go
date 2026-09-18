@@ -22,6 +22,16 @@
 // OnToggleCollapse is the request to change it, so wiring the
 // affordance to nothing leaves a sidebar that cannot collapse.
 //
+// A row is a symbol, a label and, at the trailing end, a count when the
+// entry has one: [Item.Icon], [Item.Label] and [Item.Count], each drawn in
+// the column the platform draws it in ([SymbolInset], [LabelInset],
+// [CountInset]). A row with no symbol or no count draws without one and the
+// columns do not move, so the labels of a list whose entries differ still
+// line up. A run of rows may be headed by a small label — [Item.Section] on
+// the row that begins it — which stands in a block of [SectionHeight] above
+// that row and is parted from the rows by air alone: the platform draws no
+// line there, and neither does this.
+//
 // Items are stacked at the sidebar's own row pitch — [RowHeight], 32 dp,
 // which is not the platform's list row — in a
 // components/list scroll region filling the column below the toggle: a
@@ -100,8 +110,21 @@ import (
 // item should carry it — the first one that does wins. It is independent
 // of OnClick.
 type Item struct {
-	Icon    layout.Widget
-	Label   string
+	Icon  layout.Widget
+	Label string
+
+	// Count is what stands at the row's trailing end — how many things the
+	// entry holds. An empty Count is an entry with no count, and the row
+	// draws without one; nothing else about the row moves.
+	Count string
+
+	// Section heads the run of rows this item begins with a small label.
+	// It is set on the first item of the run and left empty on the rest;
+	// an item carrying one is laid out [SectionHeight] taller, with the
+	// heading in that block above the row. The heading is not an item: it
+	// takes no selection, answers no click, and the keyboard steps over it.
+	Section string
+
 	OnClick func(gtx layout.Context)
 	Active  bool
 }
@@ -159,7 +182,6 @@ type Props struct {
 const (
 	expandedDp  = 192
 	collapsedDp = 48
-	iconColDp   = 48
 )
 
 // RowHeight, SelectionInset and SelectionRadius are the sidebar's own
@@ -188,10 +210,48 @@ const (
 	SelectionRadius unit.Dp = 8
 )
 
+// SymbolBox, SymbolInset, LabelInset and CountInset are where the three parts
+// of a row stand, each an inset from the rail's own edge, and SectionHeight,
+// SectionInset and SectionBaseline are the block a section's heading occupies.
+// They are this package's for the reason RowHeight is: a chrome rail's row is
+// not a content list's.
+//
+// MEASURED off voicememos-multi-folder-2026-09-18.png, the panel at x 64–283,
+// and cross-checked against finder-window-untinted-dark.png and
+// voicememos-sidebar-dark.png. reference/macos/controls.md carries the
+// readings under "What a sidebar row measures".
+//
+//   - SymbolBox 24 and SymbolInset 17: the folder mark's drawn box runs
+//     x 83.0–103.0, centred on x=93.0, which is 29 in from the panel's x=64;
+//     Finder's narrower page mark stands on the same centre. A 24 dp square
+//     set 17 in centres on 29.
+//   - LabelInset 48: every row's name starts at x=112 or 113 against the
+//     panel's x=64. Finder's rows start 47 in.
+//   - CountInset 17: every count is drawn to x 266 or 267 against the panel's
+//     trailing rim at x=283, and the selected row's count keeps that column.
+//   - SectionHeight 42: the row above the heading ends at y=161 and the row
+//     below it begins at y=203.
+//   - SectionInset 17: "My Folders" starts at x=81, the symbol box's own
+//     column, and Finder's three headings start there too.
+//   - SectionBaseline 30: the heading's cap band is [183.0, 191.0], so its
+//     baseline stands 30 into the block and its cap top the 22 already
+//     recorded.
+const (
+	SymbolBox   unit.Dp = 24
+	SymbolInset unit.Dp = 17
+	LabelInset  unit.Dp = 48
+	CountInset  unit.Dp = 17
+
+	SectionHeight   unit.Dp = 42
+	SectionInset    unit.Dp = 17
+	SectionBaseline unit.Dp = 30
+)
+
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	section tokens.TextStyle // the role a section's heading is set in; see SectionStyle
 	density tokens.Density   // item/toggle height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -220,6 +280,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 					color:   n.First,
 					spacing: n.Second,
 					label:   typ.LabelLarge,
+					section: SectionStyle(typ),
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
 				}
@@ -245,7 +306,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 			}
 			return func(gtx layout.Context) layout.Dimensions {
 				processInput(gtx, props, st)
-				return drawSidebar(gtx, shaper, props, st, st.list, col, tok.color, tok.spacing, tok.label, tok.density)
+				return drawSidebar(gtx, shaper, props, st, st.list, col, tok.color, tok.spacing, tok.label, tok.section, tok.density)
 			}
 		})
 	})
@@ -274,10 +335,12 @@ type liveState struct {
 // below off the theme.
 //
 // label is the LabelLarge role's whole text style — typeface, weight,
-// size and line height all reach the shaper — and d is the density the
-// column draws at (item rows and the collapse toggle are each exactly
-// Density.ControlHeight). Pass tokens.DefaultTypography.LabelLarge and
-// tokens.Comfortable for the default desktop look.
+// size and line height all reach the shaper — section is the role a
+// section's heading is set in ([SectionStyle] names it), and d is the
+// density the column draws at (item rows and the collapse toggle are each
+// exactly Density.ControlHeight). Pass tokens.DefaultTypography.LabelLarge,
+// SectionStyle(tokens.DefaultTypography) and tokens.Comfortable for the
+// default desktop look.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -285,6 +348,7 @@ func Render(
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	label tokens.TextStyle,
+	section tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
 	state := list.NewState()
@@ -294,7 +358,7 @@ func Render(
 	// ask the viewport to move.
 	state.Select(activeIndex(props.Items))
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawSidebar(gtx, shaper, props, nil, state, collapsed, colors, sp, label, d)
+		return drawSidebar(gtx, shaper, props, nil, state, collapsed, colors, sp, label, section, d)
 	}
 }
 
@@ -390,6 +454,7 @@ func drawSidebar(
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
+	section tokens.TextStyle,
 	d tokens.Density,
 ) layout.Dimensions {
 	widthDp := float32(expandedDp)
@@ -432,7 +497,7 @@ func drawSidebar(
 		idx[i] = i
 	}
 	list.LayoutSelectable(lGtx, state, idx, func(rGtx layout.Context, i int, selected bool) layout.Dimensions {
-		return drawItem(rGtx, shaper, props.Items[i], clickFor(st, i), selected, props.Unemphasized, image.Pt(w, itemH), collapsed, colors, sp, style)
+		return drawItem(rGtx, shaper, props.Items[i], clickFor(st, i), selected, props.Unemphasized, image.Pt(w, itemH), collapsed, colors, sp, style, section)
 	})
 	stk.Pop()
 
@@ -553,7 +618,26 @@ func drawItem(
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
+	section tokens.TextStyle,
 ) layout.Dimensions {
+	// A row that begins a section is laid out a block taller and the heading
+	// stands in that block. The heading is not part of the row: the pointer
+	// area below covers the row alone, so clicking a heading does nothing and
+	// the keyboard, which moves over items, never reaches one.
+	head := 0
+	if item.Section != "" && !collapsed {
+		head = gtx.Dp(SectionHeight)
+	}
+	cell := image.Pt(size.X, size.Y+head)
+	gtx.Constraints = layout.Exact(cell)
+	if head > 0 {
+		hGtx := gtx
+		hGtx.Constraints = layout.Exact(image.Pt(size.X, head))
+		PaintSection(hGtx, shaper, item.Section, section, image.Pt(size.X, head),
+			vgcolor.Flatten(SectionForeground(colors), colors.SidebarMaterial))
+	}
+	defer op.Offset(image.Pt(0, head)).Push(gtx.Ops).Pop()
+
 	// The selected row is the platform's pill, and a row that is not selected
 	// takes no fill of its own and no hover tint either — the platform tints
 	// neither a list row nor a sidebar row under the pointer, which the
@@ -564,80 +648,54 @@ func drawItem(
 		rowFill, label = SelectionFill(colors, unemphasized), SelectionLabel(colors, unemphasized)
 	}
 	foreground := vgcolor.Flatten(label, rowFill)
+	countFG := vgcolor.Flatten(CountForeground(colors, selected, unemphasized), rowFill)
 
 	inner := func(gtx layout.Context) layout.Dimensions {
 		if selected {
 			PaintSelection(gtx, size, colors, unemphasized)
 		}
 
-		iconW := gtx.Dp(unit.Dp(iconColDp))
-		if iconW > size.X {
-			iconW = size.X
+		drawSymbol(gtx, item.Icon, size, collapsed)
+
+		if collapsed {
+			return layout.Dimensions{Size: size}
 		}
 
-		// Icon slot: centred inside the leading iconCol.
-		if item.Icon != nil {
-			iconGtx := gtx
-			iconGtx.Constraints = layout.Constraints{
-				Min: image.Point{},
-				Max: image.Pt(iconW, size.Y),
-			}
-			st := op.Offset(image.Point{}).Push(gtx.Ops)
-			rec := op.Record(gtx.Ops)
-			d := item.Icon(iconGtx)
-			call := rec.Stop()
-			offX := (iconW - d.Size.X) / 2
-			offY := (size.Y - d.Size.Y) / 2
-			if offX < 0 {
-				offX = 0
-			}
-			if offY < 0 {
-				offY = 0
-			}
-			st.Pop()
-			stk := op.Offset(image.Pt(offX, offY)).Push(gtx.Ops)
-			call.Add(gtx.Ops)
-			stk.Pop()
+		// The count first: it owns its column, so what is left of the row is
+		// what the label may spend. A label longer than that is ellipsized
+		// rather than allowed to run under the count.
+		countW := 0
+		if item.Count != "" {
+			countW = drawTrailing(gtx, shaper, item.Count, style, size, countFG)
 		}
-
-		// Label slot: trailing, hidden when collapsed.
-		if !collapsed && size.X > iconW {
-			padH := gtx.Dp(unit.Dp(sp.S2))
-			labelMaxW := size.X - iconW - padH
-			if labelMaxW > 0 {
-				mColor := op.Record(gtx.Ops)
-				paint.ColorOp{Color: foreground}.Add(gtx.Ops)
-				textMaterial := mColor.Stop()
-
-				labelGtx := gtx
-				labelGtx.Constraints.Min = image.Point{}
-				labelGtx.Constraints.Max.X = labelMaxW
-				labelGtx.Constraints.Max.Y = size.Y
-
-				// Shape with the LabelLarge role's typeface, weight, size
-				// and line height. Zero fields (the Render path can
-				// synthesize a size-only style) fall back to the shaper's
-				// defaults.
-				f := typeset.Font(style, font.Normal)
-				wl := typeset.Label(style, 1)
-				mLabel := op.Record(gtx.Ops)
-				labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(style.Size), item.Label, textMaterial)
-				labelCall := mLabel.Stop()
-
-				offY := (size.Y - labelDims.Size.Y) / 2
-				stk := op.Offset(image.Pt(iconW, offY)).Push(gtx.Ops)
-				labelCall.Add(gtx.Ops)
-				stk.Pop()
-			}
+		lead := gtx.Dp(LabelInset)
+		gap := gtx.Dp(unit.Dp(sp.S2))
+		room := size.X - lead - gtx.Dp(CountInset) - countW
+		if countW > 0 {
+			room -= gap
 		}
+		if room <= 0 {
+			return layout.Dimensions{Size: size}
+		}
+		lGtx := gtx
+		lGtx.Constraints.Min = image.Point{}
+		lGtx.Constraints.Max = image.Pt(room, size.Y)
+		rec := op.Record(gtx.Ops)
+		dims := drawText(lGtx, shaper, item.Label, style, foreground)
+		call := rec.Stop()
+		stk := op.Offset(image.Pt(lead, (size.Y-dims.Size.Y)/2)).Push(gtx.Ops)
+		call.Add(gtx.Ops)
+		stk.Pop()
 		return layout.Dimensions{Size: size}
 	}
 
-	gtx.Constraints = layout.Exact(size)
+	rGtx := gtx
+	rGtx.Constraints = layout.Exact(size)
 	if click == nil || item.OnClick == nil {
-		return inner(gtx)
+		inner(rGtx)
+		return layout.Dimensions{Size: cell}
 	}
-	dims := inner(gtx)
+	dims := inner(rGtx)
 	// The pointer target is the row bounds exactly. Rows tile edge to edge,
 	// so anything added to one would be taken off its neighbours; the row's
 	// full width is what makes it easy to land on.
@@ -647,5 +705,122 @@ func drawItem(
 	pointer.CursorPointer.Add(gtx.Ops)
 	click.Add(gtx.Ops)
 	area.Pop()
-	return dims
+	return layout.Dimensions{Size: cell}
+}
+
+// SectionStyle reports the type role a section's heading is set in: the
+// smallest label role, which is what the platform's own heading measures as.
+//
+// MEASURED off voicememos-multi-folder-2026-09-18.png: the heading's cap band
+// is 8 px against a row label's 10, and at the shipped face's cap ratio those
+// are an 11 dp and a 14 dp role. The scale already carries both, so the
+// heading takes the role it matches rather than a size of its own.
+func SectionStyle(t tokens.Typography) tokens.TextStyle { return t.LabelSmall }
+
+// SectionForeground is what a section's heading is drawn in: the platform's
+// secondary label, which the heading in the reference capture flattens to on
+// the panel's own fill to the byte in both appearances. The caller flattens it
+// onto the fill.
+func SectionForeground(colors tokens.PlatformColors) color.NRGBA { return colors.SecondaryLabel }
+
+// CountForeground is what the count at a row's trailing end is drawn in: the
+// sidebar's own measured count value off the pill, and the foreground the
+// platform pairs with the pill on it — the count wears the selected row's
+// white like the label beside it. The caller flattens it onto the fill.
+func CountForeground(colors tokens.PlatformColors, selected, unemphasized bool) color.NRGBA {
+	if selected {
+		return SelectionLabel(colors, unemphasized)
+	}
+	return colors.SidebarCount
+}
+
+// PaintSection draws a section's heading into a block of the given size at the
+// current offset: the label at [SectionInset] from the leading edge, its
+// baseline [SectionBaseline] down the block, and nothing else — the platform
+// parts a section from the rows above it by air, not by a line.
+//
+// It is exported so an application drawing its own chrome rail heads its
+// sections the way the platform heads them.
+func PaintSection(gtx layout.Context, shaper *text.Shaper, label string, style tokens.TextStyle, size image.Point, fg color.NRGBA) layout.Dimensions {
+	if label == "" || size.X <= 0 || size.Y <= 0 {
+		return layout.Dimensions{Size: size}
+	}
+	lead := gtx.Dp(SectionInset)
+	room := size.X - 2*lead
+	if room <= 0 {
+		return layout.Dimensions{Size: size}
+	}
+	lGtx := gtx
+	lGtx.Constraints.Min = image.Point{}
+	lGtx.Constraints.Max = image.Pt(room, size.Y)
+	rec := op.Record(gtx.Ops)
+	dims := drawText(lGtx, shaper, label, style, fg)
+	call := rec.Stop()
+	// The block's own top to the heading's baseline is what was measured, and
+	// a line box is placed by its top, so the baseline the shaper reports is
+	// what carries the one to the other.
+	top := gtx.Dp(SectionBaseline) - (dims.Size.Y - dims.Baseline)
+	stk := op.Offset(image.Pt(lead, top)).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	stk.Pop()
+	return layout.Dimensions{Size: size}
+}
+
+// drawSymbol paints a row's symbol in the square the platform draws it in:
+// [SymbolBox], set [SymbolInset] in from the rail's leading edge and centred
+// on the row. A collapsed rail has no label to line the symbol up with, so
+// there the square is centred in the rail instead.
+func drawSymbol(gtx layout.Context, icon layout.Widget, size image.Point, collapsed bool) {
+	if icon == nil {
+		return
+	}
+	box := gtx.Dp(SymbolBox)
+	if box > size.X {
+		box = size.X
+	}
+	x := gtx.Dp(SymbolInset)
+	if collapsed {
+		x = (size.X - box) / 2
+	}
+	if x < 0 {
+		x = 0
+	}
+	iGtx := gtx
+	iGtx.Constraints = layout.Constraints{Max: image.Pt(box, size.Y)}
+	rec := op.Record(gtx.Ops)
+	d := icon(iGtx)
+	call := rec.Stop()
+	stk := op.Offset(image.Pt(x+(box-d.Size.X)/2, (size.Y-d.Size.Y)/2)).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	stk.Pop()
+}
+
+// drawTrailing paints a row's count at the trailing end — its own trailing
+// edge [CountInset] in from the rail's — and reports how wide it came out, so
+// the caller knows what is left for the label.
+func drawTrailing(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, size image.Point, fg color.NRGBA) int {
+	cGtx := gtx
+	cGtx.Constraints.Min = image.Point{}
+	cGtx.Constraints.Max = image.Pt(size.X, size.Y)
+	rec := op.Record(gtx.Ops)
+	dims := drawText(cGtx, shaper, txt, style, fg)
+	call := rec.Stop()
+	x := size.X - gtx.Dp(CountInset) - dims.Size.X
+	if x < 0 {
+		x = 0
+	}
+	stk := op.Offset(image.Pt(x, (size.Y-dims.Size.Y)/2)).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	stk.Pop()
+	return dims.Size.X
+}
+
+// drawText lays one line out in the role's own typeface, weight, size and
+// line height. Zero fields — the Render path can synthesize a size-only style
+// — fall back to the shaper's defaults.
+func drawText(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, fg color.NRGBA) layout.Dimensions {
+	m := op.Record(gtx.Ops)
+	paint.ColorOp{Color: fg}.Add(gtx.Ops)
+	material := m.Stop()
+	return typeset.Layout(gtx, shaper, typeset.Label(style, 1), typeset.Font(style, font.Normal), unit.Sp(style.Size), txt, material)
 }

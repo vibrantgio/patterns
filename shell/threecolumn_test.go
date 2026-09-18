@@ -58,7 +58,7 @@ func TestShellThreeColumnGolden(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			sbW := sidebar.Render(shaper, sbProps, false, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			sbW := sidebar.Render(shaper, sbProps, false, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 			props := shell.Props{
 				Layout: shell.ThreeColumn,
 				Navbar: shellNavbar(shaper),

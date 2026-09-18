@@ -114,7 +114,7 @@ func TestSidebarGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			props := sidebar.Props{Items: navItems(3, tc.activeIdx), Shaper: shaper}
-			w := sidebar.Render(shaper, props, tc.collapsed, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			w := sidebar.Render(shaper, props, tc.collapsed, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 			golden.Render(t, tc.name, tc.size, scene(w, tc.bg))
 		})
 	}
@@ -138,7 +138,7 @@ func TestSidebarActiveSelectionIsVisible(t *testing.T) {
 	render := func(t *testing.T, activeIdx int, colors tokens.PlatformColors) *image.RGBA {
 		t.Helper()
 		props := sidebar.Props{Items: navItems(2, activeIdx), Shaper: shaper}
-		w := sidebar.Render(shaper, props, false, colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		w := sidebar.Render(shaper, props, false, colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 		return golden.Capture(t, expandedSize, scene(w, bg))
 	}
 
@@ -365,7 +365,7 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 	// Active=1: the seed reaches the same highlight the Render path draws.
 	live := golden.Capture(t, expandedSize, scene(w, bg))
 	static := sidebar.Render(shaper, sidebar.Props{Items: navItems(3, 1), Shaper: shaper},
-		false, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		false, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 	want := golden.Capture(t, expandedSize, scene(static, bg))
 	if live != nil && want != nil {
 		if d := golden.PixelDiff(live, want); d != 0 {
@@ -533,4 +533,132 @@ func TestSidebarOverflowGolden(t *testing.T) {
 func itemMid(i int) int {
 	toggleH, rowH := int(tokens.Comfortable.ControlHeight), int(sidebar.RowHeight)
 	return toggleH + i*rowH + rowH/2
+}
+
+// sectionItems returns the rail the row goldens picture: two runs of entries,
+// the second headed by a small label, each row a symbol, a name and a count,
+// and one row with neither symbol nor count to show that the columns do not
+// move when an entry has less to say.
+func sectionItems() []sidebar.Item {
+	return []sidebar.Item{
+		{Icon: testIcon(), Label: "Everything", Count: "128", Active: true, OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Label: "Recently Deleted", Count: "2", OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Label: "Tokens", Count: "46", Section: "My Folders", OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Label: "Colour", Count: "16", OnClick: func(_ layout.Context) {}},
+		{Label: "Type", OnClick: func(_ layout.Context) {}},
+	}
+}
+
+// TestSidebarSectionGolden records or diffs the rail as the platform draws
+// one: rows of a symbol, a label and a count, and a second run headed by a
+// small label with air above it and no line.
+func TestSidebarSectionGolden(t *testing.T) {
+	shaper := defaultShaper(t)
+	cases := []struct {
+		name   string
+		colors tokens.PlatformColors
+		bg     color.NRGBA
+	}{
+		{"light-sections", tokens.PlatformLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}},
+		{"dark-sections", tokens.PlatformDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			props := sidebar.Props{Items: sectionItems(), Shaper: shaper}
+			w := sidebar.Render(shaper, props, false, tc.colors, tokens.Spacing,
+				tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+			golden.Render(t, tc.name, expandedSize, scene(w, tc.bg))
+		})
+	}
+}
+
+// TestSidebarRowStandsInTheMeasuredColumns reads the three parts of a row off
+// a rendered rail and holds each to the column the platform draws it in:
+// the symbol's square at SymbolInset, the label's first column at LabelInset,
+// and the count's trailing edge CountInset in from the rail's.
+//
+// The symbol is a flat blue square, so its own columns are told from the text
+// by colour rather than by position; the label and the count are read as the
+// drawn columns either side of it.
+func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
+	shaper := defaultShaper(t)
+	props := sidebar.Props{
+		Items:  []sidebar.Item{{Icon: testIcon(), Label: "Tokens", Count: "46", OnClick: func(_ layout.Context) {}}},
+		Shaper: shaper,
+	}
+	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
+		tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+	img := golden.Capture(t, expandedSize, w)
+	if img == nil {
+		t.Skip("no capture backend")
+	}
+	// The one row sits under the toggle, whose height is the density's
+	// control height; read the band the row occupies.
+	top := int(tokens.Comfortable.ControlHeight)
+	var symMin, symMax = expandedW, -1
+	var textMin, textMax = expandedW, -1
+	// The rail's own trailing hairline is not part of a row, so the scan
+	// stops before it.
+	for y := top; y < top+int(sidebar.RowHeight); y++ {
+		for x := 0; x < expandedW-1; x++ {
+			c := img.RGBAAt(x, y)
+			if c.B > c.R+0x40 && c.G > c.R {
+				symMin, symMax = min(symMin, x), max(symMax, x)
+				continue
+			}
+			if int(c.R)+int(c.G)+int(c.B) < 3*0xf0 {
+				textMin, textMax = min(textMin, x), max(textMax, x)
+			}
+		}
+	}
+	if symMax < 0 || textMax < 0 {
+		t.Fatalf("nothing drawn: symbol %d–%d, text %d–%d", symMin, symMax, textMin, textMax)
+	}
+	// The 16 px test symbol is centred in the 24 dp square.
+	wantSym := int(sidebar.SymbolInset) + (int(sidebar.SymbolBox)-16)/2
+	if symMin != wantSym {
+		t.Errorf("the symbol starts at x=%d, want %d — SymbolInset %v and a 16 px mark centred in SymbolBox %v",
+			symMin, wantSym, sidebar.SymbolInset, sidebar.SymbolBox)
+	}
+	if textMin < int(sidebar.LabelInset) {
+		t.Errorf("the label starts at x=%d, before LabelInset %v", textMin, sidebar.LabelInset)
+	}
+	if textMin > int(sidebar.LabelInset)+2 {
+		t.Errorf("the label starts at x=%d, want LabelInset %v or the glyph's own bearing past it", textMin, sidebar.LabelInset)
+	}
+	if want := expandedW - int(sidebar.CountInset); textMax > want || textMax < want-3 {
+		t.Errorf("the count ends at x=%d, want its trailing edge within the glyph's bearing of %d — CountInset %v in from the rail's %d",
+			textMax, want, sidebar.CountInset, expandedW)
+	}
+}
+
+// TestSidebarSectionIsPartedByAirAlone holds the heading's own block to the
+// measurement and reads the air around it: between the row above a heading and
+// the row below it the rail draws its own fill and the heading's letters, and
+// nothing that runs the rail's width.
+func TestSidebarSectionIsPartedByAirAlone(t *testing.T) {
+	shaper := defaultShaper(t)
+	props := sidebar.Props{Items: sectionItems(), Shaper: shaper}
+	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
+		tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+	img := golden.Capture(t, expandedSize, w)
+	if img == nil {
+		t.Skip("no capture backend")
+	}
+	m := tokens.PlatformLight.SidebarMaterial
+	fill := color.RGBA{R: m.R, G: m.G, B: m.B, A: m.A}
+	// Two rows stand above the heading, under the toggle.
+	blockTop := int(tokens.Comfortable.ControlHeight) + 2*int(sidebar.RowHeight)
+	blockBottom := blockTop + int(sidebar.SectionHeight)
+	for y := blockTop; y < blockBottom; y++ {
+		same := 0
+		for x := 1; x < expandedW-1; x++ {
+			if img.RGBAAt(x, y) == fill {
+				same++
+			}
+		}
+		if same < expandedW-2-60 {
+			t.Errorf("row y=%d of the heading's block holds %d columns of the rail's own fill; a run that wide is a line, and the platform draws none", y, same)
+		}
+	}
 }
