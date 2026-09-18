@@ -39,7 +39,7 @@
 // is within two of 255 of the plane it stands on and in the dark appearance
 // within two of the content beside it — so neither boundary is a step of
 // fill, and both are the rim. [Surface] is the fill, [RimColor] the rim and
-// [ShadowColor] the shadow's peak, all three the platform's own names.
+// [Shadow] the shadow it casts, all three the platform's own names.
 //
 // The rim is drawn INSIDE the panel's own rounded rectangle, never on the
 // plane outside it: half a line lying on the plane would blur the one
@@ -128,14 +128,6 @@ const (
 	// on every side of every stored panel.
 	RimDp = 1
 
-	// ShadowReachDp is how far the panel's shadow carries past it and
-	// ShadowSinkDp how far below the panel its rectangle sits, which is what
-	// makes the shadow heavier under the panel than over it. The two are
-	// fitted together off one capture with the peak
-	// [tokens.PlatformColors.PaneShadow] carries, and are spent together.
-	ShadowReachDp unit.Dp = 24
-	ShadowSinkDp  unit.Dp = 9
-
 	// ButtonInsetDp is how far the window control buttons sit in from the
 	// window's own top and leading glass: the drawn circles' own edges,
 	// equal on both axes, measured from the glass and from nothing else.
@@ -206,10 +198,11 @@ func RimColor(c tokens.PlatformColors) color.NRGBA {
 	return c.PaneRim
 }
 
-// ShadowColor is the peak coverage of the shadow the panel casts on what
-// lies around it, at the panel's own edge. [Layout] spreads it over
-// [ShadowReachDp] from a rectangle sunk [ShadowSinkDp] below the panel.
-func ShadowColor(c tokens.PlatformColors) color.NRGBA {
+// Shadow is the reading of the shadow the panel casts on what lies around
+// it: the peak coverage at the edge of a rectangle sunk below the panel, how
+// far the ramp carries out of it, and how far it is sunk. The three were
+// fitted together off one capture and [PaintShadow] spends them together.
+func Shadow(c tokens.PlatformColors) tokens.DropShadow {
 	return c.PaneShadow
 }
 
@@ -285,8 +278,8 @@ func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle,
 }
 
 // PaintShadow paints the shadow the panel at bounds casts on what lies
-// around it: the peak [ShadowColor] at the edge of a rectangle sunk
-// [ShadowSinkDp] below the panel, falling to nothing [ShadowReachDp] out.
+// around it: [Shadow]'s peak at the edge of the rectangle its offset sinks
+// below the panel, falling to nothing its reach out.
 //
 // WHERE TO CALL IT. The ramp falls outside the panel and on whatever stands
 // there, so it must be painted after that. A window's document column fills
@@ -305,19 +298,19 @@ func PaintShadow(gtx layout.Context, c tokens.PlatformColors, bounds image.Recta
 	if bounds.Empty() {
 		return
 	}
-	col := ShadowColor(c)
-	extent := gtx.Dp(ShadowReachDp)
-	if col.A == 0 || extent <= 0 {
+	sh := Shadow(c)
+	extent := gtx.Dp(unit.Dp(sh.Reach))
+	if sh.Peak.A == 0 || extent <= 0 {
 		return
 	}
 	r := gtx.Dp(unit.Dp(RadiusDp))
-	sunk := bounds.Add(image.Pt(0, gtx.Dp(ShadowSinkDp)))
+	sunk := bounds.Add(image.Pt(0, gtx.Dp(unit.Dp(sh.Offset))))
 	// The whole drawing's extent: the sunk rectangle and the panel's own box,
 	// grown by the reach. One pixel of slack keeps the ramp's last column
 	// inside the outer contour.
 	all := bounds.Union(sunk).Inset(-extent - 1)
 	defer clip.Outline{Path: ringPath(gtx.Ops, all, bounds, r)}.Op().Push(gtx.Ops).Pop()
-	depth.ShadowAt(gtx, sunk, r, ShadowReachDp, col)
+	depth.Shadow(gtx, bounds, r, sh)
 }
 
 // bezierCircle is the cubic-Bézier control-point ratio that best

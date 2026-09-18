@@ -229,8 +229,8 @@ func TestRimAndShadowAreThePlatformsNames(t *testing.T) {
 			if got := pane.RimColor(tc.colors); got.A != 0xff {
 				t.Errorf("the panel's rim has coverage %d, want an opaque answer — the measured pixel is the colour", got.A)
 			}
-			if got, want := pane.ShadowColor(tc.colors), tc.colors.PaneShadow; got != want {
-				t.Errorf("the panel's shadow is %v, want the platform's measured peak %v", got, want)
+			if got, want := pane.Shadow(tc.colors), tc.colors.PaneShadow; got != want {
+				t.Errorf("the panel's shadow is %v, want the platform's measured reading %v", got, want)
 			}
 		})
 	}
@@ -308,7 +308,7 @@ func TestThePanelDrawsARimOnEverySideAndNoSeam(t *testing.T) {
 			}
 			// Far from the panel the plane recovers: past the reach there is
 			// no shadow left to see.
-			far := img.RGBAAt(bounds.Max.X+2*int(pane.ShadowReachDp), midY)
+			far := img.RGBAAt(bounds.Max.X+2*int(pane.Shadow(tc.colors).Reach), midY)
 			if !sameColor(far, plane) {
 				t.Errorf("twice the shadow's reach past the panel the window draws %v, want its bare plane %v", far, plane)
 			}

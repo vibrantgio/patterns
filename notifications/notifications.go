@@ -45,7 +45,6 @@ package notifications
 
 import (
 	"image"
-	"image/color"
 	"time"
 
 	"gioui.org/layout"
@@ -559,8 +558,8 @@ func fadeAlpha(at time.Time, lifetime, fade time.Duration, now time.Time) float6
 // fadedShadow is the platform's floating shadow at the share of its own
 // coverage a toast on its way in or out is showing, which is how a surface
 // that fades takes its shadow with it.
-func fadedShadow(c tokens.PlatformColors, share float32) color.NRGBA {
-	s := c.FloatingShadow
-	s.A = uint8(float32(s.A)*share + 0.5)
-	return s
+func fadedShadow(c tokens.PlatformColors, share float32) tokens.DropShadow {
+	peak := c.FloatingShadow.Peak
+	peak.A = uint8(float32(peak.A)*share + 0.5)
+	return c.FloatingShadow.WithPeak(peak)
 }
