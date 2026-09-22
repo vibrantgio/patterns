@@ -5,6 +5,25 @@
 // [PaintSelection] fills, its label in the foreground the platform pairs
 // with that fill.
 //
+// # The pill's two states
+//
+// A list shows its focus as the platform does for the place it stands in,
+// and a sidebar's place shows it in the pill's colour rather than in a
+// halo. The rail draws the accent pill under a white label while its list
+// holds the keyboard, and the grey pill under the label in the accent
+// colour while it does not — both measured, the first off
+// voicememos-sidebar-{light,dark}.png and the second off
+// finder-sidebar-unfocused-{light,dark}.png, where the pill keeps the same
+// geometry in both states. The switch is gtx.Focused on the list's own tag
+// ([list.State.Focus]), so the rail wears the emphasized pill exactly while
+// the keys reach it, and no halo is drawn at all: the pill IS this place's
+// answer, and a band around the rail would be a second one.
+//
+// A still render — [Render], a golden, a specimen — processes no events, so
+// the keyboard is never on it and it draws the grey pill: the state a
+// screenshot of a rail nothing has clicked into shows. [Props.Focused] is
+// how such a caller asks for the other one.
+//
 // Sidebar is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is
 // intentionally short — copy it into your own app and modify as needed.
@@ -186,12 +205,12 @@ type Props struct {
 	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
 
-	// Unemphasized draws the selected row the way the platform draws one in
-	// a window that is not frontmost: the unemphasized grey under the
-	// ordinary label, rather than the accent-following selection colour
-	// under the foreground the platform pairs with it. The zero value is
-	// the frontmost window.
-	Unemphasized bool
+	// Focused says the rail's list holds the keyboard where the frame
+	// cannot: a still render — [Render], a golden, a specimen — processes
+	// no events, so gtx.Focused answers false for it however the rail is
+	// meant to read. Set it to draw the accent pill in a still; leave it
+	// alone in the live pipeline, where the keyboard itself decides.
+	Focused bool
 }
 
 // Width constants. Widths do not follow density (the column contract is
@@ -361,6 +380,10 @@ type liveState struct {
 // production code should use Sidebar, which reads both of the parameters
 // below off the theme.
 //
+// It processes no events, so the keyboard is never on the rail it draws and
+// the selected row wears the grey pill: [Props.Focused] is how a still asks
+// for the accent one instead.
+//
 // label is the LabelLarge role's whole text style — typeface, weight,
 // size and line height all reach the shaper — section is the role a
 // section's heading is set in ([SectionStyle] names it), and d is the
@@ -523,8 +546,13 @@ func drawSidebar(
 	for i := range idx {
 		idx[i] = i
 	}
+	// Which of the platform's two pills the selected row wears: the accent
+	// one while the list holds the keyboard, the grey one while it does
+	// not. A still render processes no events, so the keys are never on it
+	// and it draws the grey pill unless Props.Focused says otherwise.
+	unemphasized := !(props.Focused || gtx.Focused(state.Focus()))
 	list.LayoutSelectable(lGtx, state, idx, func(rGtx layout.Context, i int, selected bool) layout.Dimensions {
-		return drawItem(rGtx, shaper, props.Items[i], clickFor(st, i), selected, props.Unemphasized, image.Pt(w, itemH), collapsed, colors, sp, style, section)
+		return drawItem(rGtx, shaper, props.Items[i], clickFor(st, i), selected, unemphasized, image.Pt(w, itemH), collapsed, colors, sp, style, section)
 	})
 	stk.Pop()
 
@@ -532,28 +560,37 @@ func drawSidebar(
 }
 
 // SelectionFill is the fill the platform lays under a selected sidebar row:
-// the accent in a frontmost window, and the unemphasized selection grey in a
-// window that is not.
+// the accent pill while the rail's list holds the keyboard, and the grey one
+// while it does not.
 //
-// It is deliberately neither SelectedContentBackground, which is what a
-// content list's selected row wears, nor ControlAccent: the platform lifts
-// the pill above the accent's own blue over the chrome material. Both
-// readings are recorded as SidebarSelection, which follows the theme colour
-// through PlatformColors.WithAccent.
+// Neither is SelectedContentBackground, which is what a content list's
+// selected row wears, and neither is ControlAccent: the platform lifts the
+// accent pill above the accent's own blue over the chrome material, and the
+// grey one is no name in the set at all. Both readings are recorded —
+// SidebarSelection, which follows the theme colour through
+// PlatformColors.WithAccent, and SidebarSelectionUnemphasized, which does
+// not, being black and white rather than a colour.
+//
+// The grey one is a COVERAGE over the rail, which is what the capture holds:
+// the rail's own dither carries through the pill column for column. So it is
+// flattened onto SidebarMaterial here, in encoded sRGB, rather than handed
+// to the rasterizer translucent — the rail IS that material, and Gio would
+// blend a translucent fill in linear light where the platform blends the
+// byte. An opaque colour is what comes back either way.
 func SelectionFill(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 	if unemphasized {
-		return colors.UnemphasizedSelectedContentBackground
+		return vgcolor.Flatten(colors.SidebarSelectionUnemphasized, colors.SidebarMaterial)
 	}
 	return colors.SidebarSelection
 }
 
 // SelectionLabel is the foreground the platform pairs with [SelectionFill]:
-// the label it draws on an accent fill where the window is frontmost, and the
-// ordinary label on the unemphasized grey where it is not. The caller
-// flattens it onto the fill.
+// the white it draws on the accent pill, and the accent itself on the grey
+// one — measured as the platform's vibrancy lands it there, and following
+// the theme colour with the pill. The caller flattens it onto the fill.
 func SelectionLabel(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 	if unemphasized {
-		return colors.Label
+		return colors.SidebarSelectionUnemphasizedLabel
 	}
 	return colors.AlternateSelectedControlText
 }

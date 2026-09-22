@@ -705,11 +705,13 @@ func TestSidebarSymbolWearsTheMeasuredColour(t *testing.T) {
 			// The symbol's own square, the two rows the rail holds: the
 			// unselected one first, the selected one below it.
 			plain := extremeInSymbolBox(img, top, tc.colors.SidebarMaterial)
-			onPill := extremeInSymbolBox(img, top+int(sidebar.RowHeight), sidebar.SelectionFill(tc.colors, false))
+			// A static render holds no focus, so the pill it draws is the
+			// grey one and the symbol on it wears that pill's foreground.
+			onPill := extremeInSymbolBox(img, top+int(sidebar.RowHeight), sidebar.SelectionFill(tc.colors, true))
 			if plain != tc.want {
 				t.Errorf("the symbol reads %v, want the measured %v", plain, tc.want)
 			}
-			if want := sidebar.SelectionLabel(tc.colors, false); onPill != want {
+			if want := sidebar.SelectionLabel(tc.colors, true); onPill != want {
 				t.Errorf("the symbol on the pill reads %v, want the pill's own foreground %v", onPill, want)
 			}
 		})
@@ -762,4 +764,141 @@ func TestSidebarDrawsNoTrailingLine(t *testing.T) {
 			t.Fatalf("the rail's last column at y=%d is %v, want the rail's own fill %v: nothing is drawn down the trailing edge", y, got, fill)
 		}
 	}
+}
+
+// TestTheRailDrawsThePlatformsTwoPills reads both pill states off a rendered
+// rail in both appearances: the accent pill under a white label while the
+// rail's list holds the keyboard, and the grey pill under the label in the
+// accent colour while it does not.
+//
+// Both are measured — the accent pill off voicememos-sidebar-{light,dark}.png
+// and the grey one off finder-sidebar-unfocused-{light,dark}.png, where the
+// pill keeps the same geometry — and what moves between the two frames is
+// the keyboard and nothing else: the same rail, the same selected row, the
+// keys handed to it by a click, which is what a rail does with a click.
+func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
+	shaper := defaultShaper(t)
+	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+	for _, tc := range []struct {
+		name   string
+		colors tokens.PlatformColors
+	}{
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// The icon set's folder — the very mark the reference capture
+			// measures — so what is read on the pill is a drawn vector and
+			// not a test shape.
+			props := sidebar.Props{
+				Items: []sidebar.Item{
+					{Icon: icons.Mark(icons.Folder), Label: itemLabels[0], Active: true, OnClick: func(layout.Context) {}},
+					{Icon: icons.Mark(icons.Folder), Label: itemLabels[1], OnClick: func(layout.Context) {}},
+				},
+				Collapsed: rx.Of(false),
+				Shaper:    shaper,
+			}
+			th := theme.Theme{
+				Platform:   rx.Of(tc.colors),
+				Spacing:    rx.Of(tokens.Spacing),
+				Typography: rx.Of(tokens.DefaultTypography),
+				Density:    rx.Of(tokens.Comfortable),
+			}
+			w := liveWidget(t, sidebar.Sidebar(rx.Of(th), props))
+			r := new(gioinput.Router)
+			ops := new(op.Ops)
+			capture := func(t *testing.T) *image.RGBA {
+				t.Helper()
+				driveFrame(w, ops, r, expandedSize)
+				return golden.Capture(t, expandedSize, scene(func(gtx layout.Context) layout.Dimensions {
+					gtx.Source = r.Source()
+					return w(gtx)
+				}, bg))
+			}
+
+			// Nothing has handed the rail the keyboard, so it draws the
+			// grey pill.
+			bare := capture(t)
+			if bare == nil {
+				return // headless unavailable; Capture called t.Skip
+			}
+			// A click on the active row hands the list the keys, which is
+			// what makes the pill the emphasized one.
+			hit := f32.Pt(96, float32(itemMid(0)))
+			r.Queue(
+				pointer.Event{Kind: pointer.Press, Position: hit, Source: pointer.Touch},
+				pointer.Event{Kind: pointer.Release, Position: hit, Source: pointer.Touch},
+			)
+			driveFrame(w, ops, r, expandedSize)
+			held := capture(t)
+
+			// The pill's own fill, read well inside it and clear of the
+			// symbol and the label: the row's trailing half, which carries
+			// no count in these items.
+			x := expandedW - int(sidebar.SelectionInset) - 4
+			y := itemMid(0)
+			for _, c := range []struct {
+				what string
+				img  *image.RGBA
+				want color.NRGBA
+			}{
+				{"while the rail does not hold the keyboard", bare, sidebar.SelectionFill(tc.colors, true)},
+				{"while it does", held, sidebar.SelectionFill(tc.colors, false)},
+			} {
+				if got := c.img.RGBAAt(x, y); !sameColour(got, c.want) {
+					t.Errorf("the pill %s reads %v at (%d, %d), want the measured %v", c.what, got, x, y, c.want)
+				}
+			}
+			// No halo: a rail says where the keyboard is in the pill's
+			// colour, so the list's own edges must read the same in both
+			// frames. The band would land on the viewport's outermost
+			// columns and rows, which is where these four points stand —
+			// down an unfilled row, in the rail's own leading column at
+			// the list's head, and across the list's foot.
+			listTop := int(tokens.Comfortable.ControlHeight)
+			plainY := listTop + int(sidebar.RowHeight) + int(sidebar.RowHeight)/2
+			for _, at := range []image.Point{
+				{X: 0, Y: plainY},
+				{X: expandedW - 1, Y: plainY},
+				{X: 0, Y: listTop},
+				{X: expandedW / 2, Y: frameH - 1},
+			} {
+				if bare.RGBAAt(at.X, at.Y) != held.RGBAAt(at.X, at.Y) {
+					t.Errorf("the rail's edge at %v reads %v while it holds the keyboard and %v while it does not: a rail draws no halo",
+						at, held.RGBAAt(at.X, at.Y), bare.RGBAAt(at.X, at.Y))
+				}
+			}
+
+			// The label on each pill: the pixel of the label's own run
+			// standing furthest from the fill under it, which is the
+			// glyph's plateau.
+			for _, c := range []struct {
+				what string
+				img  *image.RGBA
+				fill color.NRGBA
+				want color.NRGBA
+			}{
+				{"while the rail does not hold the keyboard", bare, sidebar.SelectionFill(tc.colors, true), sidebar.SelectionLabel(tc.colors, true)},
+				{"while it does", held, sidebar.SelectionFill(tc.colors, false), sidebar.SelectionLabel(tc.colors, false)},
+			} {
+				got := extremeInSymbolBox(c.img, int(tokens.Comfortable.ControlHeight), c.fill)
+				if !sameColour(color.RGBA{R: got.R, G: got.G, B: got.B, A: got.A}, c.want) {
+					t.Errorf("the symbol on the pill %s reads %v, want the pill's own foreground %v", c.what, got, c.want)
+				}
+			}
+		})
+	}
+}
+
+// sameColour allows the rasterizer's rounding on an opaque pixel: the claim
+// is which colour the pill carries, not which byte a blend landed on.
+func sameColour(got color.RGBA, want color.NRGBA) bool {
+	const slack = 2
+	off := func(a, b uint8) bool {
+		if a > b {
+			return a-b > slack
+		}
+		return b-a > slack
+	}
+	return !off(got.R, want.R) && !off(got.G, want.G) && !off(got.B, want.B) && got.A == want.A
 }
