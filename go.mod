@@ -10,6 +10,7 @@ require (
 	github.com/vibrantgio/mvu v1.0.1
 	github.com/vibrantgio/mvu/desktop v1.0.1
 	github.com/vibrantgio/theme v1.3.2
+	golang.org/x/image v0.44.0
 )
 
 require (
@@ -19,7 +20,6 @@ require (
 	github.com/vibrantgio/font v0.4.1 // indirect
 	github.com/vibrantgio/svg v0.0.9 // indirect
 	golang.org/x/exp/shiny v0.0.0-20260727155853-b88d891fe743 // indirect
-	golang.org/x/image v0.44.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect

@@ -19,13 +19,14 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/patterns/sidebar"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
 
 const (
-	expandedW  = 192
+	expandedW  = 220
 	collapsedW = 48
 	frameH     = 256
 )
@@ -44,14 +45,16 @@ func defaultShaper(t *testing.T) *text.Shaper {
 	return tokens.DefaultTypography.DeterministicShaper()
 }
 
-// testIcon returns a 16×16 filled square in a fixed mid-Blue colour.
-// Using a deterministic shape avoids GPU font rasterisation differences
-// across platforms.
-func testIcon() layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		size := image.Pt(16, 16)
-		paint.FillShape(gtx.Ops, color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 0xff}, clip.Rect{Max: size}.Op())
-		return layout.Dimensions{Size: size}
+// testIcon returns a 16×16 filled square in a fixed mid-Blue colour, drawn
+// at the leading corner of the box the row hands it. A deterministic shape
+// avoids GPU font rasterisation differences across platforms, and a colour of
+// its own is what lets a scan tell the symbol's columns from the text's —
+// which is why it spends the colour the row hands it on nothing.
+func testIcon() icons.Painter {
+	return func(gtx layout.Context, box int, _ color.NRGBA) {
+		defer op.Offset(image.Pt((box-16)/2, (box-16)/2)).Push(gtx.Ops).Pop()
+		paint.FillShape(gtx.Ops, color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 0xff},
+			clip.Rect{Max: image.Pt(16, 16)}.Op())
 	}
 }
 
@@ -61,7 +64,7 @@ func testIcon() layout.Widget {
 // Latin text in Roboto rasterises identically on every machine via
 // DeterministicShaper; ASCII only — no symbol reaches a stored image.
 //
-// They are short because the expanded rail is 192 px wide and a row is the
+// They are short because the expanded rail is 220 px wide and a row is the
 // icon, a gap and a MaxLines:1 label: a longer name is ellipsized, not
 // wrapped. The collapsed rail drops the label entirely, which is what makes
 // the collapsed goldens still meaningful.
@@ -203,7 +206,7 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 // one focus tag rather than one per row, so what the click at the start
 // seeds is the list's focus, not the row's.
 //
-// With PxPerDp=1 and an expanded sidebar (192 wide), the toggle
+// With PxPerDp=1 and an expanded sidebar (220 wide), the toggle
 // occupies y∈[0,48] and item i occupies y∈[48+48i, 48+48(i+1)]. A
 // pointer click at (96, 72) lands on item 0 and gives it focus —
 // the seed used to drive subsequent arrow-key traversal.
@@ -392,8 +395,8 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 
 // TestSidebarToggleDispatchesOnToggleCollapse verifies that clicking
 // the toggle affordance invokes OnToggleCollapse exactly once. With
-// PxPerDp=1, an expanded sidebar (192 wide) renders its toggle as a
-// 192×36 hit area (the Comfortable control height) at the top of
+// PxPerDp=1, an expanded sidebar (220 wide) renders its toggle as a
+// 220×36 hit area (the Comfortable control height) at the top of
 // the frame; (96, 24) lands squarely inside.
 func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 	var toggleCount int
@@ -448,12 +451,11 @@ func TestSidebarCompactGolden(t *testing.T) {
 // indexIcon returns a 16×16 filled square whose colour varies with the
 // item index, so rows are visually distinguishable in the overflow
 // goldens: a scrolled-to-bottom viewport cannot be mistaken for the top.
-func indexIcon(i int) layout.Widget {
+func indexIcon(i int) icons.Painter {
 	c := color.NRGBA{R: uint8(20 * i), G: 0x80, B: 0xf6, A: 0xff}
-	return func(gtx layout.Context) layout.Dimensions {
-		size := image.Pt(16, 16)
-		paint.FillShape(gtx.Ops, c, clip.Rect{Max: size}.Op())
-		return layout.Dimensions{Size: size}
+	return func(gtx layout.Context, box int, _ color.NRGBA) {
+		defer op.Offset(image.Pt((box-16)/2, (box-16)/2)).Push(gtx.Ops).Pop()
+		paint.FillShape(gtx.Ops, c, clip.Rect{Max: image.Pt(16, 16)}.Op())
 	}
 }
 
@@ -597,10 +599,10 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	top := int(tokens.Comfortable.ControlHeight)
 	var symMin, symMax = expandedW, -1
 	var textMin, textMax = expandedW, -1
-	// The rail's own trailing hairline is not part of a row, so the scan
-	// stops before it.
+	// The rail draws nothing down its trailing edge, so the scan runs the
+	// whole width.
 	for y := top; y < top+int(sidebar.RowHeight); y++ {
-		for x := 0; x < expandedW-1; x++ {
+		for x := 0; x < expandedW; x++ {
 			c := img.RGBAAt(x, y)
 			if c.B > c.R+0x40 && c.G > c.R {
 				symMin, symMax = min(symMin, x), max(symMax, x)
@@ -626,8 +628,11 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	if textMin > int(sidebar.LabelInset)+2 {
 		t.Errorf("the label starts at x=%d, want LabelInset %v or the glyph's own bearing past it", textMin, sidebar.LabelInset)
 	}
-	if want := expandedW - int(sidebar.CountInset); textMax > want || textMax < want-3 {
-		t.Errorf("the count ends at x=%d, want its trailing edge within the glyph's bearing of %d — CountInset %v in from the rail's %d",
+	// The count is placed by its DRAWN pixels: its last covered column is
+	// CountInset in from the rail's trailing edge exactly, the face's own
+	// trailing side bearing read off the shaped run and spent.
+	if want := expandedW - int(sidebar.CountInset) - 1; textMax != want {
+		t.Errorf("the count's last covered column is x=%d, want %d — CountInset %v in from the rail's %d, the bearing subtracted",
 			textMax, want, sidebar.CountInset, expandedW)
 	}
 }
@@ -659,6 +664,102 @@ func TestSidebarSectionIsPartedByAirAlone(t *testing.T) {
 		}
 		if same < expandedW-2-60 {
 			t.Errorf("row y=%d of the heading's block holds %d columns of the rail's own fill; a run that wide is a line, and the platform draws none", y, same)
+		}
+	}
+}
+
+// TestSidebarSymbolWearsTheMeasuredColour reads the row's symbol off a
+// rendered rail and holds it to the platform's own reading: black in light
+// and white in dark, stronger than the label standing beside it, and the
+// pill's own foreground on the selected row.
+//
+// The mark is the icon set's folder — the very mark the reference capture
+// measures — so what is read is a drawn vector and not a test shape.
+func TestSidebarSymbolWearsTheMeasuredColour(t *testing.T) {
+	shaper := defaultShaper(t)
+	cases := []struct {
+		name   string
+		colors tokens.PlatformColors
+		bg     color.NRGBA
+		want   color.NRGBA
+	}{
+		{"light", tokens.PlatformLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255}, tokens.PlatformLight.SidebarSymbol},
+		{"dark", tokens.PlatformDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}, tokens.PlatformDark.SidebarSymbol},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			props := sidebar.Props{
+				Items: []sidebar.Item{
+					{Icon: icons.Mark(icons.Folder), Label: "Notes"},
+					{Icon: icons.Mark(icons.Folder), Label: "Archive", Active: true},
+				},
+				Shaper: shaper,
+			}
+			w := sidebar.Render(shaper, props, false, tc.colors, tokens.Spacing,
+				tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+			img := golden.Capture(t, expandedSize, scene(w, tc.bg))
+			if img == nil {
+				t.Skip("no capture backend")
+			}
+			top := int(tokens.Comfortable.ControlHeight)
+			// The symbol's own square, the two rows the rail holds: the
+			// unselected one first, the selected one below it.
+			plain := extremeInSymbolBox(img, top, tc.colors.SidebarMaterial)
+			onPill := extremeInSymbolBox(img, top+int(sidebar.RowHeight), sidebar.SelectionFill(tc.colors, false))
+			if plain != tc.want {
+				t.Errorf("the symbol reads %v, want the measured %v", plain, tc.want)
+			}
+			if want := sidebar.SelectionLabel(tc.colors, false); onPill != want {
+				t.Errorf("the symbol on the pill reads %v, want the pill's own foreground %v", onPill, want)
+			}
+		})
+	}
+}
+
+// extremeInSymbolBox returns the pixel of the row's symbol square that stands
+// furthest from fill, the surface the row carries — the mark's own plateau,
+// since a vector mark takes no stem darkening and reaches full coverage
+// inside its stems.
+func extremeInSymbolBox(img *image.RGBA, top int, fill color.NRGBA) color.NRGBA {
+	x0, x1 := int(sidebar.SymbolInset), int(sidebar.SymbolInset)+int(sidebar.SymbolBox)
+	base := int(fill.R) + int(fill.G) + int(fill.B)
+	best, bestD := color.NRGBA{}, -1
+	for y := top; y < top+int(sidebar.RowHeight); y++ {
+		for x := x0; x < x1; x++ {
+			p := img.RGBAAt(x, y)
+			if d := abs(int(p.R) + int(p.G) + int(p.B) - base); d > bestD {
+				best, bestD = color.NRGBA{R: p.R, G: p.G, B: p.B, A: p.A}, d
+			}
+		}
+	}
+	return best
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+// TestSidebarDrawsNoTrailingLine holds the rail to the panel reading: the
+// platform's sidebar is an inset panel whose rim and shadow are the boundary,
+// so the rail itself draws nothing down its trailing edge. A hairline there
+// would be a second boundary inside the first.
+func TestSidebarDrawsNoTrailingLine(t *testing.T) {
+	shaper := defaultShaper(t)
+	props := sidebar.Props{Items: navItems(3, 1), Shaper: shaper}
+	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
+		tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+	img := golden.Capture(t, expandedSize, w)
+	if img == nil {
+		t.Skip("no capture backend")
+	}
+	m := tokens.PlatformLight.SidebarMaterial
+	fill := color.RGBA{R: m.R, G: m.G, B: m.B, A: m.A}
+	for y := 0; y < frameH; y++ {
+		if got := img.RGBAAt(expandedW-1, y); got != fill {
+			t.Fatalf("the rail's last column at y=%d is %v, want the rail's own fill %v: nothing is drawn down the trailing edge", y, got, fill)
 		}
 	}
 }

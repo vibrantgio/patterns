@@ -9,7 +9,7 @@
 // observable, returning a stream of layout.Widget. Source is
 // intentionally short — copy it into your own app and modify as needed.
 //
-// The column's width is not negotiable: 192 dp expanded and 48 dp
+// The column's width is not negotiable: 220 dp expanded and 48 dp
 // collapsed, both fixed constants in this file that ignore the
 // horizontal constraint entirely. Height is whatever it is handed.
 // Clamping the width to the constraint would introduce a third,
@@ -22,10 +22,18 @@
 // OnToggleCollapse is the request to change it, so wiring the
 // affordance to nothing leaves a sidebar that cannot collapse.
 //
+// The rail draws no line down its trailing edge. The platform's sidebar is
+// an inset panel and what parts it from the content is the panel's own rim
+// and the shadow it casts, which patterns/pane draws; a hairline here would
+// be a second boundary inside the first.
+//
 // A row is a symbol, a label and, at the trailing end, a count when the
 // entry has one: [Item.Icon], [Item.Label] and [Item.Count], each drawn in
 // the column the platform draws it in ([SymbolInset], [LabelInset],
-// [CountInset]). A row with no symbol or no count draws without one and the
+// [CountInset]). The symbol wears [SymbolForeground] and the count
+// [CountForeground], both measured values of the sidebar; on the selected
+// row's pill all three parts wear the foreground the platform pairs with
+// that fill. A row with no symbol or no count draws without one and the
 // columns do not move, so the labels of a list whose entries differ still
 // line up. A run of rows may be headed by a small label — [Item.Section] on
 // the row that begins it — which stands in a block of [SectionHeight] above
@@ -87,6 +95,8 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
+	"golang.org/x/image/math/fixed"
+
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/icon"
 	"github.com/vibrantgio/components/icons"
@@ -110,7 +120,13 @@ import (
 // item should carry it — the first one that does wins. It is independent
 // of OnClick.
 type Item struct {
-	Icon  layout.Widget
+	// Icon is the row's symbol, painted in the box the platform keeps for
+	// one ([SymbolBox]) and in the colour the row hands it —
+	// [SymbolForeground]. It is the shape [icons.Set.Mark] returns, so a row
+	// drawn from the icon set passes icons.Mark(name) straight in; a nil
+	// Icon is a row with no symbol, and the columns beside it do not move.
+	Icon icons.Painter
+
 	Label string
 
 	// Count is what stands at the row's trailing end — how many things the
@@ -173,14 +189,20 @@ type Props struct {
 	Unemphasized bool
 }
 
-// Width constants.
-// SpacingScale tops out at S24 = 96 dp, so the 192 dp expanded width
-// (≈ 4 × S12) is a local constant rather than a new spacing-token field.
-// Widths do not follow density (the column contract is fixed — see the
-// package comment); the toggle's height does — it is exactly
-// Density.ControlHeight.
+// Width constants. Widths do not follow density (the column contract is
+// fixed — see the package comment); the toggle's height does — it is exactly
+// Density.ControlHeight. SpacingScale tops out at S24 = 96 dp, so neither
+// width is a spacing-token field.
+//
+// MEASURED, voicememos-multi-folder-2026-09-18.png at 1x: the panel spans
+// x 64–283 inside a window standing at x 56–1031 — 220 columns, rim to rim.
+// reference/macos/controls.md carries the reading under "What the sidebar
+// panel measures".
+//
+// collapsedDp is NOT measured: no stored capture holds a collapsed sidebar,
+// so the 48 stands as the pattern's own until one does.
 const (
-	expandedDp  = 192
+	expandedDp  = 220
 	collapsedDp = 48
 )
 
@@ -501,24 +523,7 @@ func drawSidebar(
 	})
 	stk.Pop()
 
-	drawTrailingSeam(gtx, size, colors)
-
 	return layout.Dimensions{Size: size}
-}
-
-// drawTrailingSeam draws the hairline down the rail's trailing edge: two
-// flush regions, so the one leading draws the line that says where it ends —
-// once, inside its own bounds. It is what parts the rail from the content
-// beside it: in the light appearance the platform's chrome material IS the
-// content's white, so without this line the two regions are one blank page.
-// It is drawn last so a full-width row, selected or not, cannot erase it.
-func drawTrailingSeam(gtx layout.Context, size image.Point, colors tokens.PlatformColors) {
-	w := max(gtx.Dp(unit.Dp(1)), 1)
-	if size.X <= w || size.Y <= 0 {
-		return
-	}
-	edge := image.Rect(size.X-w, 0, size.X, size.Y)
-	paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, colors.SidebarMaterial), clip.Rect(edge).Op())
 }
 
 // SelectionFill is the fill the platform lays under a selected sidebar row:
@@ -656,13 +661,14 @@ func drawItem(
 	}
 	foreground := vgcolor.Flatten(label, rowFill)
 	countFG := vgcolor.Flatten(CountForeground(colors, selected, unemphasized), rowFill)
+	symbolFG := vgcolor.Flatten(SymbolForeground(colors, selected, unemphasized), rowFill)
 
 	inner := func(gtx layout.Context) layout.Dimensions {
 		if selected {
 			PaintSelection(gtx, size, colors, unemphasized)
 		}
 
-		drawSymbol(gtx, item.Icon, size, collapsed)
+		drawSymbol(gtx, item.Icon, size, collapsed, symbolFG)
 
 		if collapsed {
 			return layout.Dimensions{Size: size}
@@ -673,7 +679,7 @@ func drawItem(
 		// rather than allowed to run under the count.
 		countW := 0
 		if item.Count != "" {
-			countW = drawTrailing(gtx, shaper, item.Count, style, size, countFG)
+			countW = PaintCount(gtx, shaper, item.Count, style, size, countFG)
 		}
 		lead := gtx.Dp(LabelInset)
 		gap := gtx.Dp(unit.Dp(sp.S2))
@@ -730,6 +736,21 @@ func SectionStyle(t tokens.Typography) tokens.TextStyle { return t.LabelSmall }
 // onto the fill.
 func SectionForeground(colors tokens.PlatformColors) color.NRGBA { return colors.SecondaryLabel }
 
+// SymbolForeground is what the symbol at a row's leading end is drawn in: the
+// sidebar's own measured symbol value, and the foreground the platform pairs
+// with the pill on the selected row — the symbol wears the pill's white like
+// the label beside it. The caller flattens it onto the fill.
+//
+// It is exported so an application drawing its own chrome rail draws the
+// symbol the strength the platform draws it, which is stronger than the
+// label standing beside it: 38 of 255 in light and 35 in dark.
+func SymbolForeground(colors tokens.PlatformColors, selected, unemphasized bool) color.NRGBA {
+	if selected {
+		return SelectionLabel(colors, unemphasized)
+	}
+	return colors.SidebarSymbol
+}
+
 // CountForeground is what the count at a row's trailing end is drawn in: the
 // sidebar's own measured count value off the pill, and the foreground the
 // platform pairs with the pill on it — the count wears the selected row's
@@ -775,10 +796,14 @@ func PaintSection(gtx layout.Context, shaper *text.Shaper, label string, style t
 
 // drawSymbol paints a row's symbol in the square the platform draws it in:
 // [SymbolBox], set [SymbolInset] in from the rail's leading edge and centred
-// on the row. A collapsed rail has no label to line the symbol up with, so
-// there the square is centred in the rail instead.
-func drawSymbol(gtx layout.Context, icon layout.Widget, size image.Point, collapsed bool) {
-	if icon == nil {
+// on the row, in fg. A collapsed rail has no label to line the symbol up
+// with, so there the square is centred in the rail instead.
+//
+// The mark fills the square rather than being drawn at a mark-beside-text
+// size inside it: the set's axis-aligned keyline is 18 of 24, which draws 18
+// across against the 20 the platform's own folder measures.
+func drawSymbol(gtx layout.Context, mark icons.Painter, size image.Point, collapsed bool, fg color.NRGBA) {
+	if mark == nil {
 		return
 	}
 	box := gtx.Dp(SymbolBox)
@@ -792,20 +817,29 @@ func drawSymbol(gtx layout.Context, icon layout.Widget, size image.Point, collap
 	if x < 0 {
 		x = 0
 	}
-	iGtx := gtx
-	iGtx.Constraints = layout.Constraints{Max: image.Pt(box, size.Y)}
-	rec := op.Record(gtx.Ops)
-	d := icon(iGtx)
-	call := rec.Stop()
-	stk := op.Offset(image.Pt(x+(box-d.Size.X)/2, (size.Y-d.Size.Y)/2)).Push(gtx.Ops)
-	call.Add(gtx.Ops)
+	stk := op.Offset(image.Pt(x, (size.Y-box)/2)).Push(gtx.Ops)
+	mark(gtx, box, fg)
 	stk.Pop()
 }
 
-// drawTrailing paints a row's count at the trailing end — its own trailing
-// edge [CountInset] in from the rail's — and reports how wide it came out, so
-// the caller knows what is left for the label.
-func drawTrailing(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, size image.Point, fg color.NRGBA) int {
+// PaintCount paints a row's count at the trailing end of a row of the given
+// size at the current offset and reports how wide it came out, so the caller
+// knows what is left for the label.
+//
+// It is exported so an application drawing its own chrome rail puts its
+// counts in the platform's column.
+//
+// What is placed is the count's LAST COVERED COLUMN, [CountInset] in from the
+// rail's trailing edge, not the trailing edge of its layout box: the platform
+// draws every count in the reference to x 266 or 267 against a panel rim at
+// x 283, and those are drawn pixels. A face leaves a trailing side bearing
+// between its last stem and the end of its advance, so a box placed by its
+// own edge lands the digits that much short of the measured column. The run's
+// own covered width is read off the shaper and the placement spends that,
+// which is the rule components/internal/control spends a text origin by,
+// mirrored to the other end of the line.
+func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, size image.Point, fg color.NRGBA) int {
+	covered := coveredWidth(gtx, shaper, txt, style, size.X)
 	cGtx := gtx
 	cGtx.Constraints.Min = image.Point{}
 	cGtx.Constraints.Max = image.Pt(size.X, size.Y)
@@ -813,6 +847,9 @@ func drawTrailing(gtx layout.Context, shaper *text.Shaper, txt string, style tok
 	dims := drawText(cGtx, shaper, txt, style, fg)
 	call := rec.Stop()
 	x := size.X - gtx.Dp(CountInset) - dims.Size.X
+	if covered > 0 {
+		x = size.X - gtx.Dp(CountInset) - covered
+	}
 	if x < 0 {
 		x = 0
 	}
@@ -820,6 +857,44 @@ func drawTrailing(gtx layout.Context, shaper *text.Shaper, txt string, style tok
 	call.Add(gtx.Ops)
 	stk.Pop()
 	return dims.Size.X
+}
+
+// coveredWidth reports how far a one-line run's drawn pixels reach from the
+// line's own origin, in whole columns, or 0 when the run cannot be measured.
+// It is the glyphs' covered extent rather than the advance they spend: a
+// face leaves a trailing side bearing between its last stem and the end of
+// the advance, and the platform's own column is a drawn pixel.
+//
+// It shapes the run with the parameters the paint pass will, so it is a hit
+// in the shaper's cache rather than a second shaping. A shaper lays one
+// document out at a time, so this runs to completion before the paint pass
+// shapes anything.
+func coveredWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, maxWidth int) int {
+	if shaper == nil || txt == "" || style.Size <= 0 {
+		return 0
+	}
+	lbl := typeset.Label(style, 1)
+	shaper.LayoutString(text.Parameters{
+		Font:       typeset.Font(style, font.Normal),
+		PxPerEm:    fixed.I(gtx.Sp(unit.Sp(style.Size))),
+		MaxLines:   lbl.MaxLines,
+		Truncator:  lbl.Truncator,
+		Alignment:  lbl.Alignment,
+		WrapPolicy: lbl.WrapPolicy,
+		MaxWidth:   maxWidth,
+		Locale:     gtx.Locale,
+	}, txt)
+	var covered fixed.Int26_6
+	for {
+		g, ok := shaper.NextGlyph()
+		if !ok {
+			break
+		}
+		if right := g.X + g.Bounds.Max.X; right > covered {
+			covered = right
+		}
+	}
+	return covered.Ceil()
 }
 
 // drawText lays one line out in the role's own typeface, weight, size and

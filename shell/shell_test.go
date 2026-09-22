@@ -21,6 +21,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/shell"
 	"github.com/vibrantgio/patterns/sidebar"
@@ -85,11 +86,15 @@ func shellSidebar(shaper *text.Shaper) sidebar.Props {
 	return sidebar.Props{Items: items, Shaper: shaper}
 }
 
-func testIcon() layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		size := image.Pt(16, 16)
-		paint.FillShape(gtx.Ops, color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 0xff}, clip.Rect{Max: size}.Op())
-		return layout.Dimensions{Size: size}
+// testIcon mirrors sidebar_test.go's: a 16x16 square in a fixed mid-blue,
+// centred in the box the row hands it. It spends the colour the row hands it
+// on nothing, so a shell golden reads the same square whatever fill the row
+// carries.
+func testIcon() icons.Painter {
+	return func(gtx layout.Context, box int, _ color.NRGBA) {
+		defer op.Offset(image.Pt((box-16)/2, (box-16)/2)).Push(gtx.Ops).Pop()
+		paint.FillShape(gtx.Ops, color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 0xff},
+			clip.Rect{Max: image.Pt(16, 16)}.Op())
 	}
 }
 
