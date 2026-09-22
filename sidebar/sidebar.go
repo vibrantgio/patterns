@@ -40,6 +40,11 @@
 // that row and is parted from the rows by air alone: the platform draws no
 // line there, and neither does this.
 //
+// Those three parts are also exported one at a time — [PaintSymbol],
+// [PaintSection] and [PaintCount] — so an application drawing a row of its
+// own puts each in the platform's own column instead of writing the offset
+// arithmetic a second time.
+//
 // Items are stacked at the sidebar's own row pitch — [RowHeight], 32 dp,
 // which is not the platform's list row — in a
 // components/list scroll region filling the column below the toggle: a
@@ -794,25 +799,53 @@ func PaintSection(gtx layout.Context, shaper *text.Shaper, label string, style t
 	return layout.Dimensions{Size: size}
 }
 
-// drawSymbol paints a row's symbol in the square the platform draws it in:
-// [SymbolBox], set [SymbolInset] in from the rail's leading edge and centred
-// on the row, in fg. A collapsed rail has no label to line the symbol up
-// with, so there the square is centred in the rail instead.
+// PaintSymbol paints a row's symbol into a block of the given size at the
+// current offset, in the column the platform draws it in: a [SymbolBox]
+// square set [SymbolInset] in from the block's leading edge and centred on
+// its height, in fg. It reports the block it filled — [LabelInset] wide, the
+// column the name beside it begins at — so a caller lays the name out against
+// the same reading the symbol was painted from.
+//
+// It is exported so an application drawing its own row puts its symbol in the
+// platform's column instead of writing the offset arithmetic again. A row
+// outside a chrome rail takes the columns and not the rail's measured symbol
+// foreground: that value was read off a rail, where the platform draws the
+// symbol stronger than the name beside it, and what a content row's symbol
+// wears is the caller's to hand in.
 //
 // The mark fills the square rather than being drawn at a mark-beside-text
 // size inside it: the set's axis-aligned keyline is 18 of 24, which draws 18
 // across against the 20 the platform's own folder measures.
+func PaintSymbol(gtx layout.Context, mark icons.Painter, size image.Point, fg color.NRGBA) layout.Dimensions {
+	paintSymbolAt(gtx, mark, size, gtx.Dp(SymbolInset), fg)
+	return layout.Dimensions{Size: image.Pt(gtx.Dp(LabelInset), size.Y)}
+}
+
+// drawSymbol paints a row's symbol in the square the platform draws it in.
+// A collapsed rail has no label to line the symbol up with, so there the
+// square is centred in the rail instead of standing in its measured column.
 func drawSymbol(gtx layout.Context, mark icons.Painter, size image.Point, collapsed bool, fg color.NRGBA) {
-	if mark == nil {
+	if !collapsed {
+		PaintSymbol(gtx, mark, size, fg)
 		return
 	}
 	box := gtx.Dp(SymbolBox)
 	if box > size.X {
 		box = size.X
 	}
-	x := gtx.Dp(SymbolInset)
-	if collapsed {
-		x = (size.X - box) / 2
+	paintSymbolAt(gtx, mark, size, (size.X-box)/2, fg)
+}
+
+// paintSymbolAt draws the mark in a [SymbolBox] square whose leading edge is
+// x, centred on the block's height. A square wider than the block it stands
+// in is drawn at the block's width, and a negative column is drawn at zero.
+func paintSymbolAt(gtx layout.Context, mark icons.Painter, size image.Point, x int, fg color.NRGBA) {
+	if mark == nil {
+		return
+	}
+	box := gtx.Dp(SymbolBox)
+	if box > size.X {
+		box = size.X
 	}
 	if x < 0 {
 		x = 0

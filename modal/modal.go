@@ -12,9 +12,12 @@
 // what tells a dialog from the window beneath it, the dark one included, is
 // the scrim: the window keeps 0.74 of itself under the measured dim while
 // the dialog keeps all of it. The scrim is that dim, measured off the same
-// captures. Its footer's actions are the caller's components/button visuals,
-// which is where the default action's measured default-button fill and the
-// ordinary button's push-button fill come from.
+// captures. Its corner is that sheet's own, fitted off the same pair — see
+// [dialogCornerDp]. Its footer's actions are the caller's components/button
+// visuals, which is where the default action's measured default-button fill
+// and the ordinary button's push-button fill come from: the platform fills
+// the default answer with the accent and draws the other as an ordinary push
+// button, which is the Tonal emphasis, never a borderless one.
 //
 // Modal is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and
@@ -566,7 +569,7 @@ func drawModal(
 	closeWidget layout.Widget,
 ) layout.Dimensions {
 	frame := gtx.Constraints.Max
-	r := gtx.Dp(unit.Dp(tok.radius.Lg))
+	r := gtx.Dp(unit.Dp(dialogCornerDp))
 	gap := gtx.Dp(unit.Dp(tok.spacing.S3))
 
 	// The default action is drained BEFORE the footer lays out, and that
@@ -953,6 +956,39 @@ func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 // platform's own window close control measures, so the mark a dialog is left
 // by is the size the platform leaves a window by.
 const crossPadDp = 4
+
+// dialogCornerDp is the radius the dialog's surface is rounded at.
+//
+// MEASURED, save-dialog-{light,dark}.png, the sheet's own corner, fitted the
+// way CG4.8 fitted the sidebar recess's ends: a circle through the sub-pixel
+// leading edge the per-row coverage gives, the sheet's own extremes pinned
+// (its fill begins at x 165.000 and y 188.000 exactly, the boundary stepping
+// in one column from the dimmed window on every side). Light r = 27.05,
+// dark r = 27.04, rms 0.37 px over 26 rows in each — the two appearances
+// land on the same hundredth. The corner's topmost row is left out of the
+// fit: the curve crosses it almost horizontally, so one row of partial
+// coverage stands for six px of inset and carries a +6 px residual where
+// every other row lands inside one.
+//
+// The same corner read as a drawn shape rather than as an edge agrees: the
+// circular coverage of a 40x40 corner block differs from the capture's by
+// 17.2 summed over 1600 px at r = 27 and by 21.7 at r = 28 and 23.7 at
+// r = 26, in both appearances, so 27 is the circle the platform's corner is
+// closest to and the fit's hundredths sit just above it, as every circular
+// fit in this reference does.
+//
+// The coverage MISSING from that corner block reads r = 28.0 instead
+// (168.4 px² light and 168.3 px² dark against r²(1 - pi/4), over the
+// top-left, top-right and bottom-left corners; the light capture's
+// bottom-trailing corner cannot be read, the default button's fill standing
+// inside the block). It reads a pixel high because the platform's corner is
+// a continuous curve: it runs fuller than a circle through the middle of the
+// arc and carries a tail past where the circle has met the edge, and a
+// missing-area reading counts that tail. A clipped circle is what Gio draws,
+// so the radius drawn is the one the arc fits.
+//
+// It replaces RadiusScale.Lg's 8, which was a scale stop and not a reading.
+const dialogCornerDp = 27
 
 // crossIcon paints an "×" shape — two diagonal strokes — into a
 // sizePx×sizePx box at the current origin in colour col. It is the modal

@@ -36,7 +36,10 @@ const (
 var (
 	frameSize = image.Pt(frameW, frameH)
 	// Sharp corner radius. Anti-aliased rounded corners vary slightly
-	// between GPU contexts, breaking determinism.
+	// between GPU contexts, breaking determinism. It reaches the close
+	// button and whatever else a caller draws from the scale; the dialog's
+	// own surface takes the sheet's measured corner and is not on the scale
+	// at all, so these goldens carry that one rounded shape.
 	sharpRadius = tokens.RadiusScale{}
 )
 
