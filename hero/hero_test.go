@@ -197,7 +197,7 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 func TestLongCTALabelGrowsTheButton(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	fill := tokens.PlatformLight.ControlAccent
+	fill := tokens.PlatformLight.DefaultButtonFill
 
 	ctaWidth := func(label string) int {
 		p := heroText(shaper)

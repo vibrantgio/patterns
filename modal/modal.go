@@ -4,12 +4,17 @@
 //
 // The dialog's plane is the platform's window background — what every
 // floating surface on this platform is filled with — under the platform's
-// measured floating shadow, and it carries no hairline: the platform tells a
-// floating surface by its shadow and draws no edge around a sheet. The scrim
-// is the dim the platform lays over the window a sheet interrupts, measured
-// off the reference. Its footer's actions are the caller's
-// components/button visuals, which is where the default action's accent fill
-// and the ordinary button's push-button fill come from.
+// measured floating shadow, and it carries no hairline. MEASURED,
+// save-dialog-{light,dark}.png: the sheet runs x 165-534 and steps in ONE
+// column from the dimmed window to its own fill on every side — x 164 reads
+// #cccccc light and #191a1b dark against the x 165 that reads #ffffff and
+// #232a2f — with no stroke column of a third value in either appearance. So
+// what tells a dialog from the window beneath it, the dark one included, is
+// the scrim: the window keeps 0.74 of itself under the measured dim while
+// the dialog keeps all of it. The scrim is that dim, measured off the same
+// captures. Its footer's actions are the caller's components/button visuals,
+// which is where the default action's measured default-button fill and the
+// ordinary button's push-button fill come from.
 //
 // Modal is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and
@@ -636,7 +641,9 @@ func drawModal(
 	// Surface — rounded rectangle, registered as a pointer absorber so
 	// presses on its area do not reach the scrim and dismiss the modal.
 	// It floats, so it wears the window background under the platform's
-	// shadow and no hairline: the shadow is what says a surface floats here.
+	// shadow and no hairline: the sheet's boundary in the reference is one
+	// step from the dimmed window to the fill, on every side and in both
+	// appearances.
 	off := op.Offset(surfPos).Push(gtx.Ops)
 	surfRRect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(surfW, surfH)}, SE: r, SW: r, NE: r, NW: r}
 	castShadow(gtx, image.Rectangle{Max: image.Pt(surfW, surfH)}, r, tok.color)
