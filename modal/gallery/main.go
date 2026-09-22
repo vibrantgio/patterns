@@ -151,7 +151,7 @@ func run(w *app.Window) error {
 		Open:            openObs,
 		Title:           "Confirm action",
 		Body:            d.body,
-		Actions:         []layout.Widget{footerSlot(cancelBtn), footerSlot(okBtn)},
+		Actions:         []layout.Widget{cancelBtn, okBtn},
 		ActionFocusTags: []event.Tag{&d.cancelClk, &d.okClk},
 		Decision: &modal.Decision{
 			Confirm: func(_ layout.Context) { closeDialog() },
@@ -198,17 +198,6 @@ func (d *demo) body(gtx layout.Context) layout.Dimensions {
 			"focused button; Return takes the default (OK) from wherever focus is; "+
 			"Escape is Cancel. Clicking the dimmed backdrop does nothing.",
 		mat)
-}
-
-// footerSlot constrains an otherwise fill-width button to a compact fixed width
-// so the footer shows two right-aligned buttons rather than one stretched bar.
-// It only sets the width budget; the wrapped button still owns its focus tag.
-func footerSlot(w layout.Widget) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		gtx.Constraints.Min.X = 0
-		gtx.Constraints.Max.X = gtx.Dp(unit.Dp(110))
-		return w(gtx)
-	}
 }
 
 func (d *demo) frame(gtx layout.Context) layout.Dimensions {

@@ -66,9 +66,13 @@ func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 
 // fixedRect is a sharp-edged solid layout.Widget with explicit width and height.
 // Used for footer action stand-ins so their hit rect is predictable.
-func fixedRect(c color.NRGBA, widthDp, heightDp float32) layout.Widget {
+// actionRect is a footer action's stand-in: a flat rectangle filling the box
+// the footer lays an action out in, heightDp tall. It states no width of its
+// own, because a footer action does not — the footer owns the platform's
+// measured dialog button width and hands every action that box.
+func actionRect(c color.NRGBA, heightDp float32) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		size := image.Pt(gtx.Dp(unit.Dp(widthDp)), gtx.Dp(unit.Dp(heightDp)))
+		size := image.Pt(gtx.Constraints.Max.X, gtx.Dp(unit.Dp(heightDp)))
 		paint.FillShape(gtx.Ops, c, clip.Rect{Max: size}.Op())
 		return layout.Dimensions{Size: size}
 	}
@@ -115,8 +119,8 @@ const (
 func TestModalGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
-	cancel := fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28)
-	discard := fixedRect(color.NRGBA{R: 220, G: 100, B: 100, A: 255}, 60, 28)
+	cancel := actionRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 28)
+	discard := actionRect(color.NRGBA{R: 220, G: 100, B: 100, A: 255}, 28)
 
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	darkBG := color.NRGBA{R: 20, G: 20, B: 20, A: 255}

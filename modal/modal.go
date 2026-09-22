@@ -19,6 +19,15 @@
 // the default answer with the accent and draws the other as an ordinary push
 // button, which is the Tonal emphasis, never a borderless one.
 //
+// The dialog carries no band and no hairline of its own anywhere else
+// either: the footer is a row of actions over the same plane the header and
+// the body stand on, with nothing ruled between them. MEASURED,
+// save-dialog-{light,dark}.png: the sheet's own footer holds its two push
+// buttons over the sheet's fill and nothing more — a run down x=340, clear
+// of both buttons (they span x 359-514), reads #ffffff light and #232a2f
+// dark over every row from y=490 to the sheet's own foot at y=544, with no
+// row of a third value in it.
+//
 // Modal is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and
 // free of opaque configuration — copy it into your own app and modify as
@@ -76,6 +85,11 @@
 // in. Bind it in app chrome, with Gio's own key.ModShortcut (Cmd on darwin,
 // Ctrl elsewhere) rather than a GOOS test of your own, and land a message
 // that flips the flag [Props.Open] reads.
+//
+// A dialog opens with the keyboard on its body's first focusable — the first
+// field, as the platform's sheet shows — which the body declares through
+// Props.DynamicFocusTags; see [initialFocus]. A body with nothing to focus
+// leaves the opening focus to the first tag in the Tab cycle.
 //
 // Tab and Shift+Tab cycle keyboard focus within the modal's focusable items
 // and do not escape to background content. Only the topmost modal in the
@@ -245,6 +259,12 @@ type Props struct {
 	Title   string
 	Body    layout.Widget
 	OnClose func(gtx layout.Context)
+
+	// Actions are the footer's, right-aligned in the order given and each
+	// laid out in the box the footer owns — the platform's measured dialog
+	// button width, see [dialogButtonWDp]. A caller hands over an action and
+	// not a width; an action whose label does not fit the box widens itself
+	// and nothing else.
 	Actions []layout.Widget
 
 	// Decision, when non-nil, makes this a decision dialog rather than a
@@ -277,11 +297,18 @@ type Props struct {
 	HideClose bool
 
 	// DynamicFocusTags, if non-nil, is called every frame and its tags join
-	// the Tab cycle after the close button and BEFORE ActionFocusTags. Use
-	// it for focusables whose tags change across the modal's lifetime —
-	// e.g. a components TextField rebuilt per open (its editor tag, exposed via
-	// TextFieldProps.FocusTag, is new each rebuild). The first tag in the
-	// cycle receives initial focus when the modal opens.
+	// the Tab cycle after the close button and BEFORE ActionFocusTags. It is
+	// how the BODY declares its own focusables, in the order it lays them
+	// out, and it is called every frame because a body's controls are often
+	// rebuilt per open — a components TextField rebuilt on each open is a new
+	// editor with a new tag (exposed via TextFieldProps.FocusTag).
+	//
+	// The first tag it returns is the body's first focusable, and that is
+	// the control the dialog OPENS with the keyboard on: the first field
+	// holds the focus when a dialog opens, as the platform's sheet shows.
+	// A body that declares none leaves the opening focus to the first tag in
+	// the cycle — the close affordance on a panel, the first action on a
+	// decision. See [initialFocus].
 	DynamicFocusTags func() []event.Tag
 
 	// ActionFocusTags lists the focus tags of the focusable Actions, in the
@@ -736,10 +763,32 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 	}
 }
 
+// dialogButtonWDp is the width a footer action is laid out in.
+//
+// MEASURED, save-dialog-{light,dark}.png: that sheet's two answers span
+// x 359-432 and x 441-514 — 74 px apiece, 8 apart, the trailing one ending
+// 20 px from the sheet's edge and both standing 20 px off its foot. The 8 is
+// this footer's gap (SpacingScale.S2) and the 20 its surface inset (S5), so
+// the width is the one number of that footer the pattern did not already
+// spend. It is the platform's minimum for a dialog button, which both of
+// those labels are under, so the two stand equal.
+//
+// It is a budget and not a cap. An action drawn in a box this wide takes the
+// 74 when its label fits; a label that does not fit widens its button by the
+// label's own measure alone, components/button reporting the wider box
+// rather than eliding into this one. So a footer of short answers is a row
+// of equal buttons and a long answer beside them is exactly as wide as it
+// has to be.
+const dialogButtonWDp = 74
+
 // footerWidget renders a right-aligned row of action components. Each action is
-// laid out bare: it owns its own focus tag and focus ring (the modal neither
-// wraps it nor decorates it), and joins the Tab cycle via Props.ActionFocusTags.
-// Returns nil when there are no non-nil actions.
+// laid out bare inside a box [dialogButtonWDp] wide: it owns its own focus
+// tag and focus ring (the modal neither wraps it nor decorates it), and joins
+// the Tab cycle via Props.ActionFocusTags. Returns nil when there are no
+// non-nil actions.
+//
+// The row draws nothing of its own — no band, no hairline, no rule between
+// it and the body — because the sheet it is drawn after draws none.
 func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 	any := false
 	for _, a := range props.Actions {
@@ -754,6 +803,7 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 	gap := tok.spacing.S2
 
 	return func(gtx layout.Context) layout.Dimensions {
+		btnW := gtx.Dp(unit.Dp(dialogButtonWDp))
 		// The right-alignment filler must claim NO cross-axis height: with a
 		// content-sized surface the row's Max.Y is all remaining space, and
 		// a Constraints.Max-sized filler would inflate the footer to fill it
@@ -772,9 +822,26 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 				children = append(children, layout.Rigid(pllayout.HSpacer(gap)))
 			}
 			first = false
-			children = append(children, layout.Rigid(a))
+			children = append(children, layout.Rigid(actionBox(a, btnW)))
 		}
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
+	}
+}
+
+// actionBox lays one footer action out in a box wPx wide — the width the
+// footer owns, so a caller hands over an action and not a width.
+//
+// The box is stated as the MAXIMUM alone, the minimum released, because a
+// components/button fills the width it is given: a minimum of wPx would let
+// the flex hand it the whole row. Given the box and no more, it draws the
+// box, or the wider one its own label measures.
+func actionBox(a layout.Widget, wPx int) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints.Min = image.Point{}
+		if wPx < gtx.Constraints.Max.X {
+			gtx.Constraints.Max.X = wPx
+		}
+		return a(gtx)
 	}
 }
 
@@ -784,7 +851,7 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 func processInput(gtx layout.Context, props Props, st *modalState) {
 	// Drain FocusFilter events for each focus tag so the router retains focus
 	// when set, mirroring components/layout.FocusGroup.Update.
-	tags := focusTags(props, st)
+	tags, bodyFirst := focusTags(props, st)
 	for _, tag := range tags {
 		for {
 			if _, ok := gtx.Event(key.FocusFilter{Target: tag}); !ok {
@@ -793,14 +860,16 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 		}
 	}
 
-	// Set initial focus to the close button on the first frame after Open
-	// transitions to true. Subsequent transitions are tracked by the rx
-	// pipeline; here we just consume the flag.
+	// Set initial focus on the first frame after Open transitions to true:
+	// the body's first focusable when the body declares one, the first tag
+	// in the cycle when it does not (see [initialFocus]). Subsequent
+	// transitions are tracked by the rx pipeline; here we just consume the
+	// flag.
 	if st.wantInitialFocus {
-		// tags can be empty (HideClose with no action tags) — nothing to
-		// focus then, but never panic.
-		if len(tags) > 0 {
-			gtx.Execute(key.FocusCmd{Tag: tags[0]})
+		// The cycle can be empty (HideClose with no action tags and no body
+		// tags) — nothing to focus then, but never panic.
+		if tag := initialFocus(tags, bodyFirst); tag != nil {
+			gtx.Execute(key.FocusCmd{Tag: tag})
 		}
 		st.wantInitialFocus = false
 	}
@@ -895,7 +964,8 @@ func processDefaultAction(gtx layout.Context, props Props, st *modalState) {
 		return
 	}
 	act := props.Decision.DefaultAction()
-	for _, tag := range focusTags(props, st) {
+	tags, _ := focusTags(props, st)
+	for _, tag := range tags {
 		for {
 			e, ok := gtx.Event(
 				key.Filter{Focus: tag, Name: key.NameReturn},
@@ -912,17 +982,26 @@ func processDefaultAction(gtx layout.Context, props Props, st *modalState) {
 }
 
 // focusTags returns the ordered slice of focus tags belonging to this modal:
-// the close button first, then the caller-declared action focus tags. Action
-// tags are owned by the action components themselves (Props.ActionFocusTags); the
-// modal only sequences them for Tab cycling and the Escape trap.
-func focusTags(props Props, st *modalState) []event.Tag {
-	tags := make([]event.Tag, 0, focusCount(props))
+// the close button first, then the body's own (Props.DynamicFocusTags), then
+// the caller-declared action focus tags. Every one of them is owned by the
+// component that draws it; the modal only sequences them for Tab cycling and
+// the Escape trap.
+//
+// bodyFirst is the index of the body's first focusable within tags, or -1
+// when the body declares none. That is the control the dialog opens with the
+// keyboard on — see [initialFocus].
+func focusTags(props Props, st *modalState) (tags []event.Tag, bodyFirst int) {
+	tags = make([]event.Tag, 0, focusCount(props))
+	bodyFirst = -1
 	if props.showsClose() {
 		tags = append(tags, &st.closeClick)
 	}
 	if props.DynamicFocusTags != nil {
 		for _, t := range props.DynamicFocusTags() {
 			if t != nil {
+				if bodyFirst < 0 {
+					bodyFirst = len(tags)
+				}
 				tags = append(tags, t)
 			}
 		}
@@ -932,7 +1011,36 @@ func focusTags(props Props, st *modalState) []event.Tag {
 			tags = append(tags, t)
 		}
 	}
-	return tags
+	return tags, bodyFirst
+}
+
+// initialFocus returns the control a dialog opens with the keyboard on: the
+// body's first focusable when the body declares one, and the first tag in
+// the Tab cycle when it does not.
+//
+// The first field holds the keyboard focus when a dialog opens, as the
+// platform's sheet shows: its save dialog opens with the caret in "Save As:"
+// and that field wearing the focus halo, not with the keyboard on one of the
+// two answers in the footer. So a body that has a field is what the dialog
+// opens on, and only a body with nothing to focus — a question and two
+// answers, say — hands the keyboard to the header's close affordance or to
+// the first footer action.
+//
+// The pattern learns which control is first from the body, which declares it
+// by passing its own focus tags in Props.DynamicFocusTags: the first of
+// those is the body's first focusable, in the order the body lays its
+// controls out. It is the body that knows, and a body whose controls are
+// rebuilt per open — a field is a new editor with a new tag every time — is
+// the reason the declaration is a function called per frame rather than a
+// tag held once.
+func initialFocus(tags []event.Tag, bodyFirst int) event.Tag {
+	if bodyFirst >= 0 {
+		return tags[bodyFirst]
+	}
+	if len(tags) == 0 {
+		return nil
+	}
+	return tags[0]
 }
 
 // currentFocusIdx returns the index of the currently-focused modal tag,

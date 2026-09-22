@@ -86,7 +86,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 	drive() // frame 1: register the tags
 	drive() // frame 2: initial focus applied
 
-	tags := focusTags(props, st)
+	tags, _ := focusTags(props, st)
 	focusedIdx := func() int {
 		gtx := layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
@@ -180,13 +180,13 @@ func TestFocusTagsIncludesDynamicBeforeStatic(t *testing.T) {
 		ActionFocusTags:  []event.Tag{&act},
 	}
 	st := newState(props)
-	tags := focusTags(props, st)
+	tags, _ := focusTags(props, st)
 	if len(tags) != 2 || tags[0] != &dyn || tags[1] != &act {
 		t.Fatalf("focusTags = %v, want [dynamic static]", tags)
 	}
 
 	props.HideClose = false
-	tags = focusTags(props, st)
+	tags, _ = focusTags(props, st)
 	if len(tags) != 3 || tags[0] != &st.closeClick || tags[1] != &dyn || tags[2] != &act {
 		t.Fatalf("focusTags with close = %v, want [close dynamic static]", tags)
 	}
@@ -250,7 +250,7 @@ func TestFocusTagsDropTheCloseTag(t *testing.T) {
 	var act int
 	props := Props{ActionFocusTags: []event.Tag{&act}, Decision: &Decision{}}
 	st := newState(props)
-	tags := focusTags(props, st)
+	tags, _ := focusTags(props, st)
 	if len(tags) != 1 || tags[0] != &act {
 		t.Fatalf("focusTags on a decision = %v, want just the action tag", tags)
 	}
