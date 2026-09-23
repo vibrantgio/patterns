@@ -19,14 +19,23 @@
 // the default answer with the accent and draws the other as an ordinary push
 // button, which is the Tonal emphasis, never a borderless one.
 //
-// The dialog carries no band and no hairline of its own anywhere else
-// either: the footer is a row of actions over the same plane the header and
-// the body stand on, with nothing ruled between them. MEASURED,
-// save-dialog-{light,dark}.png: the sheet's own footer holds its two push
-// buttons over the sheet's fill and nothing more — a run down x=340, clear
-// of both buttons (they span x 359-514), reads #ffffff light and #232a2f
-// dark over every row from y=490 to the sheet's own foot at y=544, with no
-// row of a third value in it.
+// A DECISION dialog carries one hairline and one band: the sheet's own
+// footer. MEASURED, save-dialog-{light,dark}.png (controls.md, "What the
+// sheet's own hairlines measure"): a 1 px separatorColor line runs edge to
+// edge of the sheet at y=479, and under it a 65 px band, y 480-544, holds
+// the two 24 px push buttons centred — 21 clear rows above and 20 below.
+// See [footerAirDp]. The band itself carries no fill: a run down x=340,
+// clear of both buttons (they span x 359-514), reads #ffffff light and
+// #232a2f dark over every row from y=490 to the sheet's foot at y=544, so
+// what parts the footer from the body is the line and nothing else.
+//
+// A PANEL carries neither. The same sheet draws a FIRST hairline at y=324,
+// and what that one parts is not the header from the body: it parts the
+// panel's own rows from the accessory view an application hands the Save
+// panel, one body region from another. A panel here has one body, supplied
+// whole by its caller, so it has no such boundary to rule — and with no
+// decision to answer it has no footer either. Nothing else in this surface
+// is ruled: header and body stand on one plane.
 //
 // Modal is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and
@@ -655,17 +664,47 @@ func drawModal(
 		maxH = frame.Y
 	}
 	inset := gtx.Dp(unit.Dp(tok.spacing.S5))
+	colW := surfW - 2*inset
+
+	// The decision footer's own band, laid out before the content so the room
+	// left for the content is what the band does not take. Its actions are
+	// stateful components, so it is laid out ONCE into a macro and replayed
+	// where the band lands.
+	footer := footerWidget(props, tok)
+	hairline, air, bandH := 0, 0, 0
+	var band op.CallOp
+	var bandDims layout.Dimensions
+	if footer != nil {
+		hairline = max(gtx.Dp(footerHairlineDp), 1)
+		air = gtx.Dp(unit.Dp(footerAirDp))
+		bandGtx := gtx
+		bandGtx.Constraints = layout.Constraints{
+			Min: image.Pt(colW, 0),
+			Max: image.Pt(colW, maxH),
+		}
+		bandMacro := op.Record(gtx.Ops)
+		bandDims = footer(bandGtx)
+		band = bandMacro.Stop()
+		bandH = air + bandDims.Size.Y + inset
+	}
+
+	// Below the content: the surface's own inset when there is no footer, and
+	// the gap, the hairline and the band when there is.
+	below := inset
+	if footer != nil {
+		below = gap + hairline + bandH
+	}
 
 	contentGtx := gtx
 	contentGtx.Constraints = layout.Constraints{
-		Min: image.Pt(surfW-2*inset, 0),
-		Max: image.Pt(surfW-2*inset, maxH-2*inset),
+		Min: image.Pt(colW, 0),
+		Max: image.Pt(colW, maxH-inset-below),
 	}
 	contentMacro := op.Record(gtx.Ops)
 	contentDims := drawSurfaceContents(contentGtx, shaper, props, tok, gap, closeWidget)
 	content := contentMacro.Stop()
 
-	surfH := clampInt(contentDims.Size.Y+2*inset, gtx.Dp(unit.Dp(120)), maxH)
+	surfH := clampInt(contentDims.Size.Y+inset+below, gtx.Dp(unit.Dp(120)), maxH)
 	surfPos := image.Pt((frame.X-surfW)/2, (frame.Y-surfH)/2)
 
 	// Surface — rounded rectangle, registered as a pointer absorber so
@@ -686,13 +725,26 @@ func drawModal(
 		absorbClip.Pop()
 	}
 
-	// Surface inset content (header / body / footer) — the macro recorded
-	// above, replayed at the inset origin and clipped to the surface.
+	// Surface inset content (header / body) — the macro recorded above,
+	// replayed at the inset origin and clipped to the surface.
 	contentClip := clip.Rect{Max: image.Pt(surfW, surfH)}.Push(gtx.Ops)
 	contentOff := op.Offset(image.Pt(inset, inset)).Push(gtx.Ops)
 	content.Add(gtx.Ops)
 	contentOff.Pop()
 	contentClip.Pop()
+
+	// The footer's hairline and the band under it. The line is the sheet's
+	// and runs its full width, so it is drawn here rather than inside the
+	// inset column; the band's actions keep the column's trailing edge.
+	if footer != nil {
+		bandTop := surfH - bandH
+		lineTop := bandTop - hairline
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.Separator, tok.color.WindowBackground),
+			clip.Rect(image.Rect(0, lineTop, surfW, bandTop)).Op())
+		bandOff := op.Offset(image.Pt(inset, bandTop+air)).Push(gtx.Ops)
+		band.Add(gtx.Ops)
+		bandOff.Pop()
+	}
 	off.Pop()
 
 	op.Defer(gtx.Ops, floating.Stop())
@@ -704,8 +756,10 @@ func drawModal(
 	return layout.Dimensions{Size: frame}
 }
 
-// drawSurfaceContents lays out the header row, the body, and the footer
-// action row vertically inside the already-inset surface gtx.
+// drawSurfaceContents lays out the header row and the body vertically inside
+// the already-inset surface gtx. The decision footer is not among them: it is
+// a band of the SHEET and not of the inset column, drawn by drawModal at the
+// surface's own width under the hairline that parts it from the body.
 func drawSurfaceContents(
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -714,19 +768,12 @@ func drawSurfaceContents(
 	gap int,
 	closeWidget layout.Widget,
 ) layout.Dimensions {
-	header := headerWidget(shaper, props, tok, closeWidget)
-	footer := footerWidget(props, tok)
-
 	children := []layout.FlexChild{
-		layout.Rigid(header),
+		layout.Rigid(headerWidget(shaper, props, tok, closeWidget)),
 		layout.Rigid(spacerV(gap)),
 	}
 	if props.Body != nil {
 		children = append(children, layout.Rigid(props.Body))
-	}
-	if footer != nil {
-		children = append(children, layout.Rigid(spacerV(gap)))
-		children = append(children, layout.Rigid(footer))
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
 }
@@ -781,22 +828,41 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 // has to be.
 const dialogButtonWDp = 74
 
+// footerHairlineDp is the width of the line that parts a decision's footer
+// from its body: one hair, the width every seam in this library is drawn at.
+//
+// MEASURED, save-dialog-{light,dark}.png: the sheet's footer line is 1 px
+// tall and runs the sheet's full width, x 165-534 — its own first column to
+// its own last, inset at neither end and drawn to no content column. A run
+// down x=300 reads the fill at y=478, the line at y=479 and the fill at
+// y=480. It is separatorColor over the sheet — #e6e6e6 light and #393f43
+// dark, exact on every channel in both appearances — which is why the line
+// is the Language's own separator flattened and not a value of its own.
+const footerHairlineDp = 1
+
+// footerAirDp is the clear air between that hairline and the top of the
+// actions standing under it.
+//
+// MEASURED, save-dialog-{light,dark}.png: the band under the line runs
+// y 480-544, 65 px, and the push buttons in it run y 501-524 — 21 clear rows
+// above and 20 below. The 20 is the sheet's own inset, which this pattern
+// already spends as SpacingScale.S5, and the 21 is that inset plus the half
+// pixel an exact centring of a 24 px control in a 65 px band leaves (20.5 a
+// side, the rounding falling high). So the band is this air, the row's own
+// height and that inset, which is 65 for the measured 24 px button and
+// follows the density down with the control.
+const footerAirDp = 21
+
 // footerWidget renders a right-aligned row of action components. Each action is
 // laid out bare inside a box [dialogButtonWDp] wide: it owns its own focus
 // tag and focus ring (the modal neither wraps it nor decorates it), and joins
 // the Tab cycle via Props.ActionFocusTags. Returns nil when there are no
 // non-nil actions.
 //
-// The row draws nothing of its own — no band, no hairline, no rule between it
-// and the body.
-//
-// The platform's sheet draws one and this does not. MEASURED 2026-09-23,
-// save-dialog-{light,dark}.png (`controls.md`, "What the sheet's own hairlines
-// measure"): a 1 px `separatorColor` line runs edge to edge of the sheet at
-// y=479, and the footer under it is a 65 px band with the 24 px buttons
-// centred in it — 21 clear rows above and the sheet's own 20 px inset below.
-// The reading stands recorded; drawing it is a decision this pattern has not
-// been given, because it moves every dialog in the organization at once.
+// The ROW draws nothing of its own. The hairline above it and the band it
+// stands in are the SURFACE's, drawn by drawModal at the sheet's own width:
+// the line runs edge to edge and the row does not, so neither can be the
+// row's. See [footerAirDp] for the band, and the package doc for the line.
 func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 	any := false
 	for _, a := range props.Actions {
