@@ -902,3 +902,86 @@ func sameColour(got color.RGBA, want color.NRGBA) bool {
 	}
 	return !off(got.R, want.R) && !off(got.G, want.G) && !off(got.B, want.B) && got.A == want.A
 }
+
+// TestSectionDisclosureStandsInTheRailsTrailingColumn reads the control that
+// collapses a section off a drawn block: the closed mark's own last covered
+// column must land on CountInset — the rail has ONE trailing column, and the
+// heading's control shares it with the counts on the rows below — and turning
+// the section open must move the drawing without moving the block.
+//
+// The mark's extent is read off the pixels rather than taken from the
+// arithmetic that placed it, because the platform's column is measured
+// against a drawn pixel and not a layout box. One column of slack is allowed
+// and is the set's own: the figure covers a third of its box, which at a 20
+// dp box is 6.67 dp of clear space at each end and cannot be landed on a
+// whole column by an inset stated in whole dp.
+func TestSectionDisclosureStandsInTheRailsTrailingColumn(t *testing.T) {
+	m := tokens.PlatformLight.SidebarMaterial
+	fill := color.NRGBA{R: m.R, G: m.G, B: m.B, A: m.A}
+	fg := sidebar.DisclosureForeground(tokens.PlatformLight)
+	blockH := int(sidebar.SectionHeight)
+	size := image.Pt(expandedW, blockH)
+
+	draw := func(open bool) *image.RGBA {
+		return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
+			paint.FillShape(gtx.Ops, fill, clip.Rect{Max: size}.Op())
+			return sidebar.PaintDisclosure(gtx, open, size, fg)
+		})
+	}
+	extent := func(img *image.RGBA) (x0, x1, y0, y1 int) {
+		x0, y0 = size.X, blockH
+		x1, y1 = -1, -1
+		for y := range blockH {
+			for x := range size.X {
+				c := img.RGBAAt(x, y)
+				if int(c.R)+int(c.G)+int(c.B) < 3*int(fill.R)-0x18 {
+					x0, x1 = min(x0, x), max(x1, x)
+					y0, y1 = min(y0, y), max(y1, y)
+				}
+			}
+		}
+		return
+	}
+
+	closed := draw(false)
+	if closed == nil {
+		t.Skip("no capture backend")
+	}
+	cx0, cx1, cy0, cy1 := extent(closed)
+	if cx1 < 0 {
+		t.Fatal("the closed disclosure drew nothing")
+	}
+	if want := size.X - int(sidebar.CountInset) - 1; abs(cx1-want) > 1 {
+		t.Errorf("the closed mark's last covered column is x=%d, want %d — CountInset %v in from the rail's %d, the column the counts below it are drawn to",
+			cx1, want, sidebar.CountInset, size.X)
+	}
+	// The heading's own line, not the block's: the label's cap band centres on
+	// the middle of SectionCapTop and SectionBaseline, and the mark centres
+	// there too.
+	line := (int(sidebar.SectionCapTop) + int(sidebar.SectionBaseline)) / 2
+	if mid := (cy0 + cy1 + 1) / 2; abs(mid-line) > 1 {
+		t.Errorf("the closed mark centres on row %d, want the heading's own line %d (SectionCapTop %v, SectionBaseline %v)",
+			mid, line, sidebar.SectionCapTop, sidebar.SectionBaseline)
+	}
+
+	open := draw(true)
+	ox0, ox1, oy0, oy1 := extent(open)
+	if ox1 < 0 {
+		t.Fatal("the open disclosure drew nothing")
+	}
+	// One drawing turned a quarter, not two drawings: the closed mark is
+	// taller than it is wide and the open one wider than it is tall, by the
+	// same two extents swapped.
+	cw, ch := cx1-cx0+1, cy1-cy0+1
+	ow, oh := ox1-ox0+1, oy1-oy0+1
+	if ch <= cw {
+		t.Errorf("the closed mark measures %dx%d; it does not point along the row", cw, ch)
+	}
+	if ow <= oh {
+		t.Errorf("the open mark measures %dx%d; it is not the closed one turned a quarter", ow, oh)
+	}
+	if abs(ow-ch) > 1 || abs(oh-cw) > 1 {
+		t.Errorf("the open mark measures %dx%d against the closed one's %dx%d; the turn is not about the square's own centre",
+			ow, oh, cw, ch)
+	}
+}

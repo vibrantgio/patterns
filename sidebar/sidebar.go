@@ -105,7 +105,9 @@ package sidebar
 import (
 	"image"
 	"image/color"
+	"math"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/io/event"
@@ -280,9 +282,10 @@ const (
 //     below it begins at y=203.
 //   - SectionInset 17: "My Folders" starts at x=81, the symbol box's own
 //     column, and Finder's three headings start there too.
-//   - SectionBaseline 30: the heading's cap band is [183.0, 191.0], so its
-//     baseline stands 30 into the block and its cap top the 22 already
-//     recorded.
+//   - SectionCapTop 22 and SectionBaseline 30: the heading's cap band is
+//     [183.0, 191.0] in a block beginning at y=161, so its cap top stands 22
+//     into the block and its baseline 30. The two are the heading's own line,
+//     which is what anything else standing in the block is set against.
 const (
 	SymbolBox   unit.Dp = 24
 	SymbolInset unit.Dp = 17
@@ -291,7 +294,49 @@ const (
 
 	SectionHeight   unit.Dp = 42
 	SectionInset    unit.Dp = 17
+	SectionCapTop   unit.Dp = 22
 	SectionBaseline unit.Dp = 30
+)
+
+// DisclosureBox and DisclosureInset are where the control that collapses a
+// section stands: at the trailing end of the section's own heading block,
+// which is where the platform puts it and where the rows below already keep
+// their counts.
+//
+// NEITHER IS MEASURED. No stored capture holds a sidebar section's
+// disclosure: mail-window.png and mail-window-light.png carry a Mail window
+// whose sidebar is redacted — the whole column reads one flat fill with no
+// glyph in it — Finder's three headings show no control at rest, and the
+// "My Folders" heading in voicememos-multi-folder-2026-09-18.png has none.
+// reference/macos/controls.md records the gap and names the capture that
+// would close it. Both numbers below are derived from readings the reference
+// does hold.
+//
+// DisclosureBox 20: the row's symbol box measures 24 and the heading's label
+// measures four fifths of the row's — MEASURED,
+// voicememos-multi-folder-2026-09-18.png, an 8 px cap against the row
+// label's 10 — so the heading's own mark takes the same four fifths of the
+// row's box. Twenty is also what the icon rule gives at the comfortable
+// density, which is the size a mark standing beside text is drawn at
+// everywhere else in the library.
+//
+// DisclosureInset 10: the rail has ONE trailing column — CountInset, 17 in
+// from the panel's trailing edge, which every count in the same capture is
+// drawn to — and the heading's control stands in it. components/icons draws
+// the disclosure at 8 of the mark box's 24 units, centred
+// (marks/disclosure.svg: the drawing runs x 8 to 16 of the 24-unit box), so
+// at a 20 dp box the figure covers 6.7 and stands 6.7 inside each edge, and
+// a box 10 in lands the closed mark's own trailing column on CountInset to
+// within one: 6.7 of clear space cannot be landed on a whole column by an
+// inset stated in whole dp, and the one column the rounding leaves is the
+// set's and not the rail's.
+//
+// Turned a quarter for the open state, the same drawing measures 11.7 across
+// about the box's centre, so it reaches 2 dp further out than the closed
+// one. That is the turn's own geometry and not a second column.
+const (
+	DisclosureBox   unit.Dp = 20
+	DisclosureInset unit.Dp = 10
 )
 
 type resolvedTokens struct {
@@ -835,6 +880,66 @@ func PaintSection(gtx layout.Context, shaper *text.Shaper, label string, style t
 	call.Add(gtx.Ops)
 	stk.Pop()
 	return layout.Dimensions{Size: size}
+}
+
+// DisclosureForeground is what a section's own control is drawn in: the
+// heading's colour, because the heading and the control that collapses it are
+// one thing. The caller flattens it onto the fill.
+func DisclosureForeground(colors tokens.PlatformColors) color.NRGBA {
+	return SectionForeground(colors)
+}
+
+// PaintDisclosure draws a collapsing section's control at the trailing end of
+// a heading block of the given size at the current offset: the icon set's
+// disclosure in a [DisclosureBox] square whose trailing edge stands
+// [DisclosureInset] in from the block's trailing edge, in fg.
+//
+// The square is centred on the HEADING'S OWN LINE and not on the block: the
+// block carries 22 dp of air above the label's cap and 12 below its baseline,
+// so a mark centred in it would stand half a cap height above the name it
+// belongs to. The line is the middle of [SectionCapTop] and
+// [SectionBaseline], which is where the label's own cap band centres.
+//
+// There is one drawing and not two. The set draws the mark as the section
+// stands CLOSED — pointing at the rows it would open — and an open section
+// turns it a quarter about the square's own centre, which is what the
+// platform does and what keeps the figure recognisable through the turn.
+//
+// It reports the block it filled, so a caller lays the heading's label out
+// against the room the control leaves rather than writing the arithmetic
+// again. A section that does not collapse takes no control and calls this not
+// at all.
+func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.NRGBA) layout.Dimensions {
+	box := gtx.Dp(DisclosureBox)
+	if box > size.X {
+		box = size.X
+	}
+	if box <= 0 {
+		return layout.Dimensions{Size: image.Pt(0, size.Y)}
+	}
+	mark := icons.Mark(icons.Disclosure)
+	if mark == nil {
+		return layout.Dimensions{Size: image.Pt(box+gtx.Dp(DisclosureInset), size.Y)}
+	}
+	x := size.X - gtx.Dp(DisclosureInset) - box
+	if x < 0 {
+		x = 0
+	}
+	y := (gtx.Dp(SectionCapTop)+gtx.Dp(SectionBaseline))/2 - box/2
+	if y < 0 || y+box > size.Y {
+		y = (size.Y - box) / 2
+	}
+	stk := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
+	if open {
+		half := float32(box) / 2
+		turn := op.Affine(f32.Affine2D{}.Rotate(f32.Pt(half, half), math.Pi/2)).Push(gtx.Ops)
+		mark(gtx, box, fg)
+		turn.Pop()
+	} else {
+		mark(gtx, box, fg)
+	}
+	stk.Pop()
+	return layout.Dimensions{Size: image.Pt(box+gtx.Dp(DisclosureInset), size.Y)}
 }
 
 // PaintSymbol paints a row's symbol into a block of the given size at the
