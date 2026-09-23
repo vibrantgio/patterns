@@ -787,8 +787,16 @@ const dialogButtonWDp = 74
 // the Tab cycle via Props.ActionFocusTags. Returns nil when there are no
 // non-nil actions.
 //
-// The row draws nothing of its own — no band, no hairline, no rule between
-// it and the body — because the sheet it is drawn after draws none.
+// The row draws nothing of its own — no band, no hairline, no rule between it
+// and the body.
+//
+// The platform's sheet draws one and this does not. MEASURED 2026-09-23,
+// save-dialog-{light,dark}.png (`controls.md`, "What the sheet's own hairlines
+// measure"): a 1 px `separatorColor` line runs edge to edge of the sheet at
+// y=479, and the footer under it is a 65 px band with the 24 px buttons
+// centred in it — 21 clear rows above and the sheet's own 20 px inset below.
+// The reading stands recorded; drawing it is a decision this pattern has not
+// been given, because it moves every dialog in the organization at once.
 func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 	any := false
 	for _, a := range props.Actions {
