@@ -476,10 +476,9 @@ func processInput(gtx layout.Context, props Props, st *liveState) {
 		st.list.Select(a)
 	}
 
-	// Row clicks. gesture.Click is deliberately not widget.Clickable: a
-	// Clickable registers a focus tag, and a per-row focus tag cannot
-	// survive virtualisation. The rail's only focus tag is the list's, so
-	// a click hands the keyboard there.
+	// Row clicks. The rail's only focus tag is the list's, so a click hands
+	// the keyboard there; see [RowTarget] for why a row's target is a
+	// pointer gesture and not a focusable of its own.
 	for i := range st.clicks {
 		for {
 			e, ok := st.clicks[i].Update(gtx.Source)
@@ -668,6 +667,36 @@ func PaintSelection(gtx layout.Context, size image.Point, colors tokens.Platform
 	paint.FillShape(gtx.Ops, SelectionFill(colors, unemphasized), rr.Op(gtx.Ops))
 }
 
+// RowTarget registers a rail row's pointer target at the current offset:
+// the row's bounds exactly, the name it answers to, and the pointer the
+// platform shows over a row it can open. It draws nothing.
+//
+// click is a gesture.Click and not a widget.Clickable because a Clickable
+// registers a focus filter of its own, and a rail is ONE focus target: with a
+// filter per row Tab walks the rows one by one and the arrows go dead the
+// moment it does, where the platform's sidebar takes the keys once and hands
+// Tab on to whatever stands after it. The keys reach a row through the rail's
+// own tag, which the caller hands them to with key.FocusCmd when a click
+// lands.
+//
+// The target is the row bounds and no more. Rows tile edge to edge, so
+// anything added to one would be taken off its neighbours; the row's full
+// width is what makes it easy to land on.
+//
+// It is exported so an application drawing its own chrome rail — a file tree,
+// a list of feeds — wires the row the platform's way rather than its own.
+func RowTarget(gtx layout.Context, click *gesture.Click, size image.Point, label string) {
+	if click == nil {
+		return
+	}
+	area := clip.Rect{Max: size}.Push(gtx.Ops)
+	semantic.LabelOp(label).Add(gtx.Ops)
+	semantic.EnabledOp(true).Add(gtx.Ops)
+	click.Add(gtx.Ops)
+	area.Pop()
+	pointershape.OverSize(gtx.Ops, size, pointer.CursorPointer)
+}
+
 func clickFor(st *liveState, i int) *gesture.Click {
 	if st == nil || i >= len(st.clicks) {
 		return nil
@@ -801,15 +830,7 @@ func drawItem(
 		return layout.Dimensions{Size: cell}
 	}
 	dims := inner(rGtx)
-	// The pointer target is the row bounds exactly. Rows tile edge to edge,
-	// so anything added to one would be taken off its neighbours; the row's
-	// full width is what makes it easy to land on.
-	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
-	semantic.LabelOp(item.Label).Add(gtx.Ops)
-	semantic.EnabledOp(true).Add(gtx.Ops)
-	click.Add(gtx.Ops)
-	area.Pop()
-	pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
+	RowTarget(gtx, click, dims.Size, item.Label)
 	return layout.Dimensions{Size: cell}
 }
 
