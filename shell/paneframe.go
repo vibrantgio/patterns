@@ -11,14 +11,16 @@ import (
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/patterns/pane"
+	"github.com/vibrantgio/patterns/sidebar"
 	"github.com/vibrantgio/theme/tokens"
 )
 
 // PaneWidthDp is the width a leading pane takes when a caller names none:
-// the sidebar panel's own column, rim to rim. MEASURED,
-// voicememos-multi-folder-2026-09-18.png at 1x, where the panel spans
-// x 64-283 inside a window standing at x 56-1031 — 220 columns.
-const PaneWidthDp = 220
+// the sidebar panel's own column, rim to rim. It is patterns/sidebar's
+// ExpandedWidth and not a second statement of it — that package took the
+// reading and owns it, and a pane frame standing a sidebar in its panel
+// cannot be a column wider or narrower than the column it holds.
+const PaneWidthDp = sidebar.ExpandedWidth
 
 // PaneFrame is the window composition a leading pane makes: the window's own
 // plane under everything, the panel set one [pane.MarginDp] inside the

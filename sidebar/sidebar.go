@@ -228,9 +228,13 @@ type Props struct {
 //
 // collapsedDp is NOT measured: no stored capture holds a collapsed sidebar,
 // so the 48 stands as the pattern's own until one does.
+//
+// ExpandedWidth is exported because the reading has one owner: this package
+// took it, and patterns/shell's pane width and every application that sets a
+// pane's own column read it here rather than restating the number.
 const (
-	expandedDp  = 220
-	collapsedDp = 48
+	ExpandedWidth unit.Dp = 220
+	collapsedDp           = 48
 )
 
 // RowHeight, SelectionInset and SelectionRadius are the sidebar's own
@@ -553,7 +557,7 @@ func drawSidebar(
 	section tokens.TextStyle,
 	d tokens.Density,
 ) layout.Dimensions {
-	widthDp := float32(expandedDp)
+	widthDp := float32(ExpandedWidth)
 	if collapsed {
 		widthDp = collapsedDp
 	}
