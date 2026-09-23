@@ -181,9 +181,10 @@ func densityTheme(d tokens.Density) theme.Theme {
 
 // TestShellCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline (the static Render path is frozen at
-// tokens.Comfortable): the navbar slot pins at ControlHeight + 2·PaddingY
-// = 40 dp instead of 52, and the composed sidebar's item pitch drops to
-// 28 dp through its own density subscription.
+// tokens.Comfortable): the band keeps the platform's measured depth, which
+// no density moves, while the composed sidebar's item pitch drops to 28 dp
+// through its own density subscription — so the picture shows exactly what
+// density does settle and what it does not.
 func TestShellCompactGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}

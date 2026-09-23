@@ -34,17 +34,14 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 	if len(sectionObs) > 0 {
 		sections = rx.CombineLatest(sectionObs...)
 	}
-	densityObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.Density] {
-		return t.Density
-	})
-	inputs := rx.CombineLatest4(colorObs, nb, sections, densityObs)
+	inputs := rx.CombineLatest3(colorObs, nb, sections)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		// The scroll position is captured once per subscription so it
 		// survives re-emissions for the lifetime of the Shell instance.
 		list := &layout.List{Axis: layout.Vertical}
-		return rx.Map(inputs, func(next rx.Tuple4[tokens.PlatformColors, layout.Widget, []layout.Widget, tokens.Density]) layout.Widget {
+		return rx.Map(inputs, func(next rx.Tuple3[tokens.PlatformColors, layout.Widget, []layout.Widget]) layout.Widget {
 			colors, nbW, secW := next.First, next.Second, next.Third
-			navH := NavbarHeight(next.Fourth)
+			navH := NavbarHeight()
 			footer := props.Footer
 			maxW := props.ContentMaxWidth
 			return func(gtx layout.Context) layout.Dimensions {
@@ -61,11 +58,11 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // region (Props.Sections is not consulted); Footer and ContentMaxWidth
 // are taken from props, with Footer appended after the last section.
 //
-// label is the LabelLarge role's whole text style, which the page spends
-// on its navbar, and d is the density both the navbar and the navbar
-// slot's pinned height derive from. Pass
-// tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look.
+// label is the LabelLarge role's whole text style, which the page
+// spends on its navbar, and d is the density the navbar's own insets
+// derive from — the band it stands in is the platform's measured depth and
+// takes no density. Pass tokens.DefaultTypography.LabelLarge and
+// tokens.Comfortable for the default desktop look.
 func RenderStackedPage(
 	shaper *text.Shaper,
 	props Props,
@@ -80,7 +77,7 @@ func RenderStackedPage(
 	footer := props.Footer
 	maxW := props.ContentMaxWidth
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawStackedPage(gtx, nbW, sections, footer, colors, maxW, list, NavbarHeight(d))
+		return drawStackedPage(gtx, nbW, sections, footer, colors, maxW, list, NavbarHeight())
 	}
 }
 

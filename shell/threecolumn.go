@@ -54,10 +54,11 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 		sb = rx.Of[layout.Widget](emptyWidget)
 	}
 	nb := navbar.Navbar(th, props.Navbar)
-	// Colour and density fold into one snapshot stream so the five-way
-	// CombineLatest keeps room for the layout.Widget and width inputs.
-	tokObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[rx.Tuple2[tokens.PlatformColors, tokens.Density]] {
-		return rx.CombineLatest2(t.Platform, t.Density)
+	// The colours are the only token set this composition spends: the band
+	// is the platform's measured depth and the columns' contents carry
+	// their own streams, patterns/navbar's density subscription included.
+	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.PlatformColors] {
+		return t.Platform
 	})
 	hasAside := props.Aside != nil
 	aside := props.Aside
@@ -68,12 +69,12 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 	if widthObs == nil {
 		widthObs = rx.Of(unit.Dp(defaultAsideDp))
 	}
-	inputs := rx.CombineLatest5(tokObs, sb, nb, aside, widthObs)
+	inputs := rx.CombineLatest5(colorObs, sb, nb, aside, widthObs)
 	return rx.Defer(func() rx.Observable[layout.Widget] {
 		ds := &asideDragState{current: defaultAsideDp}
-		return rx.Map(inputs, func(next rx.Tuple5[rx.Tuple2[tokens.PlatformColors, tokens.Density], layout.Widget, layout.Widget, layout.Widget, unit.Dp]) layout.Widget {
-			tok, sbW, nbW, asW, wdp := next.First, next.Second, next.Third, next.Fourth, next.Fifth
-			colors, navH := tok.First, NavbarHeight(tok.Second)
+		return rx.Map(inputs, func(next rx.Tuple5[tokens.PlatformColors, layout.Widget, layout.Widget, layout.Widget, unit.Dp]) layout.Widget {
+			colors, sbW, nbW, asW, wdp := next.First, next.Second, next.Third, next.Fourth, next.Fifth
+			navH := NavbarHeight()
 			ext := clampAsideWidth(wdp)
 			if asW == nil {
 				asW = emptyWidget
@@ -115,10 +116,10 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // nil asideW omits the aside column and its splitter entirely.
 //
 // label is the LabelLarge role's whole text style, which the layout
-// spends on its navbar, and d is the density both the navbar and the
-// navbar slot's pinned height derive from. Pass
-// tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look.
+// spends on its navbar, and d is the density the navbar's own insets
+// derive from — the band it stands in is the platform's measured depth and
+// takes no density. Pass tokens.DefaultTypography.LabelLarge and
+// tokens.Comfortable for the default desktop look.
 func RenderThreeColumn(
 	shaper *text.Shaper,
 	props Props,
@@ -136,7 +137,7 @@ func RenderThreeColumn(
 	hasAside := asideW != nil
 	w := clampAsideWidth(asideWidth)
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawThreeColumn(gtx, nbW, sidebarW, props.Main, asideW, props.Footer, w, colors, nil, hasAside, NavbarHeight(d))
+		return drawThreeColumn(gtx, nbW, sidebarW, props.Main, asideW, props.Footer, w, colors, nil, hasAside, NavbarHeight())
 	}
 }
 

@@ -1,7 +1,8 @@
 // Package shell provides the Patterns Shell pattern: a top-level
 // application layout. Four variants are offered via Props.Layout —
-// SidebarHeaderMain composes a leading sidebar, a top navbar, and a
-// main content slot; SplitPane composes two slots abutting a draggable
+// SidebarHeaderMain composes a leading sidebar set into the window as a
+// PANE, a band across the content column's top and a main content slot
+// under it; SplitPane composes two slots abutting a draggable
 // hairline seam on either axis; ThreeColumn composes a full-width
 // top navbar, a leading sidebar, a main column, an optional resizable
 // trailing aside, and an optional footer strip; StackedPage composes a
@@ -32,6 +33,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/patterns/navbar"
+	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/patterns/splitter"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -41,9 +43,11 @@ import (
 type Layout int
 
 const (
-	// SidebarHeaderMain renders a sidebar on the leading edge, a navbar
-	// across the top of the remaining area, and a main content slot
-	// below the navbar.
+	// SidebarHeaderMain renders the sidebar as a PANE down the leading
+	// edge — an inset rounded panel with the platform's rim and the shadow
+	// it casts, the window's own plane showing around it — a navbar band
+	// across the top of the content column beside it, and a main content
+	// slot below that band. The composition is [PaneFrame]'s.
 	SidebarHeaderMain Layout = iota
 	// SplitPane renders Left and Right slots abutting a draggable
 	// vertical hairline seam whose position is governed by SplitRatio.
@@ -52,8 +56,9 @@ const (
 	// times that.
 	SplitPane
 	// ThreeColumn renders a navbar across the full width of the top
-	// edge (unlike SidebarHeaderMain, where the sidebar claims the full
-	// height and the navbar starts after it), then a leading sidebar, a
+	// edge (unlike SidebarHeaderMain, where the sidebar's panel claims
+	// the full height and the band starts beside it), then a leading
+	// sidebar standing flush against the window's edge, a
 	// flexed main column, and a trailing aside column separated from
 	// main by a draggable vertical splitter, with an optional full-width
 	// footer strip along the bottom. A nil Aside omits the trailing
@@ -85,6 +90,19 @@ type Props struct {
 	Sidebar rx.Observable[layout.Widget]
 	Navbar  navbar.Props
 	Main    layout.Widget
+
+	// SidebarWidth is the panel's own width, rim to rim, under
+	// SidebarHeaderMain. Zero means [PaneWidthDp]. It is ignored by every
+	// other Layout, whose sidebar column stands flush against the window's
+	// edge and takes the width the slot itself reports.
+	SidebarWidth unit.Dp
+
+	// SidebarHidden sends the panel out of the window under
+	// SidebarHeaderMain: it takes no width at all and the content column
+	// reflows from the window's own leading edge. The control that brings
+	// it back stands in the band, since a control travelling with the
+	// panel cannot be the one that recalls it.
+	SidebarHidden bool
 
 	// SplitPane slots. Left is the leading pane and Right the trailing
 	// pane; when SplitAxis is layout.Vertical, Left is the top pane and
@@ -161,8 +179,8 @@ type Props struct {
 }
 
 // Layout-affecting constants. The footer slot has a fixed height and the
-// navbar slot a density-derived one (see NavbarHeight), so the main area
-// is deterministic. The aside column tracks an absolute dp width clamped
+// navbar slot the platform's measured band (see NavbarHeight), so the main
+// area is deterministic. The aside column tracks an absolute dp width clamped
 // to [minAsideDp, maxAsideDp]. The footer is a status strip — a surface,
 // not a control — so its height deliberately does not follow density.
 const (
@@ -186,16 +204,21 @@ const (
 	defaultAsideDp = 320
 )
 
-// NavbarHeight returns the pinned height of the navbar band the shell draws
-// for a density: ControlHeight + 2·PaddingY — a bar wrapping ControlHeight
-// controls with the density's vertical control padding as breathing room (52
-// dp Comfortable, 40 dp Compact). patterns/navbar insets its content by
-// the same PaddingY, so a components/button action fills the slot exactly.
+// NavbarHeight returns the pinned depth of the navbar band the shell draws:
+// [pane.BandDp], 52 dp, which is the band every stored toolbar capture
+// measures — nineteen dp of inset either side of a fourteen dp window
+// control button. patterns/navbar fills whatever it is handed, so the bar
+// stands in the band rather than settling it.
+//
+// It takes no density. The band is the PLATFORM's: the three window control
+// buttons stand a measured inset in from the window's own glass, the band
+// that holds them centred follows from that one number, and no setting of
+// how tightly a window sets its rows moves it.
 //
 // This is the number an app needs when it caps a shell window's top edge at
 // the depth of the navbar band.
-func NavbarHeight(d tokens.Density) unit.Dp {
-	return unit.Dp(d.ControlHeight + 2*d.PaddingY)
+func NavbarHeight() unit.Dp {
+	return unit.Dp(pane.BandDp)
 }
 
 // Shell returns an rx.Observable[layout.Widget] that emits a new one
@@ -227,10 +250,10 @@ func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // RenderStackedPage to supply pre-built section layout.Widget values.
 //
 // label is the LabelLarge role's whole text style, which the shell
-// spends on its navbar, and d is the density both the navbar and the
-// navbar slot's pinned height derive from. Pass
-// tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
-// default desktop look.
+// spends on its navbar, and d is the density the navbar's own insets
+// derive from — the band it stands in is the platform's measured depth and
+// takes no density. Pass tokens.DefaultTypography.LabelLarge and
+// tokens.Comfortable for the default desktop look.
 func Render(
 	shaper *text.Shaper,
 	props Props,
@@ -261,14 +284,13 @@ func sidebarHeaderMainObservable(th rx.Observable[theme.Theme], props Props) rx.
 		sb = rx.Of[layout.Widget](emptyWidget)
 	}
 	nb := navbar.Navbar(th, props.Navbar)
-	densityObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.Density] {
-		return t.Density
+	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.PlatformColors] {
+		return t.Platform
 	})
-	combined := rx.CombineLatest3(sb, nb, densityObs)
-	return rx.Map(combined, func(next rx.Tuple3[layout.Widget, layout.Widget, tokens.Density]) layout.Widget {
-		sbW, nbW, d := next.First, next.Second, next.Third
-		main := props.Main
-		return composeSidebarHeaderMain(sbW, nbW, main, NavbarHeight(d))
+	combined := rx.CombineLatest3(sb, nb, colorObs)
+	return rx.Map(combined, func(next rx.Tuple3[layout.Widget, layout.Widget, tokens.PlatformColors]) layout.Widget {
+		sbW, nbW, colors := next.First, next.Second, next.Third
+		return composeSidebarHeaderMain(sbW, nbW, props, colors)
 	})
 }
 
@@ -285,33 +307,38 @@ func staticSidebarHeaderMain(
 		sidebarW = emptyWidget
 	}
 	nbW := navbar.Render(shaper, props.Navbar, colors, sp, label, d)
-	return composeSidebarHeaderMain(sidebarW, nbW, props.Main, NavbarHeight(d))
+	return composeSidebarHeaderMain(sidebarW, nbW, props, colors)
 }
 
-// composeSidebarHeaderMain stacks the three slots so that Tab focus
-// traversal flows sidebar → navbar → main. Flex preserves child order
-// in the op stream, which is the order Gio's focus group walks.
-func composeSidebarHeaderMain(sb, nb, main layout.Widget, navbarH unit.Dp) layout.Widget {
+// composeSidebarHeaderMain hands the three slots to [PaneFrame], which is
+// the composition: the window's own plane under everything, the sidebar's
+// panel set one margin inside the window's leading, top and bottom edges,
+// the navbar band across the content column at the platform's measured
+// depth, the main content under it and the panel's shadow cast last.
+//
+// The frame lays its slots out in reading order — panel, band, main — which
+// is the order Gio's focus group walks, so Tab traversal follows it.
+//
+// The window's plane is the platform's WindowBackground and the content
+// column stands on its ControlBackground: a pane is read through its rim and
+// the plane showing around it, so both fills are the platform's own names
+// and neither boundary is a step of fill the caller chooses.
+func composeSidebarHeaderMain(sb, nb layout.Widget, props Props, colors tokens.PlatformColors) layout.Widget {
+	main := props.Main
 	if main == nil {
 		main = emptyWidget
 	}
+	f := PaneFrame{
+		Width:       props.SidebarWidth,
+		Hidden:      props.SidebarHidden,
+		Plane:       colors.WindowBackground,
+		ContentFill: colors.ControlBackground,
+		Sidebar:     sb,
+		Band:        nb,
+		Main:        main,
+	}
 	return func(gtx layout.Context) layout.Dimensions {
-		size := gtx.Constraints.Max
-		navH := gtx.Dp(navbarH)
-		return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-			layout.Rigid(sb),
-			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				gtx.Constraints.Max.Y = size.Y
-				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						gtx.Constraints.Min.Y = navH
-						gtx.Constraints.Max.Y = navH
-						return nb(gtx)
-					}),
-					layout.Flexed(1, main),
-				)
-			}),
-		)
+		return f.Layout(gtx, colors)
 	}
 }
 
