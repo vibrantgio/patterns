@@ -61,7 +61,7 @@ func TestModalStandsAboveADeferredShadow(t *testing.T) {
 						clip.Rect{Min: image.Pt(0, ctlY-8), Max: image.Pt(frameW, ctlY+48)}.Op())
 					st := op.Offset(image.Pt(ctlX, ctlY)).Push(gtx.Ops)
 					gtx.Constraints.Min = image.Point{}
-					button.RenderChrome(nil, colors, tokens.Comfortable,
+					button.RenderChrome(nil, colors, tokens.Radius, tokens.Comfortable,
 						button.RenderState{Surface: colors.SidebarMaterial})(gtx)
 					st.Pop()
 				}
