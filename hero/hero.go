@@ -36,6 +36,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -324,8 +325,9 @@ func primaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, cli
 		return click.Layout(cgtx, func(gtx layout.Context) layout.Dimensions {
 			semantic.LabelOp(label).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
-			pointer.CursorPointer.Add(gtx.Ops)
-			return rendered(gtx)
+			dims := rendered(gtx)
+			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
+			return dims
 		})
 	}
 }
@@ -347,8 +349,9 @@ func secondaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, c
 		return click.Layout(cgtx, func(gtx layout.Context) layout.Dimensions {
 			semantic.LabelOp(label).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
-			pointer.CursorPointer.Add(gtx.Ops)
-			return draw(gtx)
+			dims := draw(gtx)
+			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
+			return dims
 		})
 	}
 }

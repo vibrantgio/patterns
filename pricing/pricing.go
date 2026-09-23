@@ -50,6 +50,7 @@ import (
 	"github.com/vibrantgio/components/badge"
 	"github.com/vibrantgio/components/button"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/components/pointershape"
 	"github.com/vibrantgio/patterns/internal/surface"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
@@ -511,8 +512,9 @@ func ctaWidget(shaper *text.Shaper, cta *CTA, tier Tier, tok resolvedTokens, cli
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			semantic.LabelOp(cta.Label).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
-			pointer.CursorPointer.Add(gtx.Ops)
-			return rendered(gtx)
+			dims := rendered(gtx)
+			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
+			return dims
 		})
 	}
 }

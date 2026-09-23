@@ -30,6 +30,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -338,7 +339,7 @@ func drawHeader(
 	return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.LabelOp(sec.Title).Add(gtx.Ops)
 		semantic.EnabledOp(true).Add(gtx.Ops)
-		pointer.CursorPointer.Add(gtx.Ops)
+		pointershape.OverSize(gtx.Ops, size, pointer.CursorPointer)
 		return inner(gtx)
 	})
 }

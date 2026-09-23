@@ -125,6 +125,7 @@ import (
 	"github.com/vibrantgio/components/icon"
 	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/components/list"
+	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -656,8 +657,8 @@ func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors toke
 	}
 	area := clip.Rect{Max: size}.Push(gtx.Ops)
 	event.Op(gtx.Ops, tt)
-	pointer.CursorPointer.Add(gtx.Ops)
 	area.Pop()
+	pointershape.OverSize(gtx.Ops, size, pointer.CursorPointer)
 }
 
 func drawItem(
@@ -757,9 +758,9 @@ func drawItem(
 	area := clip.Rect{Max: dims.Size}.Push(gtx.Ops)
 	semantic.LabelOp(item.Label).Add(gtx.Ops)
 	semantic.EnabledOp(true).Add(gtx.Ops)
-	pointer.CursorPointer.Add(gtx.Ops)
 	click.Add(gtx.Ops)
 	area.Pop()
+	pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
 	return layout.Dimensions{Size: cell}
 }
 

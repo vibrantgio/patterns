@@ -51,6 +51,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/list"
+	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -494,7 +495,7 @@ func drawHeaderCell[T any](
 	return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		semantic.LabelOp(col.Header).Add(gtx.Ops)
 		semantic.EnabledOp(true).Add(gtx.Ops)
-		pointer.CursorPointer.Add(gtx.Ops)
+		pointershape.OverSize(gtx.Ops, size, pointer.CursorPointer)
 		return inner(gtx)
 	})
 }

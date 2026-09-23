@@ -32,6 +32,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -387,8 +388,9 @@ func tabCell(
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			semantic.LabelOp(label).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
-			pointer.CursorPointer.Add(gtx.Ops)
-			return inner(gtx)
+			dims := inner(gtx)
+			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
+			return dims
 		})
 	}
 }

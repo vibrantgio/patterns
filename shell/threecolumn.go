@@ -14,6 +14,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/pointershape"
 	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/patterns/navbar"
 	vgcolor "github.com/vibrantgio/theme/color"
@@ -278,8 +279,8 @@ func drawThreeColumn(
 		if ds != nil {
 			area := clip.Rect(splitterRect).Push(gtx.Ops)
 			event.Op(gtx.Ops, &ds.tag)
-			pointer.CursorColResize.Add(gtx.Ops)
 			area.Pop()
+			pointershape.Over(gtx.Ops, splitterRect, pointer.CursorColResize)
 		}
 
 		// Aside.

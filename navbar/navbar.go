@@ -52,6 +52,7 @@ import (
 
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -395,8 +396,9 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			semantic.LabelOp(l.Label).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
-			pointer.CursorPointer.Add(gtx.Ops)
-			return inner(gtx)
+			dims := inner(gtx)
+			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
+			return dims
 		})
 	}
 }

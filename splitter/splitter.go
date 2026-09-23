@@ -35,6 +35,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/components/pointershape"
 	"github.com/vibrantgio/patterns/internal/surface"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
@@ -290,12 +291,12 @@ func (s *State) Layout(gtx layout.Context, p Props) layout.Dimensions {
 	}
 	area := clip.Rect(hit).Push(gtx.Ops)
 	event.Op(gtx.Ops, &s.tag)
-	cursor := pointer.CursorColResize
-	if axis == layout.Vertical {
-		cursor = pointer.CursorRowResize
-	}
-	cursor.Add(gtx.Ops)
 	area.Pop()
+	shape := pointer.CursorColResize
+	if axis == layout.Vertical {
+		shape = pointer.CursorRowResize
+	}
+	pointershape.Over(gtx.Ops, hit, shape)
 
 	return layout.Dimensions{Size: line.Size()}
 }
