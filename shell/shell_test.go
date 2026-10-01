@@ -59,19 +59,19 @@ func defaultShaper(t *testing.T) *text.Shaper {
 }
 
 // Shell draws no text of its own: everything legible in these goldens comes
-// through the composed navbar and sidebar. These labels are what make the
-// slot boundaries legible. Labels must stay ASCII — Latin text in Roboto
+// through the composed navbar and sidebar. These titles are what make the
+// slot boundaries legible. Titles must stay ASCII — Latin text in Roboto
 // rasterises identically on every machine via DeterministicShaper, but a
 // symbol may not.
 var (
-	navLinkLabels     = []string{"Docs", "Components"}
-	sidebarItemLabels = []string{"Overview", "Tokens"}
+	navLinkTitles     = []string{"Docs", "Components"}
+	sidebarItemTitles = []string{"Overview", "Tokens"}
 )
 
 // shellNavbar returns the navbar props every shell golden composes.
 func shellNavbar(shaper *text.Shaper) navbar.Props {
-	links := make([]navbar.Link, len(navLinkLabels))
-	for i, l := range navLinkLabels {
+	links := make([]navbar.Link, len(navLinkTitles))
+	for i, l := range navLinkTitles {
 		links[i] = navbar.Link{Title: l}
 	}
 	return navbar.Props{Links: links, Shaper: shaper}
@@ -79,8 +79,8 @@ func shellNavbar(shaper *text.Shaper) navbar.Props {
 
 // shellSidebar returns the sidebar props every shell golden composes.
 func shellSidebar(shaper *text.Shaper) sidebar.Props {
-	items := make([]sidebar.Item, len(sidebarItemLabels))
-	for i, l := range sidebarItemLabels {
+	items := make([]sidebar.Item, len(sidebarItemTitles))
+	for i, l := range sidebarItemTitles {
 		items[i] = sidebar.Item{Icon: testIcon(), Title: l, OnClick: func(_ layout.Context) {}}
 	}
 	return sidebar.Props{Items: items, Shaper: shaper}
@@ -479,7 +479,7 @@ func TestShellSidebarHeaderMainTabTraversal(t *testing.T) {
 		Layout: shell.SidebarHeaderMain,
 		Sidebar: sidebar.Sidebar(rx.Of(theme.Default()), sidebar.Props{
 			Items: []sidebar.Item{
-				{Icon: testIcon(), Title: sidebarItemLabels[0], OnClick: func(_ layout.Context) {}},
+				{Icon: testIcon(), Title: sidebarItemTitles[0], OnClick: func(_ layout.Context) {}},
 			},
 			Collapsed: rx.Of(false),
 			Shaper:    shaper,
@@ -487,7 +487,7 @@ func TestShellSidebarHeaderMainTabTraversal(t *testing.T) {
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
-				{Title: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
+				{Title: navLinkTitles[0], OnClick: func(_ layout.Context) {}},
 			},
 			Shaper: shaper,
 		},
@@ -628,7 +628,7 @@ func TestShellCustomSidebarWidget(t *testing.T) {
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
-				{Title: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
+				{Title: navLinkTitles[0], OnClick: func(_ layout.Context) {}},
 			},
 			Shaper: shaper,
 		},

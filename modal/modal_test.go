@@ -241,14 +241,14 @@ func liveModal(t *testing.T, props modal.Props) layout.Widget {
 	return w
 }
 
-// liveButtonAction subscribes to a labelled components/button keyed to a caller-owned
+// liveButtonAction subscribes to a titled components/button keyed to a caller-owned
 // clickable and returns its latest emitted layout.Widget. The caller passes &clk in
 // Props.ActionFocusTags so the button joins the modal's Tab cycle while owning
 // its own focus tag and ring.
-func liveButtonAction(t *testing.T, label string, clk *widget.Clickable) layout.Widget {
+func liveButtonAction(t *testing.T, title string, clk *widget.Clickable) layout.Widget {
 	t.Helper()
 	obs := button.Button(rx.Of(theme.Default()), button.Props{
-		Title:     label,
+		Title:     title,
 		Clickable: clk,
 		Shaper:    defaultShaper(t),
 	})

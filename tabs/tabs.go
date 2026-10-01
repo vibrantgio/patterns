@@ -66,7 +66,7 @@ type Props struct {
 	OnSelect func(gtx layout.Context, idx int)
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
-	// it nil in normal use: the tabs then shape their labels with the
+	// it nil in normal use: the tabs then shape their titles with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
@@ -82,7 +82,7 @@ type Props struct {
 
 // Strip dimensions. The strip height is exactly Density.ControlHeight and the
 // tab cells fill it; a density-fixed value keeps the layout deterministic
-// across goldens regardless of label content. Tab cells tile the strip edge to
+// across goldens regardless of title content. Tab cells tile the strip edge to
 // edge, so each cell's pointer area is the cell bounds: anything added to one
 // would be taken off the tab beside it.
 const underlineDp = 2
@@ -90,7 +90,7 @@ const underlineDp = 2
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density   // strip height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -115,7 +115,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					label:   typ.LabelLarge,
+					title:   typ.LabelLarge,
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
 				}
@@ -135,7 +135,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 			}
 			return func(gtx layout.Context) layout.Dimensions {
 				processInput(gtx, props, clicks)
-				return drawTabs(gtx, shaper, props, clicks, sel, tok.color, tok.spacing, tok.label, tok.density)
+				return drawTabs(gtx, shaper, props, clicks, sel, tok.color, tok.spacing, tok.title, tok.density)
 			}
 		})
 	})
@@ -146,10 +146,10 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // static demonstrations; production code should use Tabs, which reads
 // both of the parameters below off the theme.
 //
-// label is the LabelLarge role's whole text style — typeface, weight,
+// title is the LabelLarge role's whole text style — typeface, weight,
 // size and line height all reach the shaper — and d is the density the
 // strip draws at (the strip is exactly Density.ControlHeight tall, with
-// Density.PaddingY around each tab label). Pass
+// Density.PaddingY around each tab title). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
 // default desktop look.
 func Render(
@@ -158,11 +158,11 @@ func Render(
 	selected int,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawTabs(gtx, shaper, props, nil, selected, colors, sp, label, d)
+		return drawTabs(gtx, shaper, props, nil, selected, colors, sp, title, d)
 	}
 }
 
@@ -323,14 +323,14 @@ func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 	return colors.SelectedContentBackground
 }
 
-// tabCell renders a single tab label centred inside (S3, S2) padding,
+// tabCell renders a single tab title centred inside (S3, S2) padding,
 // with a strip-height cell. When selected, an underline of underlineDp px
 // is drawn along the cell's bottom edge in mark ([activeMark]). The cell
-// width is at least 2×S3 so the underline is visible even when the label
+// width is at least 2×S3 so the underline is visible even when the title
 // rasterises to zero width, which an empty Tab.Title does.
 func tabCell(
 	shaper *text.Shaper,
-	label string,
+	title string,
 	click *widget.Clickable,
 	selected bool,
 	colors tokens.PlatformColors,
@@ -344,11 +344,11 @@ func tabCell(
 		underlineH := gtx.Dp(unit.Dp(underlineDp))
 
 		inner := func(gtx layout.Context) layout.Dimensions {
-			labelGtx := gtx
-			labelGtx.Constraints.Min = image.Point{}
-			labelGtx.Constraints.Max.X -= 2 * padH
-			if labelGtx.Constraints.Max.X < 0 {
-				labelGtx.Constraints.Max.X = 0
+			titleGtx := gtx
+			titleGtx.Constraints.Min = image.Point{}
+			titleGtx.Constraints.Max.X -= 2 * padH
+			if titleGtx.Constraints.Max.X < 0 {
+				titleGtx.Constraints.Max.X = 0
 			}
 
 			mColor := op.Record(gtx.Ops)
@@ -360,19 +360,19 @@ func tabCell(
 			// a size-only style) fall back to the shaper's defaults.
 			f := typeset.Font(style, font.Normal)
 			wl := typeset.Label(style, 1)
-			mLabel := op.Record(gtx.Ops)
-			labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(style.Size), label, textMaterial)
-			labelCall := mLabel.Stop()
+			mTitle := op.Record(gtx.Ops)
+			titleDims := typeset.Layout(titleGtx, shaper, wl, f, unit.Sp(style.Size), title, textMaterial)
+			titleCall := mTitle.Stop()
 
-			cellW := labelDims.Size.X + 2*padH
+			cellW := titleDims.Size.X + 2*padH
 			cellH := stripH
 
-			offY := (cellH - labelDims.Size.Y - underlineH) / 2
+			offY := (cellH - titleDims.Size.Y - underlineH) / 2
 			if offY < 0 {
 				offY = 0
 			}
 			st := op.Offset(image.Pt(padH, offY)).Push(gtx.Ops)
-			labelCall.Add(gtx.Ops)
+			titleCall.Add(gtx.Ops)
 			st.Pop()
 
 			if selected {
@@ -386,7 +386,7 @@ func tabCell(
 			return inner(gtx)
 		}
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			semantic.LabelOp(label).Add(gtx.Ops)
+			semantic.LabelOp(title).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
 			dims := inner(gtx)
 			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)

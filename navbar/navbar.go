@@ -85,7 +85,7 @@ type Props struct {
 	Unemphasized bool
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
-	// it nil in normal use: the navbar then shapes its link labels with the
+	// it nil in normal use: the navbar then shapes its link titles with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
@@ -114,7 +114,7 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					label:   typ.LabelLarge,
+					title:   typ.LabelLarge,
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
 				}
@@ -136,7 +136,7 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 						props.Links[i].OnClick(gtx)
 					}
 				}
-				return drawNavbar(gtx, shaper, props, clicks, tok.color, tok.spacing, tok.label, tok.density)
+				return drawNavbar(gtx, shaper, props, clicks, tok.color, tok.spacing, tok.title, tok.density)
 			}
 		})
 	})
@@ -147,7 +147,7 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // and static demonstrations; production code should use Navbar, which
 // reads both of the parameters below off the theme.
 //
-// label is the LabelLarge role's whole text style — typeface, weight,
+// title is the LabelLarge role's whole text style — typeface, weight,
 // size and line height all reach the shaper — and d is the density the
 // bar draws at (its vertical inset and the links' padding). Pass
 // tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
@@ -157,18 +157,18 @@ func Render(
 	props Props,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawNavbar(gtx, shaper, props, nil, colors, sp, label, d)
+		return drawNavbar(gtx, shaper, props, nil, colors, sp, title, d)
 	}
 }
 
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	density tokens.Density   // bar inset and link padding source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -340,10 +340,10 @@ func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 	return colors.SelectedContentBackground
 }
 
-// linkWidget renders a single link as a label centred inside
+// linkWidget renders a single link as its title centred inside
 // (S3, Density.PaddingY) padding — the horizontal 12 dp stays on the
 // spacing scale, the vertical padding follows density. The cell width is
-// at least 2×S3 so the Active underline is visible even when the label
+// at least 2×S3 so the Active underline is visible even when the title
 // rasterises to zero width, which an empty Link.Title does. Links are
 // adjacent cells in a row, so their hit area stays the cell bounds
 // (extension would steal a neighbour's slop). The underline itself is
@@ -355,11 +355,11 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 			padV := gtx.Dp(unit.Dp(d.PaddingY))
 			underlineH := gtx.Dp(unit.Dp(underlineDp))
 
-			labelGtx := gtx
-			labelGtx.Constraints.Min = image.Point{}
-			labelGtx.Constraints.Max.X -= 2 * padH
-			if labelGtx.Constraints.Max.X < 0 {
-				labelGtx.Constraints.Max.X = 0
+			titleGtx := gtx
+			titleGtx.Constraints.Min = image.Point{}
+			titleGtx.Constraints.Max.X -= 2 * padH
+			if titleGtx.Constraints.Max.X < 0 {
+				titleGtx.Constraints.Max.X = 0
 			}
 
 			mColor := op.Record(gtx.Ops)
@@ -372,15 +372,15 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 			// shaper's defaults.
 			f := typeset.Font(style, font.Normal)
 			wl := typeset.Label(style, 1)
-			mLabel := op.Record(gtx.Ops)
-			labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(style.Size), l.Title, textMaterial)
-			labelCall := mLabel.Stop()
+			mTitle := op.Record(gtx.Ops)
+			titleDims := typeset.Layout(titleGtx, shaper, wl, f, unit.Sp(style.Size), l.Title, textMaterial)
+			titleCall := mTitle.Stop()
 
-			cellW := labelDims.Size.X + 2*padH
-			cellH := labelDims.Size.Y + 2*padV + underlineH
+			cellW := titleDims.Size.X + 2*padH
+			cellH := titleDims.Size.Y + 2*padV + underlineH
 
 			st := op.Offset(image.Pt(padH, padV)).Push(gtx.Ops)
-			labelCall.Add(gtx.Ops)
+			titleCall.Add(gtx.Ops)
 			st.Pop()
 
 			if l.Active {

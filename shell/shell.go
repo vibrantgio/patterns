@@ -249,7 +249,7 @@ func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // StackedPage Props renders only the navbar and footer — use
 // RenderStackedPage to supply pre-built section layout.Widget values.
 //
-// label is the LabelLarge role's whole text style, which the shell
+// title is the LabelLarge role's whole text style, which the shell
 // spends on its navbar, and d is the density the navbar's own insets
 // derive from — the band it stands in is the platform's measured depth and
 // takes no density. Pass tokens.DefaultTypography.LabelLarge and
@@ -260,7 +260,7 @@ func Render(
 	sidebarW layout.Widget,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	d tokens.Density,
 	splitRatio float32,
 ) layout.Widget {
@@ -268,11 +268,11 @@ func Render(
 	case SplitPane:
 		return staticSplitPane(props.Left, props.Right, splitRatio, colors, props.SplitAxis)
 	case ThreeColumn:
-		return RenderThreeColumn(shaper, props, sidebarW, nil, colors, sp, label, d, defaultAsideDp)
+		return RenderThreeColumn(shaper, props, sidebarW, nil, colors, sp, title, d, defaultAsideDp)
 	case StackedPage:
-		return RenderStackedPage(shaper, props, nil, colors, sp, label, d)
+		return RenderStackedPage(shaper, props, nil, colors, sp, title, d)
 	default:
-		return staticSidebarHeaderMain(sidebarW, shaper, props, colors, sp, label, d)
+		return staticSidebarHeaderMain(sidebarW, shaper, props, colors, sp, title, d)
 	}
 }
 
@@ -300,13 +300,13 @@ func staticSidebarHeaderMain(
 	props Props,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
 	if sidebarW == nil {
 		sidebarW = emptyWidget
 	}
-	nbW := navbar.Render(shaper, props.Navbar, colors, sp, label, d)
+	nbW := navbar.Render(shaper, props.Navbar, colors, sp, title, d)
 	return composeSidebarHeaderMain(sidebarW, nbW, props, colors)
 }
 

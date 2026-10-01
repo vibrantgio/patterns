@@ -67,7 +67,7 @@ type CTA struct {
 
 // Tier describes a single pricing card.
 type Tier struct {
-	// Name is the tier label rendered in title typography.
+	// Name is the tier's title, rendered in title typography.
 	Name string
 
 	// Price is the prominent monetary string (e.g., "$29").
@@ -110,16 +110,16 @@ type Props struct {
 }
 
 type resolvedTokens struct {
-	color   tokens.PlatformColors
-	spacing tokens.SpacingScale
-	radius  tokens.RadiusScale
-	popular tokens.TextStyle // the badge type role the "Popular" label is set in, at the density
-	name    tokens.TextStyle // the TitleLarge role (tier name)
-	price   tokens.TextStyle // the DisplaySmall role (price)
-	body    tokens.TextStyle // the BodyMedium role (cadence suffix, features)
-	label   tokens.TextStyle // the LabelLarge role (CTA label)
-	density tokens.Density   // CTA control height and inner padding
-	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
+	color    tokens.PlatformColors
+	spacing  tokens.SpacingScale
+	radius   tokens.RadiusScale
+	popular  tokens.TextStyle // the badge type role the "Popular" title is set in, at the density
+	name     tokens.TextStyle // the TitleLarge role (tier name)
+	price    tokens.TextStyle // the DisplaySmall role (price)
+	body     tokens.TextStyle // the BodyMedium role (cadence suffix, features)
+	ctaTitle tokens.TextStyle // the LabelLarge role (CTA title)
+	density  tokens.Density   // CTA control height and inner padding
+	shaper   *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
 // Pricing returns an rx.Observable[layout.Widget] that emits a new one
@@ -138,16 +138,16 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 			func(n rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.Density]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
-					color:   n.First,
-					spacing: n.Second,
-					radius:  n.Third,
-					popular: badge.Style(typ, n.Fifth),
-					name:    typ.TitleLarge,
-					price:   typ.DisplaySmall,
-					body:    typ.BodyMedium,
-					label:   typ.LabelLarge,
-					density: n.Fifth,
-					shaper:  typ.Shaper(),
+					color:    n.First,
+					spacing:  n.Second,
+					radius:   n.Third,
+					popular:  badge.Style(typ, n.Fifth),
+					name:     typ.TitleLarge,
+					price:    typ.DisplaySmall,
+					body:     typ.BodyMedium,
+					ctaTitle: typ.LabelLarge,
+					density:  n.Fifth,
+					shaper:   typ.Shaper(),
 				}
 			},
 		)
@@ -185,7 +185,7 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 // typo supplies the five roles the row draws — the badge role at d for the
 // "Popular" mark, TitleLarge for the tier name, DisplaySmall for the
 // price, BodyMedium for the cadence suffix and feature lines, LabelLarge
-// for the CTA label — whole, so typeface, weight and line height reach
+// for the CTA title — whole, so typeface, weight and line height reach
 // the shaper exactly as they do on the live path. A pattern that spends
 // more than one role takes the whole tokens.Typography rather than a
 // role's tokens.TextStyle each: the roles it picks stay its own business,
@@ -202,15 +202,15 @@ func Render(
 	d tokens.Density,
 ) layout.Widget {
 	tok := resolvedTokens{
-		color:   colors,
-		spacing: sp,
-		radius:  rad,
-		popular: badge.Style(typo, d),
-		name:    typo.TitleLarge,
-		price:   typo.DisplaySmall,
-		body:    typo.BodyMedium,
-		label:   typo.LabelLarge,
-		density: d,
+		color:    colors,
+		spacing:  sp,
+		radius:   rad,
+		popular:  badge.Style(typo, d),
+		name:     typo.TitleLarge,
+		price:    typo.DisplaySmall,
+		body:     typo.BodyMedium,
+		ctaTitle: typo.LabelLarge,
+		density:  d,
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawPricing(gtx, shaper, props, tok, nil)
@@ -405,7 +405,7 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 // are different heights around different faces, and centring the boxes puts
 // the two runs of type on two lines that are three pixels apart. Baseline
 // alignment is what "on the same line" means for text, and the badge reports
-// its label's baseline so that it can be asked.
+// its title's baseline so that it can be asked.
 func nameRowWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layout.Widget {
 	name := tierNameWidget(shaper, tier.Name, tier, tok)
 	if !tier.Recommended {
@@ -439,8 +439,8 @@ func popularBadgeWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layo
 // tierNameWidget renders the tier name in the TitleLarge role in
 // Text. A zero style weight (the legacy Render path synthesizes
 // size-only styles) falls back to SemiBold.
-func tierNameWidget(shaper *text.Shaper, label string, tier Tier, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.name, font.SemiBold)
+func tierNameWidget(shaper *text.Shaper, name string, tier Tier, tok resolvedTokens) layout.Widget {
+	return textWidget(shaper, name, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.name, font.SemiBold)
 }
 
 // priceRowWidget renders the price (DisplaySmall, the platform's label)
@@ -461,14 +461,14 @@ func priceRowWidget(shaper *text.Shaper, price, cadence string, tier Tier, tok r
 }
 
 // featureRowWidget renders a single feature bullet: an accent checkmark
-// symbol followed by the feature label in BodyMedium, the platform's label,
-// joined by an S2 gap and centred vertically.
-func featureRowWidget(shaper *text.Shaper, label string, tier Tier, tok resolvedTokens) layout.Widget {
+// symbol followed by the feature's own text in BodyMedium, the platform's
+// label, joined by an S2 gap and centred vertically.
+func featureRowWidget(shaper *text.Shaper, feature string, tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(checkmarkWidget(tier, tok)),
 			layout.Rigid(pllayout.HSpacer(tok.spacing.S2)),
-			layout.Rigid(textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.body, font.Normal)),
+			layout.Rigid(textWidget(shaper, feature, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.body, font.Normal)),
 		)
 	}
 }
@@ -503,7 +503,7 @@ func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 // button fills the card's inner width (components/button's intrinsic
 // "fill Max.X" sizing), giving the typical full-width pricing CTA.
 func ctaWidget(shaper *text.Shaper, cta *CTA, tier Tier, tok resolvedTokens, click *widget.Clickable) layout.Widget {
-	rendered := button.Render(shaper, cta.Title, tok.color, tok.spacing, tok.radius, tok.label, tok.density,
+	rendered := button.Render(shaper, cta.Title, tok.color, tok.spacing, tok.radius, tok.ctaTitle, tok.density,
 		button.RenderState{Surface: tierFill(tok.color, tier)})
 	return func(gtx layout.Context) layout.Dimensions {
 		if click == nil {
@@ -519,21 +519,21 @@ func ctaWidget(shaper *text.Shaper, cta *CTA, tier Tier, tok resolvedTokens, cli
 	}
 }
 
-// textWidget renders a single-line label in the supplied colour and text
+// textWidget renders a single line of text in the supplied colour and text
 // style, through theme/typeset so the role's line height is the height
-// of the line box. Empty labels collapse to zero dimensions so adjacent
+// of the line box. Empty text collapses to zero dimensions so adjacent
 // section gaps are the only vertical contribution. A zero style weight
 // (the legacy Render path synthesizes size-only styles) falls back to
 // fallbackWeight.
-func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
+func textWidget(shaper *text.Shaper, txt string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		if label == "" {
+		if txt == "" {
 			return layout.Dimensions{}
 		}
 		mColor := op.Record(gtx.Ops)
 		paint.ColorOp{Color: fg}.Add(gtx.Ops)
 		material := mColor.Stop()
 		wl := typeset.Label(style, 1)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), label, material)
+		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), txt, material)
 	}
 }

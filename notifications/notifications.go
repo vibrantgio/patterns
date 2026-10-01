@@ -316,7 +316,7 @@ func Column(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // shaper and the same text style off the theme. The returned layout.Widget
 // performs no input handling, no fading, and schedules no invalidation.
 //
-// label is the LabelMedium role's whole text style — typeface, weight,
+// style is the LabelMedium role's whole text style — typeface, weight,
 // size and line height all reach the shaper, exactly as they do on the
 // live path. Pass tokens.DefaultTypography.LabelMedium for the default
 // desktop look. There is no density parameter: a toast's height is a
@@ -328,9 +328,9 @@ func Render(
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
-	label tokens.TextStyle,
+	style tokens.TextStyle,
 ) layout.Widget {
-	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, style: label}
+	tok := resolvedTokens{color: colors, spacing: sp, radius: rad, style: style}
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawColumnStatic(gtx, shaper, props, tok, queued)
 	}

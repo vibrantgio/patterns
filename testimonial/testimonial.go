@@ -314,16 +314,16 @@ func appendComma(path *clip.Path, x, y, w, h int) {
 // quoteBodyWidget renders the quote text in the BodyLarge role in
 // Text. Wrap to up to four lines so longer testimonials remain
 // readable without growing the card unboundedly.
-func quoteBodyWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
+func quoteBodyWidget(shaper *text.Shaper, quote string, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		if label == "" {
+		if quote == "" {
 			return layout.Dimensions{}
 		}
 		mColor := op.Record(gtx.Ops)
 		paint.ColorOp{Color: vgcolor.Flatten(tok.color.Label, tok.color.CardFill)}.Add(gtx.Ops)
 		material := mColor.Stop()
 		wl := typeset.Label(tok.quote, 4)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(tok.quote, font.Normal), unit.Sp(tok.quote.Size), label, material)
+		return typeset.Layout(gtx, shaper, wl, typeset.Font(tok.quote, font.Normal), unit.Sp(tok.quote.Size), quote, material)
 	}
 }
 
@@ -367,7 +367,7 @@ func avatarWidget(shaper *text.Shaper, item Item, tok resolvedTokens) layout.Wid
 }
 
 // drawPlaceholder paints a hollow circle of diameter `size` and, when name is
-// non-empty, the first rune centred inside it in the platform's secondary label
+// non-empty, the first rune centred inside it in the platform's secondary
 // label. The circle is hollow, so the surface on both sides of its line is
 // the card's own fill, which is what the platform's separator is flattened
 // onto.
@@ -390,31 +390,31 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 	mColor := op.Record(gtx.Ops)
 	paint.ColorOp{Color: vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.CardFill)}.Add(gtx.Ops)
 	material := mColor.Stop()
-	mLabel := op.Record(gtx.Ops)
+	mLetter := op.Record(gtx.Ops)
 	wl := typeset.Label(tok.body, 1)
 	wl.Alignment = text.Middle
-	labelDims := typeset.Layout(letterGtx, shaper, wl, typeset.Font(tok.body, font.SemiBold), unit.Sp(tok.body.Size), letter, material)
-	labelCall := mLabel.Stop()
+	letterDims := typeset.Layout(letterGtx, shaper, wl, typeset.Font(tok.body, font.SemiBold), unit.Sp(tok.body.Size), letter, material)
+	letterCall := mLetter.Stop()
 
-	off := op.Offset(image.Pt((size-labelDims.Size.X)/2, (size-labelDims.Size.Y)/2)).Push(gtx.Ops)
-	labelCall.Add(gtx.Ops)
+	off := op.Offset(image.Pt((size-letterDims.Size.X)/2, (size-letterDims.Size.Y)/2)).Push(gtx.Ops)
+	letterCall.Add(gtx.Ops)
 	off.Pop()
 }
 
-// textWidget renders a single-line label in the supplied colour and text
+// textWidget renders a single line of text in the supplied colour and text
 // style, through theme/typeset so the role's line height is the height
-// of the line box. Empty labels collapse to zero dimensions so adjacent
+// of the line box. Empty text collapses to zero dimensions so adjacent
 // section gaps are the only vertical contribution. A zero style weight
 // falls back to fallbackWeight.
-func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
+func textWidget(shaper *text.Shaper, txt string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		if label == "" {
+		if txt == "" {
 			return layout.Dimensions{}
 		}
 		mColor := op.Record(gtx.Ops)
 		paint.ColorOp{Color: fg}.Add(gtx.Ops)
 		material := mColor.Stop()
 		wl := typeset.Label(style, 1)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), label, material)
+		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), txt, material)
 	}
 }

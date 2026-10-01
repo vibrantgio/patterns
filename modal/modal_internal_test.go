@@ -146,13 +146,13 @@ func liveCloseWidget(t *testing.T, st *modalState, shaper *text.Shaper) layout.W
 	return w
 }
 
-// liveButton subscribes to a labelled button.Button keyed to a caller-owned
+// liveButton subscribes to a titled button.Button keyed to a caller-owned
 // clickable and returns its latest emitted layout.Widget — a focusable footer action
 // whose own &clk is passed in Props.ActionFocusTags.
-func liveButton(t *testing.T, shaper *text.Shaper, label string, clk *widget.Clickable) layout.Widget {
+func liveButton(t *testing.T, shaper *text.Shaper, title string, clk *widget.Clickable) layout.Widget {
 	t.Helper()
 	obs := button.Button(rx.Of(theme.Default()), button.Props{
-		Title:     label,
+		Title:     title,
 		Clickable: clk,
 		Shaper:    shaper,
 	})

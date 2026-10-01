@@ -115,7 +115,7 @@ func threeColumnObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // consulted); a nil sidebarW renders an empty leading column, and a
 // nil asideW omits the aside column and its splitter entirely.
 //
-// label is the LabelLarge role's whole text style, which the layout
+// title is the LabelLarge role's whole text style, which the layout
 // spends on its navbar, and d is the density the navbar's own insets
 // derive from — the band it stands in is the platform's measured depth and
 // takes no density. Pass tokens.DefaultTypography.LabelLarge and
@@ -126,14 +126,14 @@ func RenderThreeColumn(
 	sidebarW, asideW layout.Widget,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	d tokens.Density,
 	asideWidth unit.Dp,
 ) layout.Widget {
 	if sidebarW == nil {
 		sidebarW = emptyWidget
 	}
-	nbW := navbar.Render(shaper, props.Navbar, colors, sp, label, d)
+	nbW := navbar.Render(shaper, props.Navbar, colors, sp, title, d)
 	hasAside := asideW != nil
 	w := clampAsideWidth(asideWidth)
 	return func(gtx layout.Context) layout.Dimensions {

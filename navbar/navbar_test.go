@@ -64,8 +64,8 @@ func links(activeIdx int) []navbar.Link {
 }
 
 // TestNavbarGolden records or diffs the three Measurable goldens. Each link
-// cell is its label plus (S3, S2) padding, so the Active link's Primary
-// underline runs the width of the label.
+// cell is its title plus (S3, S2) padding, so the Active link's underline
+// runs the width of the title.
 func TestNavbarGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -267,7 +267,7 @@ func TestNavbarTabTraversal(t *testing.T) {
 
 // TestNavbarLinkClickFiresOnClick verifies clicking a link invokes its
 // OnClick callback. With PxPerDp=1, frame 480×64, no brand, no actions, two
-// links: each cell is its label plus (S3, Density.PaddingY) padding and an
+// links: each cell is its title plus (S3, Density.PaddingY) padding and an
 // underline, separated by an S2 spacer, and the row is centred at frame-mid.
 // "Docs" and "Components" measure 57 and 105 px, so the row is 57+8+105 = 170
 // wide and starts at x = 155; link 0 occupies x in [155, 212], y in [15, 49].
@@ -316,7 +316,7 @@ func densityTheme(d tokens.Density) theme.Theme {
 }
 
 // barHeight is the height the navbar actually draws at density d: a link
-// cell is its label's line box plus the density's vertical padding above
+// cell is its title's line box plus the density's vertical padding above
 // and below plus the Active underline, and the bar insets that row by the
 // same PaddingY again.
 //
@@ -395,7 +395,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	brandColor := color.NRGBA{R: 0, G: 0, B: 255, A: 255}
 	actionColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
 	const brandH, actionH = 10, 20
-	// cellH is a link cell as linkWidget builds one: the label's line box,
+	// cellH is a link cell as linkWidget builds one: the title's line box,
 	// the density's padding above and below, and the Active underline.
 	cellH := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
 

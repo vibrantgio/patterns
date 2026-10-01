@@ -56,20 +56,20 @@ func TestTheFooterLaysEveryActionOutInThePlatformsWidth(t *testing.T) {
 				i, cs.Max.X, dialogButtonWDp)
 		}
 		if cs.Min.X != 0 {
-			t.Errorf("action %d was given a %d px minimum; the box is a budget, not a floor a wider label has to break",
+			t.Errorf("action %d was given a %d px minimum; the box is a budget, not a floor a wider title has to break",
 				i, cs.Min.X)
 		}
 	}
 }
 
-// TestAWiderLabelWidensItsOwnButtonAlone is the other half of that rule: the
-// box is what a label that fits takes, and a label that does not fit widens
+// TestAWiderTitleWidensItsOwnButtonAlone is the other half of that rule: the
+// box is what a title that fits takes, and a title that does not fit widens
 // its button by its own measure — the button beside it unmoved.
-func TestAWiderLabelWidensItsOwnButtonAlone(t *testing.T) {
+func TestAWiderTitleWidensItsOwnButtonAlone(t *testing.T) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	var short, long layout.Dimensions
-	action := func(label string, out *layout.Dimensions) layout.Widget {
-		w := button.Render(shaper, label, tokens.PlatformLight, tokens.Spacing,
+	action := func(title string, out *layout.Dimensions) layout.Widget {
+		w := button.Render(shaper, title, tokens.PlatformLight, tokens.Spacing,
 			tokens.Radius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable,
 			button.RenderState{})
 		return func(gtx layout.Context) layout.Dimensions {
@@ -89,11 +89,11 @@ func TestAWiderLabelWidensItsOwnButtonAlone(t *testing.T) {
 		Ops:         &ops,
 	})
 	if short.Size.X != dialogButtonWDp {
-		t.Errorf("a label inside the box drew %d px wide, want the platform's %d",
+		t.Errorf("a title inside the box drew %d px wide, want the platform's %d",
 			short.Size.X, dialogButtonWDp)
 	}
 	if long.Size.X <= dialogButtonWDp {
-		t.Errorf("a label wider than the box drew %d px, want more than %d — it was elided into the box instead of widening its button",
+		t.Errorf("a title wider than the box drew %d px, want more than %d — it was elided into the box instead of widening its button",
 			long.Size.X, dialogButtonWDp)
 	}
 }

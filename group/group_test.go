@@ -44,7 +44,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 }
 
 // textSlot returns a content layout.Widget that draws s in the given role. A group
-// draws no text but its own label, so everything it holds is caller-built.
+// draws no text but its own title, so everything it holds is caller-built.
 //
 // ASCII only — no symbol reaches a stored image.
 func textSlot(shaper *text.Shaper, style tokens.TextStyle, c color.NRGBA, maxLines int, s string) layout.Widget {
@@ -82,24 +82,24 @@ func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 }
 
 // TestGroupGolden records or diffs the canonical group renders in both
-// schemes, labelled and not. The scene fills the level-0 surface so the
+// schemes, with a title and without. The scene fills the level-0 surface so the
 // group's interior and its surroundings are one fill, which is the whole
 // point of the pattern: only the hairline says where it ends.
 func TestGroupGolden(t *testing.T) {
 	cases := []struct {
 		name   string
 		colors tokens.PlatformColors
-		label  string
+		title  string
 	}{
-		{name: "light-labelled", colors: tokens.PlatformLight, label: "Density"},
-		{name: "dark-labelled", colors: tokens.PlatformDark, label: "Density"},
-		{name: "light-unlabelled", colors: tokens.PlatformLight},
-		{name: "dark-unlabelled", colors: tokens.PlatformDark},
+		{name: "light-with-title", colors: tokens.PlatformLight, title: "Density"},
+		{name: "dark-with-title", colors: tokens.PlatformDark, title: "Density"},
+		{name: "light-without-title", colors: tokens.PlatformLight},
+		{name: "dark-without-title", colors: tokens.PlatformDark},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := group.Render(defaultShaper(t),
-				group.Props{Title: tc.label, Content: content(t, tc.colors)},
+				group.Props{Title: tc.title, Content: content(t, tc.colors)},
 				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.ControlBackground))
 		})
@@ -160,8 +160,8 @@ func TestGroupHairlineIsTheSeam(t *testing.T) {
 	}
 }
 
-// TestGroupTitleChangesPixels confirms the label is drawn: an unlabelled
-// group and a labelled one differ, so a Title that never reached the shaper
+// TestGroupTitleChangesPixels confirms the title is drawn: a group without
+// a title and one with a title differ, so a Title that never reached the shaper
 // cannot pass silently.
 func TestGroupTitleChangesPixels(t *testing.T) {
 	c := tokens.PlatformLight
@@ -173,6 +173,6 @@ func TestGroupTitleChangesPixels(t *testing.T) {
 	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.ControlBackground))
 	b := golden.Capture(t, frameSize, scene(named, marginPx, c.ControlBackground))
 	if n := golden.PixelDiff(a, b); n == 0 {
-		t.Error("labelled and unlabelled groups render identically; expected the label")
+		t.Error("groups with and without a title render identically; expected the title")
 	}
 }

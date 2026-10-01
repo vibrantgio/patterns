@@ -1,16 +1,16 @@
 // Package sidebar provides the Patterns Sidebar pattern: a collapsible
 // vertical chrome column that swaps between an expanded width
-// (label+icon) and a collapsed width (icon-only) on demand. The active
+// (title+icon) and a collapsed width (icon-only) on demand. The active
 // Item is drawn as the platform draws a selected sidebar row: the pill
-// [PaintSelection] fills, its label in the foreground the platform pairs
+// [PaintSelection] fills, its title in the foreground the platform pairs
 // with that fill.
 //
 // # The pill's two states
 //
 // A list shows its focus as the platform does for the place it stands in,
 // and a sidebar's place shows it in the pill's colour rather than in a
-// ring. The rail draws the accent pill under a white label while its list
-// holds the keyboard, and the grey pill under the label in the accent
+// ring. The rail draws the accent pill under a white title while its list
+// holds the keyboard, and the grey pill under the title in the accent
 // colour while it does not — both measured, the first off
 // voicememos-sidebar-{light,dark}.png and the second off
 // finder-sidebar-unfocused-{light,dark}.png, where the pill keeps the same
@@ -46,14 +46,14 @@
 // and the shadow it casts, which patterns/pane draws; a hairline here would
 // be a second boundary inside the first.
 //
-// A row is a symbol, a label and, at the trailing end, a count when the
+// A row is a symbol, a title and, at the trailing end, a count when the
 // entry has one: [Item.Icon], [Item.Title] and [Item.Count], each drawn in
 // the column the platform draws it in ([SymbolInset], [TitleInset],
 // [CountInset]). The symbol wears [SymbolForeground] and the count
 // [CountForeground], both measured values of the sidebar; on the selected
 // row's pill all three parts wear the foreground the platform pairs with
 // that fill. A row with no symbol or no count draws without one and the
-// columns do not move, so the labels of a list whose entries differ still
+// columns do not move, so the titles of a list whose entries differ still
 // line up. A run of rows may be headed by a small label — [Item.Section] on
 // the row that begins it — which stands in a block of [SectionHeight] above
 // that row and is parted from the rows by air alone: the platform draws no
@@ -195,7 +195,7 @@ type Props struct {
 	OnToggleCollapse func(gtx layout.Context)
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
-	// it nil in normal use: the sidebar then shapes its item labels with the
+	// it nil in normal use: the sidebar then shapes its item titles with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
@@ -319,7 +319,7 @@ const (
 // DisclosureBox 20: the row's symbol box measures 24 and the heading's label
 // measures four fifths of the row's — MEASURED,
 // voicememos-multi-folder-2026-09-18.png, an 8 px cap against the row
-// label's 10 — so the heading's own mark takes the same four fifths of the
+// title's 10 — so the heading's own mark takes the same four fifths of the
 // row's box. Twenty is also what the icon rule gives at the comfortable
 // density, which is the size a mark standing beside text is drawn at
 // everywhere else in the library.
@@ -346,7 +346,7 @@ const (
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	section tokens.TextStyle // the role a section's heading is set in; see SectionStyle
 	density tokens.Density   // item/toggle height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
@@ -375,7 +375,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					label:   typ.LabelLarge,
+					title:   typ.LabelLarge,
 					section: SectionStyle(typ),
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
@@ -402,7 +402,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 			}
 			return func(gtx layout.Context) layout.Dimensions {
 				processInput(gtx, props, st)
-				return drawSidebar(gtx, shaper, props, st, st.list, col, tok.color, tok.spacing, tok.label, tok.section, tok.density)
+				return drawSidebar(gtx, shaper, props, st, st.list, col, tok.color, tok.spacing, tok.title, tok.section, tok.density)
 			}
 		})
 	})
@@ -434,7 +434,7 @@ type liveState struct {
 // the selected row wears the grey pill: [Props.Focused] is how a still asks
 // for the accent one instead.
 //
-// label is the LabelLarge role's whole text style — typeface, weight,
+// title is the LabelLarge role's whole text style — typeface, weight,
 // size and line height all reach the shaper — section is the role a
 // section's heading is set in ([SectionStyle] names it), and d is the
 // density the column draws at (item rows and the collapse toggle are each
@@ -447,7 +447,7 @@ func Render(
 	collapsed bool,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	section tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
@@ -458,7 +458,7 @@ func Render(
 	// ask the viewport to move.
 	state.Select(activeIndex(props.Items))
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawSidebar(gtx, shaper, props, nil, state, collapsed, colors, sp, label, section, d)
+		return drawSidebar(gtx, shaper, props, nil, state, collapsed, colors, sp, title, section, d)
 	}
 }
 
@@ -796,7 +796,7 @@ func drawItem(
 		}
 
 		// The count first: it owns its column, so what is left of the row is
-		// what the label may spend. A label longer than that is ellipsized
+		// what the title may spend. A title longer than that is ellipsized
 		// rather than allowed to run under the count.
 		countW := 0
 		if item.Count != "" {
@@ -838,7 +838,7 @@ func drawItem(
 // smallest label role, which is what the platform's own heading measures as.
 //
 // MEASURED off voicememos-multi-folder-2026-09-18.png: the heading's cap band
-// is 8 px against a row label's 10, and at the shipped face's cap ratio those
+// is 8 px against a row title's 10, and at the shipped face's cap ratio those
 // are an 11 dp and a 14 dp role. The scale already carries both, so the
 // heading takes the role it matches rather than a size of its own.
 func SectionStyle(t tokens.Typography) tokens.TextStyle { return t.LabelSmall }
@@ -852,11 +852,11 @@ func SectionForeground(colors tokens.PlatformColors) color.NRGBA { return colors
 // SymbolForeground is what the symbol at a row's leading end is drawn in: the
 // sidebar's own measured symbol value, and the foreground the platform pairs
 // with the pill on the selected row — the symbol wears the pill's white like
-// the label beside it. The caller flattens it onto the fill.
+// the title beside it. The caller flattens it onto the fill.
 //
 // It is exported so an application drawing its own chrome rail draws the
 // symbol the strength the platform draws it, which is stronger than the
-// label standing beside it: 38 of 255 in light and 35 in dark.
+// title standing beside it: 38 of 255 in light and 35 in dark.
 func SymbolForeground(colors tokens.PlatformColors, selected, unemphasized bool) color.NRGBA {
 	if selected {
 		return SelectionLabel(colors, unemphasized)
@@ -867,7 +867,7 @@ func SymbolForeground(colors tokens.PlatformColors, selected, unemphasized bool)
 // CountForeground is what the count at a row's trailing end is drawn in: the
 // sidebar's own measured count value off the pill, and the foreground the
 // platform pairs with the pill on it — the count wears the selected row's
-// white like the label beside it. The caller flattens it onto the fill.
+// white like the title beside it. The caller flattens it onto the fill.
 func CountForeground(colors tokens.PlatformColors, selected, unemphasized bool) color.NRGBA {
 	if selected {
 		return SelectionLabel(colors, unemphasized)
@@ -990,7 +990,7 @@ func PaintSymbol(gtx layout.Context, mark icons.Painter, size image.Point, fg co
 }
 
 // drawSymbol paints a row's symbol in the square the platform draws it in.
-// A collapsed rail has no label to line the symbol up with, so there the
+// A collapsed rail has no title to line the symbol up with, so there the
 // square is centred in the rail instead of standing in its measured column.
 func drawSymbol(gtx layout.Context, mark icons.Painter, size image.Point, collapsed bool, fg color.NRGBA) {
 	if !collapsed {
@@ -1025,7 +1025,7 @@ func paintSymbolAt(gtx layout.Context, mark icons.Painter, size image.Point, x i
 
 // PaintCount paints a row's count at the trailing end of a row of the given
 // size at the current offset and reports how wide it came out, so the caller
-// knows what is left for the label.
+// knows what is left for the title.
 //
 // It is exported so an application drawing its own chrome rail puts its
 // counts in the platform's column.

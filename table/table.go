@@ -121,7 +121,7 @@ type Props[T any] struct {
 	Current func(item T) bool
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
-	// it nil in normal use: the table then shapes its header labels with the
+	// it nil in normal use: the table then shapes its header titles with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
 	// process and shared by every component reading that typography — the
 	// cache lives behind the Typography value, so it survives the copy this
@@ -378,7 +378,7 @@ func columnWidths[T any](gtx layout.Context, columns []Column[T], totalW int) []
 	return out
 }
 
-// drawHeaderRow renders the bold-weight header labels with optional sort
+// drawHeaderRow renders the bold-weight header titles with optional sort
 // chevrons and clickable hit areas for sortable columns. The trailing
 // seam marks the boundary between the header and the body.
 func drawHeaderRow[T any](
@@ -421,7 +421,7 @@ func drawHeaderRow[T any](
 	return layout.Dimensions{Size: size}
 }
 
-// drawHeaderCell renders one header label + optional sort chevron inside
+// drawHeaderCell renders one header title + optional sort chevron inside
 // a fixed-size column box, wiring a Clickable if the column is sortable.
 func drawHeaderCell[T any](
 	gtx layout.Context,
@@ -436,16 +436,16 @@ func drawHeaderCell[T any](
 	padH := gtx.Dp(unit.Dp(cellPadDp))
 
 	inner := func(gtx layout.Context) layout.Dimensions {
-		// Label.
-		labelMaxW := size.X - 2*padH
+		// Title.
+		titleMaxW := size.X - 2*padH
 		if active && col.Sortable {
-			labelMaxW -= gtx.Dp(unit.Dp(chevronSizeDp)) + padH/2
+			titleMaxW -= gtx.Dp(unit.Dp(chevronSizeDp)) + padH/2
 		}
-		if labelMaxW > 0 {
-			labelGtx := gtx
-			labelGtx.Constraints.Min = image.Point{}
-			labelGtx.Constraints.Max.X = labelMaxW
-			labelGtx.Constraints.Max.Y = size.Y
+		if titleMaxW > 0 {
+			titleGtx := gtx
+			titleGtx.Constraints.Min = image.Point{}
+			titleGtx.Constraints.Max.X = titleMaxW
+			titleGtx.Constraints.Max.Y = size.Y
 
 			mColor := op.Record(gtx.Ops)
 			paint.ColorOp{Color: vgcolor.Flatten(tok.color.HeaderText, tok.color.ControlBackground)}.Add(gtx.Ops)
@@ -457,9 +457,9 @@ func drawHeaderCell[T any](
 			style := tok.header
 			f := typeset.Font(style, font.Bold)
 			wl := typeset.Label(style, 1)
-			mLabel := op.Record(gtx.Ops)
-			labelDims := typeset.Layout(
-				labelGtx,
+			mTitle := op.Record(gtx.Ops)
+			titleDims := typeset.Layout(
+				titleGtx,
 				shaper,
 				wl,
 				f,
@@ -467,14 +467,14 @@ func drawHeaderCell[T any](
 				col.Header,
 				material,
 			)
-			labelCall := mLabel.Stop()
+			titleCall := mTitle.Stop()
 
-			offY := (size.Y - labelDims.Size.Y) / 2
+			offY := (size.Y - titleDims.Size.Y) / 2
 			if offY < 0 {
 				offY = 0
 			}
 			st := op.Offset(image.Pt(padH, offY)).Push(gtx.Ops)
-			labelCall.Add(gtx.Ops)
+			titleCall.Add(gtx.Ops)
 			st.Pop()
 		}
 
@@ -593,14 +593,14 @@ func RenderTextCell(
 	return func(gtx layout.Context) layout.Dimensions {
 		size := gtx.Constraints.Max
 		padH := gtx.Dp(unit.Dp(cellPadDp))
-		labelMaxW := size.X - 2*padH
-		if labelMaxW <= 0 {
+		textMaxW := size.X - 2*padH
+		if textMaxW <= 0 {
 			return layout.Dimensions{Size: size}
 		}
-		labelGtx := gtx
-		labelGtx.Constraints.Min = image.Point{}
-		labelGtx.Constraints.Max.X = labelMaxW
-		labelGtx.Constraints.Max.Y = size.Y
+		textGtx := gtx
+		textGtx.Constraints.Min = image.Point{}
+		textGtx.Constraints.Max.X = textMaxW
+		textGtx.Constraints.Max.Y = size.Y
 
 		mColor := op.Record(gtx.Ops)
 		paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.ControlBackground)}.Add(gtx.Ops)
@@ -611,16 +611,16 @@ func RenderTextCell(
 		// shaper's default weight, as this cell always did.
 		f := typeset.Font(body, font.Normal)
 		wl := typeset.Label(body, 1)
-		mLabel := op.Record(gtx.Ops)
-		labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(body.Size), s, material)
-		labelCall := mLabel.Stop()
+		mText := op.Record(gtx.Ops)
+		textDims := typeset.Layout(textGtx, shaper, wl, f, unit.Sp(body.Size), s, material)
+		textCall := mText.Stop()
 
-		offY := (size.Y - labelDims.Size.Y) / 2
+		offY := (size.Y - textDims.Size.Y) / 2
 		if offY < 0 {
 			offY = 0
 		}
 		st := op.Offset(image.Pt(padH, offY)).Push(gtx.Ops)
-		labelCall.Add(gtx.Ops)
+		textCall.Add(gtx.Ops)
 		st.Pop()
 		return layout.Dimensions{Size: size}
 	}

@@ -1,5 +1,5 @@
 // Package group provides the Patterns Group pattern: a hairline drawn
-// around related components so the eye chunks them, optionally labelled.
+// around related components so the eye chunks them, optionally titled.
 //
 // A group divides the page. It is drawn at the level of the surface it is
 // in and takes that surface's own fill — it paints nothing inside itself,
@@ -22,7 +22,7 @@
 // short and free of opaque configuration — copy it into your own app and
 // modify as needed.
 //
-// Apart from its own label a group draws no text: the Content slots are
+// Apart from its own title a group draws no text: the Content slots are
 // caller-supplied layout.Widgets, so the typeface of anything inside a
 // group is settled by whoever builds them. Nil slots are dropped from the
 // stack entirely, and the S3 gaps fall only between the slots that
@@ -55,22 +55,22 @@ import (
 
 // Props configures a Group.
 type Props struct {
-	// Title names what the group holds. Empty leaves the group unlabelled
-	// and its hairline unbroken.
+	// Title names what the group holds. Empty leaves the group without a
+	// title and its hairline unbroken.
 	//
 	// It is drawn top-leading, inside the hairline, as the first row of
 	// the group's own stack — the platform's current idiom for a section
-	// header over a bordered container. A label cut into the top line is
+	// header over a bordered container. A title cut into the top line is
 	// the fieldset legend's idiom, which has no native counterpart here
 	// and does not survive a Lg corner radius.
 	Title string
 
 	// Content is what the group holds, stacked top to bottom under the
-	// label with S3 gaps. Nil entries are dropped.
+	// title with S3 gaps. Nil entries are dropped.
 	Content []layout.Widget
 
 	// Shaper is an explicit per-instance override of the text shaper.
-	// Leave it nil in normal use: the group then shapes its label with the
+	// Leave it nil in normal use: the group then shapes its title with the
 	// theme's shaper, which is built once for the process and shared by
 	// every component reading that typography.
 	//
@@ -91,7 +91,7 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	label   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -107,7 +107,7 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 					color:   n.First,
 					spacing: n.Second,
 					radius:  n.Third,
-					label:   typ.LabelLarge,
+					title:   typ.LabelLarge,
 					shaper:  typ.Shaper(),
 				}
 			},
@@ -118,7 +118,7 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 		if shaper == nil {
 			shaper = tok.shaper
 		}
-		return Render(shaper, props, tok.color, tok.spacing, tok.radius, tok.label)
+		return Render(shaper, props, tok.color, tok.spacing, tok.radius, tok.title)
 	})
 }
 
@@ -126,20 +126,20 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 // Intended for golden-image testing and static demonstrations; production
 // code should use Group.
 //
-// label is the LabelLarge role's whole text style — typeface, weight, size
+// title is the LabelLarge role's whole text style — typeface, weight, size
 // and line height all reach the shaper, exactly as they do on the live
 // path. A group with no Title never asks the shaper anything, so a nil
-// shaper is only an error for a labelled one.
+// shaper is only an error for a group that has one.
 func Render(
 	shaper *text.Shaper,
 	props Props,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		return draw(gtx, shaper, props, colors, sp, rad, label)
+		return draw(gtx, shaper, props, colors, sp, rad, title)
 	}
 }
 
@@ -150,7 +150,7 @@ func draw(
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	rad tokens.RadiusScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
 	r := gtx.Dp(unit.Dp(rad.Lg))
@@ -165,7 +165,7 @@ func draw(
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		ws := make([]layout.Widget, 0, len(props.Content)+1)
 		if props.Title != "" {
-			ws = append(ws, labelWidget(shaper, props.Title, label, vgcolor.Flatten(colors.SecondaryLabel, plane)))
+			ws = append(ws, titleWidget(shaper, props.Title, title, vgcolor.Flatten(colors.SecondaryLabel, plane)))
 		}
 		ws = append(ws, props.Content...)
 		return stack(gtx, gap, ws...)
@@ -174,12 +174,12 @@ func draw(
 	return layout.Dimensions{Size: size}
 }
 
-// labelWidget draws the group's own label: the LabelLarge role in the
-// platform's secondary label, which is the strength every understated label
-// in this system is set in. It is not the accent — a group wears no role —
-// and not the full-strength label, which would give a section header the
-// weight of the content it names.
-func labelWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground color.NRGBA) layout.Widget {
+// titleWidget draws the group's own title: the LabelLarge role in the
+// platform's secondary label, which is the strength this system's
+// understated text is set in. It is not the accent — a group wears no
+// role — and not the full-strength label, which would give a section
+// header the weight of the content it names.
+func titleWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		m := op.Record(gtx.Ops)
 		paint.ColorOp{Color: foreground}.Add(gtx.Ops)

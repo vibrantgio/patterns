@@ -272,7 +272,7 @@ type Props struct {
 	// Actions are the footer's, right-aligned in the order given and each
 	// laid out in the box the footer owns — the platform's measured dialog
 	// button width, see [dialogButtonWDp]. A caller hands over an action and
-	// not a width; an action whose label does not fit the box widens itself
+	// not a width; an action whose title does not fit the box widens itself
 	// and nothing else.
 	Actions []layout.Widget
 
@@ -818,11 +818,11 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 // this footer's gap (SpacingScale.S2) and the 20 its surface inset (S5), so
 // the width is the one number of that footer the pattern did not already
 // spend. It is the platform's minimum for a dialog button, which both of
-// those labels are under, so the two stand equal.
+// those titles are under, so the two stand equal.
 //
 // It is a budget and not a cap. An action drawn in a box this wide takes the
-// 74 when its label fits; a label that does not fit widens its button by the
-// label's own measure alone, components/button reporting the wider box
+// 74 when its title fits; a title that does not fit widens its button by the
+// title's own measure alone, components/button reporting the wider box
 // rather than eliding into this one. So a footer of short answers is a row
 // of equal buttons and a long answer beside them is exactly as wide as it
 // has to be.
@@ -908,7 +908,7 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 // The box is stated as the MAXIMUM alone, the minimum released, because a
 // components/button fills the width it is given: a minimum of wPx would let
 // the flex hand it the whole row. Given the box and no more, it draws the
-// box, or the wider one its own label measures.
+// box, or the wider one its own title measures.
 func actionBox(a layout.Widget, wPx int) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min = image.Point{}

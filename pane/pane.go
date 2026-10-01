@@ -74,7 +74,7 @@
 // control that brings the pane back must stand somewhere that survives the
 // pane — the window's own chrome row — and the two are the two halves of one
 // switch rather than duplicates of one control. This package draws neither:
-// which figure, which label and where the recalling half stands are the
+// which figure, which title and where the recalling half stands are the
 // window's business. What the package fixes is the geometry both halves
 // stand on.
 //

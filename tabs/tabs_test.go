@@ -58,29 +58,29 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// tabLabels names the three tabs in document order. Latin text in Roboto
+// tabTitles names the three tabs in document order. Latin text in Roboto
 // rasterises identically on every machine with DeterministicShaper, so this
 // stays ASCII — no symbol reaches a stored image.
 //
-// They are short on purpose. A tab cell is Rigid and sized to its label plus
-// 2×S3 of padding, so three long labels would run off the 240 px frame; these
+// They are short on purpose. A tab cell is Rigid and sized to its title plus
+// 2×S3 of padding, so three long titles would run off the 240 px frame; these
 // three leave the strip comfortably inside it.
-var tabLabels = []string{"Preview", "Code", "Notes"}
+var tabTitles = []string{"Preview", "Code", "Notes"}
 
 // threeTabs returns a deterministic three-tab fixture. The per-tab content
 // colours are unrelated to the theme so the same fixture is reused for the
-// light and dark goldens; the labels carry the typography.
+// light and dark goldens; the titles carry the typography.
 func threeTabs() []tabs.Tab {
 	return []tabs.Tab{
-		{Title: tabLabels[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
-		{Title: tabLabels[1], Content: contentRect(color.NRGBA{R: 0x40, G: 0xc0, B: 0x60, A: 0xff})},
-		{Title: tabLabels[2], Content: contentRect(color.NRGBA{R: 0x40, G: 0x70, B: 0xff, A: 0xff})},
+		{Title: tabTitles[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
+		{Title: tabTitles[1], Content: contentRect(color.NRGBA{R: 0x40, G: 0xc0, B: 0x60, A: 0xff})},
+		{Title: tabTitles[2], Content: contentRect(color.NRGBA{R: 0x40, G: 0x70, B: 0xff, A: 0xff})},
 	}
 }
 
 func singleTab() []tabs.Tab {
 	return []tabs.Tab{
-		{Title: tabLabels[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
+		{Title: tabTitles[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
 	}
 }
 
@@ -208,11 +208,11 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 }
 
 // TestTabsArrowAndHomeEndWrapAndFocus drives the WAI-ARIA tab pattern
-// end-to-end. A tab cell is its label plus 2×S3 = 24 px of horizontal
+// end-to-end. A tab cell is its title plus 2×S3 = 24 px of horizontal
 // padding, never narrower than that padding alone, and stripH = 36 px (the
 // Comfortable control height; PxPerDp = 1). Tab 0 is "Preview", so it
 // is wider than the 24 px minimum and starts at x = 0 — a pointer click at
-// (12, 20) lands squarely inside it whatever the label.
+// (12, 20) lands squarely inside it whatever the title.
 //
 // Focus-follows-selection is verified using the "Enter trick": each
 // arrow / Home / End press is followed by a Press+Release of NameReturn

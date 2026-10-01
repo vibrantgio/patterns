@@ -152,7 +152,7 @@ func TestShellThreeColumnTabTraversal(t *testing.T) {
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
-				{Title: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
+				{Title: navLinkTitles[0], OnClick: func(_ layout.Context) {}},
 			},
 			Shaper: shaper,
 		},

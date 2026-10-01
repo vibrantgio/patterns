@@ -45,10 +45,10 @@ import (
 
 // ctaIntrinsicWidth is the minimum CTA cell width in dp. A CTA cell is at
 // least this wide, so components/button's "fill available Max" sizing produces a
-// deliberate footprint for a short label rather than a button the width of the
+// deliberate footprint for a short title rather than a button the width of the
 // word in it, and the locally-rendered outlined twin lines up beside it.
-// A label that needs more room gets it: [ctaGtx] measures the label first and
-// widens the cell to label + 2×PaddingX, up to whatever the row can give.
+// A title that needs more room gets it: [ctaGtx] measures the title first and
+// widens the cell to title + 2×PaddingX, up to whatever the row can give.
 const ctaIntrinsicWidth = unit.Dp(120)
 
 // CTA describes a hero call-to-action. Title populates the button title and
@@ -81,7 +81,7 @@ type Props struct {
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
 	// it nil in normal use: the hero then shapes its eyebrow, title,
-	// subtitle and CTA labels with the theme's shaper (Typography.Shaper()),
+	// subtitle and CTA titles with the theme's shaper (Typography.Shaper()),
 	// which is built once for the process and shared by every component
 	// reading that typography — the cache lives behind the Typography value,
 	// so it survives the copy this component's map function makes of it.
@@ -101,7 +101,7 @@ type resolvedTokens struct {
 	eyebrow  tokens.TextStyle // the LabelSmall role the kicker is set in
 	title    tokens.TextStyle // the DisplaySmall role
 	subtitle tokens.TextStyle // the BodyLarge role
-	label    tokens.TextStyle // the LabelLarge role (CTA labels)
+	ctaTitle tokens.TextStyle // the LabelLarge role (CTA titles)
 	density  tokens.Density   // CTA control height and inner padding
 	shaper   *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -127,7 +127,7 @@ func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 					eyebrow:  typ.LabelSmall,
 					title:    typ.DisplaySmall,
 					subtitle: typ.BodyLarge,
-					label:    typ.LabelLarge,
+					ctaTitle: typ.LabelLarge,
 					density:  n.Fifth,
 					shaper:   typ.Shaper(),
 				}
@@ -165,7 +165,7 @@ func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 //
 // typo supplies the four roles the hero draws — LabelSmall for the
 // eyebrow, DisplaySmall for the title, BodyLarge for the subtitle,
-// LabelLarge for the CTA labels — whole, so typeface, weight and line
+// LabelLarge for the CTA titles — whole, so typeface, weight and line
 // height reach the shaper exactly as they do on the live path. A pattern
 // that spends more than one role takes the whole tokens.Typography rather
 // than a role's tokens.TextStyle each: the roles it picks stay its own
@@ -189,7 +189,7 @@ func Render(
 		eyebrow:  typo.LabelSmall,
 		title:    typo.DisplaySmall,
 		subtitle: typo.BodyLarge,
-		label:    typo.LabelLarge,
+		ctaTitle: typo.LabelLarge,
 		density:  d,
 	}
 	return func(gtx layout.Context) layout.Dimensions {
@@ -256,33 +256,33 @@ func textColumn(
 //
 // The foreground is the platform's secondary label, flattened onto the
 // content the hero is printed on.
-func eyebrowWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
+func eyebrowWidget(shaper *text.Shaper, eyebrow string, tok resolvedTokens) layout.Widget {
 	foreground := vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground)
-	return textWidget(shaper, label, foreground, tok.eyebrow, font.Normal)
+	return textWidget(shaper, eyebrow, foreground, tok.eyebrow, font.Normal)
 }
 
 // titleWidget renders the DisplaySmall-role title in the platform's label.
 // A zero style weight falls back to SemiBold.
-func titleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
+func titleWidget(shaper *text.Shaper, title string, tok resolvedTokens) layout.Widget {
+	return textWidget(shaper, title, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
 }
 
 // subtitleWidget renders the BodyLarge-role subtitle in the low-contrast
 // text step (neutral 700).
-func subtitleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.subtitle, font.Normal)
+func subtitleWidget(shaper *text.Shaper, subtitle string, tok resolvedTokens) layout.Widget {
+	return textWidget(shaper, subtitle, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.subtitle, font.Normal)
 }
 
-func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
+func textWidget(shaper *text.Shaper, txt string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		if label == "" {
+		if txt == "" {
 			return layout.Dimensions{}
 		}
 		mColor := op.Record(gtx.Ops)
 		paint.ColorOp{Color: fg}.Add(gtx.Ops)
 		material := mColor.Stop()
 		wl := typeset.Label(style, 2)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), label, material)
+		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), txt, material)
 	}
 }
 
@@ -314,16 +314,16 @@ func ctaRowWidget(
 
 // primaryCTAWidget renders the Primary CTA as a components/button filled visual,
 // wrapped in widget.Clickable when a click target is provided. Sizing is
-// intrinsic — the button shrinks to its label rather than filling the row.
-func primaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, click *widget.Clickable) layout.Widget {
-	rendered := button.Render(shaper, label, tok.color, tok.spacing, tok.radius, tok.label, tok.density, button.RenderState{})
+// intrinsic — the button shrinks to its title rather than filling the row.
+func primaryCTAWidget(shaper *text.Shaper, title string, tok resolvedTokens, click *widget.Clickable) layout.Widget {
+	rendered := button.Render(shaper, title, tok.color, tok.spacing, tok.radius, tok.ctaTitle, tok.density, button.RenderState{})
 	return func(gtx layout.Context) layout.Dimensions {
-		cgtx := ctaGtx(gtx, shaper, label, tok)
+		cgtx := ctaGtx(gtx, shaper, title, tok)
 		if click == nil {
 			return rendered(cgtx)
 		}
 		return click.Layout(cgtx, func(gtx layout.Context) layout.Dimensions {
-			semantic.LabelOp(label).Add(gtx.Ops)
+			semantic.LabelOp(title).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
 			dims := rendered(gtx)
 			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
@@ -338,16 +338,16 @@ func primaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, cli
 // hand-painted lookalike. The hero drew its own before the platform's set
 // answered for it, and the geometry it was mirroring is components/button's
 // anyway.
-func secondaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, click *widget.Clickable) layout.Widget {
-	draw := button.Render(shaper, label, tok.color, tok.spacing, tok.radius, tok.label, tok.density,
+func secondaryCTAWidget(shaper *text.Shaper, title string, tok resolvedTokens, click *widget.Clickable) layout.Widget {
+	draw := button.Render(shaper, title, tok.color, tok.spacing, tok.radius, tok.ctaTitle, tok.density,
 		button.RenderState{Emphasis: button.Tonal, Surface: tok.color.ControlBackground})
 	return func(gtx layout.Context) layout.Dimensions {
-		cgtx := ctaGtx(gtx, shaper, label, tok)
+		cgtx := ctaGtx(gtx, shaper, title, tok)
 		if click == nil {
 			return draw(cgtx)
 		}
 		return click.Layout(cgtx, func(gtx layout.Context) layout.Dimensions {
-			semantic.LabelOp(label).Add(gtx.Ops)
+			semantic.LabelOp(title).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
 			dims := draw(gtx)
 			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)
@@ -358,15 +358,15 @@ func secondaryCTAWidget(shaper *text.Shaper, label string, tok resolvedTokens, c
 
 // ctaGtx sizes a CTA cell: [ctaIntrinsicWidth] as the floor, so the two CTAs
 // — both components/button visuals, which fill their Max.X — share a
-// deterministic footprint inside the CTA row, and label + 2×PaddingX when the
-// label needs more than that, so no CTA is ever ellipsised by its own cell.
-// The row's available width caps both: a label too long for the hero still
+// deterministic footprint inside the CTA row, and title + 2×PaddingX when the
+// title needs more than that, so no CTA is ever ellipsised by its own cell.
+// The row's available width caps both: a title too long for the hero still
 // truncates, but only against the hero, never against a constant.
-func ctaGtx(gtx layout.Context, shaper *text.Shaper, label string, tok resolvedTokens) layout.Context {
+func ctaGtx(gtx layout.Context, shaper *text.Shaper, title string, tok resolvedTokens) layout.Context {
 	avail := gtx.Constraints.Max.X
 
 	w := gtx.Dp(ctaIntrinsicWidth)
-	if need := ctaLabelWidth(gtx, shaper, label, tok) + 2*gtx.Dp(unit.Dp(tok.density.PaddingX)); need > w {
+	if need := ctaTitleWidth(gtx, shaper, title, tok) + 2*gtx.Dp(unit.Dp(tok.density.PaddingX)); need > w {
 		w = need
 	}
 	if avail > 0 && w > avail {
@@ -380,16 +380,16 @@ func ctaGtx(gtx layout.Context, shaper *text.Shaper, label string, tok resolvedT
 	return gtx
 }
 
-// ctaLabelWidth is the width label wants on one line in the CTA's type role,
-// measured with the constraints off so the answer is the label's own and not
+// ctaTitleWidth is the width title wants on one line in the CTA's type role,
+// measured with the constraints off so the answer is the title's own and not
 // the cell's. The ops are recorded and dropped; only the measurement is kept.
-func ctaLabelWidth(gtx layout.Context, shaper *text.Shaper, label string, tok resolvedTokens) int {
+func ctaTitleWidth(gtx layout.Context, shaper *text.Shaper, title string, tok resolvedTokens) int {
 	mgtx := gtx
 	mgtx.Constraints = layout.Constraints{Max: image.Pt(1<<20, 1<<20)}
 
-	wl := typeset.Label(tok.label, 1)
+	wl := typeset.Label(tok.ctaTitle, 1)
 	rec := op.Record(gtx.Ops)
-	dims := typeset.Layout(mgtx, shaper, wl, typeset.Font(tok.label, font.Normal), unit.Sp(tok.label.Size), label, op.CallOp{})
+	dims := typeset.Layout(mgtx, shaper, wl, typeset.Font(tok.ctaTitle, font.Normal), unit.Sp(tok.ctaTitle.Size), title, op.CallOp{})
 	rec.Stop()
 	return dims.Size.X
 }

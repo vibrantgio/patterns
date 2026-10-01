@@ -58,29 +58,29 @@ func testIcon() icons.Painter {
 	}
 }
 
-// itemLabels names the navigation items in document order, twenty deep so
+// itemTitles names the navigation items in document order, twenty deep so
 // the overflow goldens read as distinct rows rather than copies and so that
 // a rail of them overruns the test frame at the platform's 20 dp row.
 // Latin text in Roboto rasterises identically on every machine via
 // DeterministicShaper; ASCII only — no symbol reaches a stored image.
 //
 // They are short because the expanded rail is 220 px wide and a row is the
-// icon, a gap and a MaxLines:1 label: a longer name is ellipsized, not
-// wrapped. The collapsed rail drops the label entirely, which is what makes
+// icon, a gap and a MaxLines:1 title: a longer name is ellipsized, not
+// wrapped. The collapsed rail drops the title entirely, which is what makes
 // the collapsed goldens still meaningful.
-var itemLabels = []string{
+var itemTitles = []string{
 	"Overview", "Tokens", "Colour", "Type", "Density", "Motion",
 	"Elevation", "Icons", "Layout", "Forms", "Tables", "Charts",
 	"Lists", "Menus", "Panes", "Sheets", "Toasts", "Badges",
 	"Fields", "Buttons",
 }
 
-// navItems returns n items with the default icon, labelled in order, and the
+// navItems returns n items with the default icon, titled in order, and the
 // i'th marked Active when i == activeIdx (activeIdx < 0 marks none).
 func navItems(n, activeIdx int) []sidebar.Item {
 	out := make([]sidebar.Item, n)
 	for i := range out {
-		out[i] = sidebar.Item{Icon: testIcon(), Title: itemLabels[i], OnClick: func(_ layout.Context) {}}
+		out[i] = sidebar.Item{Icon: testIcon(), Title: itemTitles[i], OnClick: func(_ layout.Context) {}}
 		out[i].Active = i == activeIdx
 	}
 	return out
@@ -94,7 +94,7 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 }
 
 // TestSidebarGolden records or diffs the three Measurable goldens. The icon
-// is a fixed colour square so it renders identically across themes; the labels
+// is a fixed colour square so it renders identically across themes; the titles
 // carry the typography, and light-collapsed is the assertion that the
 // collapsed rail drops them.
 func TestSidebarGolden(t *testing.T) {
@@ -214,9 +214,9 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 	var fired [3]int
 	props := sidebar.Props{
 		Items: []sidebar.Item{
-			{Icon: testIcon(), Title: itemLabels[0], OnClick: func(_ layout.Context) { fired[0]++ }},
-			{Icon: testIcon(), Title: itemLabels[1], OnClick: func(_ layout.Context) { fired[1]++ }},
-			{Icon: testIcon(), Title: itemLabels[2], OnClick: func(_ layout.Context) { fired[2]++ }},
+			{Icon: testIcon(), Title: itemTitles[0], OnClick: func(_ layout.Context) { fired[0]++ }},
+			{Icon: testIcon(), Title: itemTitles[1], OnClick: func(_ layout.Context) { fired[1]++ }},
+			{Icon: testIcon(), Title: itemTitles[2], OnClick: func(_ layout.Context) { fired[2]++ }},
 		},
 		Collapsed: rx.Of(false),
 		Shaper:    defaultShaper(t),
@@ -291,7 +291,7 @@ func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	items := make([]sidebar.Item, n)
 	for i := range items {
 		i := i
-		items[i] = sidebar.Item{Icon: indexIcon(i), Title: itemLabels[i], OnClick: func(_ layout.Context) { fired[i]++ }}
+		items[i] = sidebar.Item{Icon: indexIcon(i), Title: itemTitles[i], OnClick: func(_ layout.Context) { fired[i]++ }}
 	}
 	props := sidebar.Props{Items: items, Collapsed: rx.Of(false), Shaper: defaultShaper(t)}
 	w := liveWidget(t, sidebar.Sidebar(rx.Of(theme.Default()), props))
@@ -402,7 +402,7 @@ func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 	var toggleCount int
 	props := sidebar.Props{
 		Items: []sidebar.Item{
-			{Icon: testIcon(), Title: itemLabels[0], OnClick: func(_ layout.Context) {}},
+			{Icon: testIcon(), Title: itemTitles[0], OnClick: func(_ layout.Context) {}},
 		},
 		Collapsed:        rx.Of(false),
 		OnToggleCollapse: func(_ layout.Context) { toggleCount++ },
@@ -490,7 +490,7 @@ func TestSidebarOverflowGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			items := make([]sidebar.Item, n)
 			for i := range items {
-				items[i] = sidebar.Item{Icon: indexIcon(i), Title: itemLabels[i], OnClick: func(_ layout.Context) {}}
+				items[i] = sidebar.Item{Icon: indexIcon(i), Title: itemTitles[i], OnClick: func(_ layout.Context) {}}
 			}
 			items[n-1].Active = true
 			props := sidebar.Props{
@@ -552,7 +552,7 @@ func sectionItems() []sidebar.Item {
 }
 
 // TestSidebarSectionGolden records or diffs the rail as the platform draws
-// one: rows of a symbol, a label and a count, and a second run headed by a
+// one: rows of a symbol, a title and a count, and a second run headed by a
 // small label with air above it and no line.
 func TestSidebarSectionGolden(t *testing.T) {
 	shaper := defaultShaper(t)
@@ -576,11 +576,11 @@ func TestSidebarSectionGolden(t *testing.T) {
 
 // TestSidebarRowStandsInTheMeasuredColumns reads the three parts of a row off
 // a rendered rail and holds each to the column the platform draws it in:
-// the symbol's square at SymbolInset, the label's first column at TitleInset,
+// the symbol's square at SymbolInset, the title's first column at TitleInset,
 // and the count's trailing edge CountInset in from the rail's.
 //
 // The symbol is a flat blue square, so its own columns are told from the text
-// by colour rather than by position; the label and the count are read as the
+// by colour rather than by position; the title and the count are read as the
 // drawn columns either side of it.
 func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	shaper := defaultShaper(t)
@@ -623,10 +623,10 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 			symMin, wantSym, sidebar.SymbolInset, sidebar.SymbolBox)
 	}
 	if textMin < int(sidebar.TitleInset) {
-		t.Errorf("the label starts at x=%d, before TitleInset %v", textMin, sidebar.TitleInset)
+		t.Errorf("the title starts at x=%d, before TitleInset %v", textMin, sidebar.TitleInset)
 	}
 	if textMin > int(sidebar.TitleInset)+2 {
-		t.Errorf("the label starts at x=%d, want TitleInset %v or the glyph's own bearing past it", textMin, sidebar.TitleInset)
+		t.Errorf("the title starts at x=%d, want TitleInset %v or the glyph's own bearing past it", textMin, sidebar.TitleInset)
 	}
 	// The count is placed by its DRAWN pixels: its last covered column is
 	// CountInset in from the rail's trailing edge exactly, the face's own
@@ -670,7 +670,7 @@ func TestSidebarSectionIsPartedByAirAlone(t *testing.T) {
 
 // TestSidebarSymbolWearsTheMeasuredColour reads the row's symbol off a
 // rendered rail and holds it to the platform's own reading: black in light
-// and white in dark, stronger than the label standing beside it, and the
+// and white in dark, stronger than the title standing beside it, and the
 // pill's own foreground on the selected row.
 //
 // The mark is the icon set's folder — the very mark the reference capture
@@ -767,8 +767,8 @@ func TestSidebarDrawsNoTrailingLine(t *testing.T) {
 }
 
 // TestTheRailDrawsThePlatformsTwoPills reads both pill states off a rendered
-// rail in both appearances: the accent pill under a white label while the
-// rail's list holds the keyboard, and the grey pill under the label in the
+// rail in both appearances: the accent pill under a white title while the
+// rail's list holds the keyboard, and the grey pill under the title in the
 // accent colour while it does not.
 //
 // Both are measured — the accent pill off voicememos-sidebar-{light,dark}.png
@@ -792,8 +792,8 @@ func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
 			// not a test shape.
 			props := sidebar.Props{
 				Items: []sidebar.Item{
-					{Icon: icons.Mark(icons.Folder), Title: itemLabels[0], Active: true, OnClick: func(layout.Context) {}},
-					{Icon: icons.Mark(icons.Folder), Title: itemLabels[1], OnClick: func(layout.Context) {}},
+					{Icon: icons.Mark(icons.Folder), Title: itemTitles[0], Active: true, OnClick: func(layout.Context) {}},
+					{Icon: icons.Mark(icons.Folder), Title: itemTitles[1], OnClick: func(layout.Context) {}},
 				},
 				Collapsed: rx.Of(false),
 				Shaper:    shaper,
@@ -833,7 +833,7 @@ func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
 			held := capture(t)
 
 			// The pill's own fill, read well inside it and clear of the
-			// symbol and the label: the row's trailing half, which carries
+			// symbol and the title: the row's trailing half, which carries
 			// no count in these items.
 			x := expandedW - int(sidebar.SelectionInset) - 4
 			y := itemMid(0)
@@ -869,7 +869,7 @@ func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
 				}
 			}
 
-			// The label on each pill: the pixel of the label's own run
+			// The title on each pill: the pixel of the title's own run
 			// standing furthest from the fill under it, which is the
 			// glyph's plateau.
 			for _, c := range []struct {

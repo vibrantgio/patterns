@@ -65,7 +65,7 @@ func iconFill(c color.NRGBA) layout.Widget {
 const featureBody = "Every token flows from one theme value, so a change lands everywhere at once."
 
 // item returns an Item with the deterministic icon fill and real text: Latin
-// text in Roboto rasterises identically on every machine, so real labels are
+// text in Roboto rasterises identically on every machine, so real text is
 // safe in goldens.
 func item(title string) feature.Item {
 	return feature.Item{

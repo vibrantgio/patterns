@@ -333,25 +333,25 @@ func iconCellWidget(icon layout.Widget, tok resolvedTokens) layout.Widget {
 
 // titleWidget renders the title in the TitleMedium role in Text. A zero
 // style weight falls back to SemiBold.
-func titleWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
+func titleWidget(shaper *text.Shaper, title string, tok resolvedTokens) layout.Widget {
+	return textWidget(shaper, title, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
 }
 
 // bodyWidget renders the body in the BodyMedium role in the low-contrast
 // text step (neutral 700).
-func bodyWidget(shaper *text.Shaper, label string, tok resolvedTokens) layout.Widget {
-	return textWidget(shaper, label, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.body, font.Normal)
+func bodyWidget(shaper *text.Shaper, body string, tok resolvedTokens) layout.Widget {
+	return textWidget(shaper, body, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.body, font.Normal)
 }
 
-// textWidget renders a wrapped label in the supplied colour and text
+// textWidget renders wrapped text in the supplied colour and text
 // style. The style's typeface, weight, size and line height are honoured;
 // a zero style weight falls back to fallbackWeight and a zero line height
 // stays at the shaper's default. Laid out through theme/typeset, so the
 // role's line height is the height of each line box rather than a value
 // widget.Label would spend only on the gaps between wrapped lines.
-func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
+func textWidget(shaper *text.Shaper, txt string, fg color.NRGBA, style tokens.TextStyle, fallbackWeight font.Weight) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		if label == "" {
+		if txt == "" {
 			return layout.Dimensions{}
 		}
 		mColor := op.Record(gtx.Ops)
@@ -359,7 +359,7 @@ func textWidget(shaper *text.Shaper, label string, fg color.NRGBA, style tokens.
 		material := mColor.Stop()
 		f := typeset.Font(style, fallbackWeight)
 		wl := typeset.Label(style, 3)
-		return typeset.Layout(gtx, shaper, wl, f, unit.Sp(style.Size), label, material)
+		return typeset.Layout(gtx, shaper, wl, f, unit.Sp(style.Size), txt, material)
 	}
 }
 

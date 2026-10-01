@@ -58,7 +58,7 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // region (Props.Sections is not consulted); Footer and ContentMaxWidth
 // are taken from props, with Footer appended after the last section.
 //
-// label is the LabelLarge role's whole text style, which the page
+// title is the LabelLarge role's whole text style, which the page
 // spends on its navbar, and d is the density the navbar's own insets
 // derive from — the band it stands in is the platform's measured depth and
 // takes no density. Pass tokens.DefaultTypography.LabelLarge and
@@ -69,10 +69,10 @@ func RenderStackedPage(
 	sections []layout.Widget,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
-	nbW := navbar.Render(shaper, props.Navbar, colors, sp, label, d)
+	nbW := navbar.Render(shaper, props.Navbar, colors, sp, title, d)
 	list := &layout.List{Axis: layout.Vertical}
 	footer := props.Footer
 	maxW := props.ContentMaxWidth

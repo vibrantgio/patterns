@@ -52,11 +52,11 @@ const (
 	secondaryCTA = "Read docs"
 )
 
-// Both CTA labels stay short on purpose: ctaGtx clamps every CTA cell to
+// Both CTA titles stay short on purpose: ctaGtx clamps every CTA cell to
 // ctaIntrinsicWidth (120 dp) so the filled and outlined twins share a
-// footprint, and both button bodies then clamp the label to that width minus
-// 2×PaddingX and lay it out MaxLines:1 — so a label wider than roughly
-// 88 px is ellipsized, not grown into. These two labels fit, so the goldens
+// footprint, and both button bodies then clamp the title to that width minus
+// 2×PaddingX and lay it out MaxLines:1 — so a title wider than roughly
+// 88 px is ellipsized, not grown into. These two titles fit, so the goldens
 // record the hero rather than the clamp.
 
 // heroText returns the Props every case starts from: a title and a subtitle,
@@ -103,7 +103,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 // TestHeroGolden records or diffs the four Measurable goldens. The structural
 // variations — Visual slot presence, eyebrow kicker, dual CTA backgrounds —
 // distinguish the cases; the four text roles (DisplaySmall title, BodyLarge
-// subtitle, LabelSmall eyebrow, LabelLarge CTA labels) carry the typography.
+// subtitle, LabelSmall eyebrow, LabelLarge CTA titles) carry the typography.
 func TestHeroGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -185,23 +185,23 @@ func TestHeroLightDarkDiffer(t *testing.T) {
 	}
 }
 
-// TestLongCTALabelGrowsTheButton pins ctaIntrinsicWidth as a floor rather
-// than a cap: a label wider than the floor must grow the button rather than
+// TestLongCTATitleGrowsTheButton pins ctaIntrinsicWidth as a floor rather
+// than a cap: a title wider than the floor must grow the button rather than
 // being clipped to it.
 //
 // The measurement is the default CTA's own pixels: the widest unbroken run of
 // the accent fill on any scanline is the button's width, since the default
 // action is the only accent-filled block in a hero and sharpRadius keeps its
-// corners square. A short label must sit at the 120 dp floor; a long one must
-// be wider than the floor and wide enough for its label plus both paddings.
-func TestLongCTALabelGrowsTheButton(t *testing.T) {
+// corners square. A short title must sit at the 120 dp floor; a long one must
+// be wider than the floor and wide enough for its title plus both paddings.
+func TestLongCTATitleGrowsTheButton(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	fill := tokens.PlatformLight.DefaultButtonFill
 
-	ctaWidth := func(label string) int {
+	ctaWidth := func(title string) int {
 		p := heroText(shaper)
-		p.PrimaryCTA = &hero.CTA{Title: label}
+		p.PrimaryCTA = &hero.CTA{Title: title}
 		w := hero.Render(shaper, p, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 		img := golden.Capture(t, frameSize, scene(w, bg))
 		return widestRunOf(img, fill)
@@ -218,15 +218,15 @@ func TestLongCTALabelGrowsTheButton(t *testing.T) {
 	}
 
 	// Long enough to drive the width at the platform's 8 dp inset: the
-	// floor is 120 px and the label plus both insets has to beat it.
-	const longLabel = "Read the documentation"
-	long := ctaWidth(longLabel)
+	// floor is 120 px and the title plus both insets has to beat it.
+	const longTitle = "Read the documentation"
+	long := ctaWidth(longTitle)
 	if long <= floor {
-		t.Errorf("CTA labelled %q drew %d px wide, still at or under the %d px floor: the label is being clipped to the cell instead of sizing it",
-			longLabel, long, floor)
+		t.Errorf("CTA titled %q drew %d px wide, still at or under the %d px floor: the title is being clipped to the cell instead of sizing it",
+			longTitle, long, floor)
 	}
 	if long <= short {
-		t.Errorf("a long CTA label (%d px) is no wider than a short one (%d px)", long, short)
+		t.Errorf("a long CTA title (%d px) is no wider than a short one (%d px)", long, short)
 	}
 }
 

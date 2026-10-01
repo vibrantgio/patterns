@@ -145,11 +145,11 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 // static demonstrations; production code should use Accordion, which
 // reads the shaper and the same text style off the theme.
 //
-// label is the LabelLarge role's whole text style — typeface, weight,
+// title is the LabelLarge role's whole text style — typeface, weight,
 // size and line height all reach the shaper, exactly as they do on the
 // live path. Pass tokens.DefaultTypography.LabelLarge for the default
 // desktop look. There is no density parameter: an accordion sizes its
-// header from the label and its own layout constants, not from a
+// header from the title and its own layout constants, not from a
 // control height.
 func Render(
 	shaper *text.Shaper,
@@ -157,10 +157,10 @@ func Render(
 	open map[int]bool,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
-	label tokens.TextStyle,
+	title tokens.TextStyle,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		return drawAccordion(gtx, shaper, props, nil, open, colors, sp, label)
+		return drawAccordion(gtx, shaper, props, nil, open, colors, sp, title)
 	}
 }
 
@@ -291,12 +291,12 @@ func drawHeader(
 		plane := colors.ControlBackground
 		drawChevron(gtx, open, image.Pt(chevW, size.Y), vgcolor.Flatten(colors.SecondaryLabel, plane))
 
-		labelMaxW := size.X - chevW - padH
-		if labelMaxW > 0 {
-			labelGtx := gtx
-			labelGtx.Constraints.Min = image.Point{}
-			labelGtx.Constraints.Max.X = labelMaxW
-			labelGtx.Constraints.Max.Y = size.Y
+		titleMaxW := size.X - chevW - padH
+		if titleMaxW > 0 {
+			titleGtx := gtx
+			titleGtx.Constraints.Min = image.Point{}
+			titleGtx.Constraints.Max.X = titleMaxW
+			titleGtx.Constraints.Max.Y = size.Y
 
 			mColor := op.Record(gtx.Ops)
 			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, plane)}.Add(gtx.Ops)
@@ -307,16 +307,16 @@ func drawHeader(
 			// size-only style) fall back to the shaper's defaults.
 			f := typeset.Font(style, font.Normal)
 			wl := typeset.Label(style, 1)
-			mLabel := op.Record(gtx.Ops)
-			labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(style.Size), sec.Title, material)
-			labelCall := mLabel.Stop()
+			mTitle := op.Record(gtx.Ops)
+			titleDims := typeset.Layout(titleGtx, shaper, wl, f, unit.Sp(style.Size), sec.Title, material)
+			titleCall := mTitle.Stop()
 
-			offY := (size.Y - labelDims.Size.Y) / 2
+			offY := (size.Y - titleDims.Size.Y) / 2
 			if offY < 0 {
 				offY = 0
 			}
 			st := op.Offset(image.Pt(chevW, offY)).Push(gtx.Ops)
-			labelCall.Add(gtx.Ops)
+			titleCall.Add(gtx.Ops)
 			st.Pop()
 		}
 
