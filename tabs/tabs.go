@@ -1,11 +1,11 @@
 // Package tabs provides the Patterns Tabs pattern: a horizontal tab strip
 // with an underline in the platform's selection colour on the selected tab,
-// plus a content panel rendered below that shows the selected tab's
+// plus a content pane rendered below that shows the selected tab's
 // content.
 //
-// The two are different kinds of area. The panel is content and wears the
+// The two are different kinds of area. The pane is content and wears the
 // platform's content fill; the strip is a row of handles on it and wears the
-// platform's chrome material, parted from the panel by a separator seam —
+// platform's chrome material, parted from the pane by a separator seam —
 // which is how the platform tells a band of chrome from the document it caps
 // in either appearance.
 //
@@ -40,7 +40,7 @@ import (
 )
 
 // Tab is one entry in the tab strip. Content may be nil; a nil content
-// renders as an empty content panel when this tab is selected.
+// renders as an empty content pane when this tab is selected.
 type Tab struct {
 	Label   string
 	Content layout.Widget
@@ -238,7 +238,7 @@ func drawTabs(
 	d tokens.Density,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The panel plane first — the platform's content fill — then the strip
+	// The pane's surface first — the platform's content fill — then the strip
 	// band over it in the chrome material.
 	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
 
@@ -246,7 +246,7 @@ func drawTabs(
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	// The strip is a band of chrome capping the panel, so it wears the
+	// The strip is a band of chrome capping the pane, so it wears the
 	// platform's chrome material. In the light appearance that material is
 	// the content's white exactly, so the seam along the strip's foot is
 	// the whole of what parts the two there; it is drawn in either
@@ -268,10 +268,10 @@ func drawTabs(
 	drawStrip(stripGtx, shaper, props, clicks, selected, colors, sp, style)
 
 	if size.Y > stripH && selected >= 0 && selected < len(props.Tabs) && props.Tabs[selected].Content != nil {
-		panelSize := image.Pt(size.X, size.Y-stripH)
+		paneSize := image.Pt(size.X, size.Y-stripH)
 		st := op.Offset(image.Pt(0, stripH)).Push(gtx.Ops)
 		contentGtx := gtx
-		contentGtx.Constraints = layout.Exact(panelSize)
+		contentGtx.Constraints = layout.Exact(paneSize)
 		props.Tabs[selected].Content(contentGtx)
 		st.Pop()
 	}

@@ -58,10 +58,10 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// TestBoundsStandsInsideTheWindow reads the whole of the panel's geometry:
+// TestBoundsStandsInsideTheWindow reads the whole of the pane's geometry:
 // one margin in from the window's leading, top and bottom edges, the
 // asked-for width, and the content flush against it on the fourth side.
-// MEASURED, voicememos-multi-folder-2026-09-18.png: the panel at x 64-283,
+// MEASURED, voicememos-multi-folder-2026-09-18.png: the pane at x 64-283,
 // y 46-786 in a window at x 56-1031, y 38-794 — eight pixels of the
 // window's own plane on three sides and none on the fourth.
 func TestBoundsStandsInsideTheWindow(t *testing.T) {
@@ -70,7 +70,7 @@ func TestBoundsStandsInsideTheWindow(t *testing.T) {
 	got := pane.Bounds(gtx, windowSize, paneW, false)
 	want := image.Rect(pane.MarginDp, pane.MarginDp, pane.MarginDp+paneW, windowH-pane.MarginDp)
 	if got != want {
-		t.Errorf("the panel stands at %v, want %v — one margin inside the window's leading, top and bottom edges", got, want)
+		t.Errorf("the pane stands at %v, want %v — one margin inside the window's leading, top and bottom edges", got, want)
 	}
 }
 
@@ -116,7 +116,7 @@ func TestBoundsNeverTakesMoreThanHalfTheWindow(t *testing.T) {
 	gtx := ctx(&ops, narrow)
 	got := pane.Bounds(gtx, narrow, 400, false)
 	if want := narrow.X/2 - pane.MarginDp; got.Dx() != want {
-		t.Errorf("in a %d-wide window the panel took %d, want the half-window clamp less its margin, %d", narrow.X, got.Dx(), want)
+		t.Errorf("in a %d-wide window the pane took %d, want the half-window clamp less its margin, %d", narrow.X, got.Dx(), want)
 	}
 	for _, tc := range []struct {
 		what string
@@ -128,14 +128,14 @@ func TestBoundsNeverTakesMoreThanHalfTheWindow(t *testing.T) {
 	} {
 		sgtx := ctx(&ops, tc.size)
 		if got := pane.Bounds(sgtx, tc.size, paneW, false); !got.Empty() {
-			t.Errorf("a window with %s laid out a panel at %v", tc.what, got)
+			t.Errorf("a window with %s laid out a pane at %v", tc.what, got)
 		}
 	}
 }
 
 // TestStripHoldsTheWindowButtons pins the strip's arithmetic against the
 // run it is cut for. The buttons are measured from the window's own glass
-// and the strip from the panel's top edge, which is one margin inside that
+// and the strip from the pane's top edge, which is one margin inside that
 // glass, so the strip must reach past both of the buttons' edges and its
 // middle line must BE their centre line — that is what puts a control
 // standing in the strip level with them.
@@ -144,20 +144,20 @@ func TestStripHoldsTheWindowButtons(t *testing.T) {
 	buttonsBottom := buttonsTop + desktop.WindowButtonDiameter
 	stripTop, stripBottom := 0, pane.StripDp
 	if stripTop > buttonsTop {
-		t.Errorf("the strip begins at y=%d, below the buttons' top edge at y=%d — the panel's content would start under them", stripTop, buttonsTop)
+		t.Errorf("the strip begins at y=%d, below the buttons' top edge at y=%d — the pane's content would start under them", stripTop, buttonsTop)
 	}
 	if stripBottom < buttonsBottom {
-		t.Errorf("the strip ends at y=%d, above the buttons' bottom edge at y=%d — the panel's content would run under them", stripBottom, buttonsBottom)
+		t.Errorf("the strip ends at y=%d, above the buttons' bottom edge at y=%d — the pane's content would run under them", stripBottom, buttonsBottom)
 	}
 	if mid := pane.MarginDp + pane.StripDp/2; unit.Dp(mid) != pane.Buttons.Center {
 		t.Errorf("the strip's middle line is y=%d in the window and the buttons' is y=%v; a control centred in the strip would sit off their line", mid, pane.Buttons.Center)
 	}
 	// The band the window's other columns carry is the deeper number, and
-	// the panel's own top edge sits one margin inside it: MEASURED, the
-	// band runs 52 in voicememos-multi-folder-2026-09-18.png and the panel
+	// the pane's own top edge sits one margin inside it: MEASURED, the
+	// band runs 52 in voicememos-multi-folder-2026-09-18.png and the pane
 	// starts at row 8 of it.
 	if got, want := pane.MarginDp+pane.StripDp+pane.MarginDp, pane.BandDp; got != want {
-		t.Errorf("the panel's strip with a margin either side measures %d and the band %d; the panel's top edge does not sit inside the band", got, want)
+		t.Errorf("the pane's strip with a margin either side measures %d and the band %d; the pane's top edge does not sit inside the band", got, want)
 	}
 	if mid := pane.BandDp / 2; unit.Dp(mid) != pane.Buttons.Center {
 		t.Errorf("the band's middle line is y=%d and the buttons' is y=%v; a control centred in the band would sit off their line", mid, pane.Buttons.Center)
@@ -166,9 +166,9 @@ func TestStripHoldsTheWindowButtons(t *testing.T) {
 
 // TestStripStandsItsControlsAtTheTrailingCorner reads the band's own
 // arrangement: the leading skip is the lead in window coordinates less the
-// margin the panel already stands in, the drag fills the middle, and the
-// controls end one margin clear of the panel's trailing edge — which is
-// where the platform's own sidebar panel keeps its marks.
+// margin the pane already stands in, the drag fills the middle, and the
+// controls end one margin clear of the pane's trailing edge — which is
+// where the platform's own sidebar pane keeps its marks.
 func TestStripStandsItsControlsAtTheTrailingCorner(t *testing.T) {
 	const (
 		buttonsEnd = 90 // where the window's buttons end, in window coordinates
@@ -216,7 +216,7 @@ func TestStripStandsItsControlsAtTheTrailingCorner(t *testing.T) {
 	}
 }
 
-// TestRimAndShadowAreThePlatformsNames pins the panel's two boundaries to
+// TestRimAndShadowAreThePlatformsNames pins the pane's two boundaries to
 // the platform's measured materials rather than to a coverage solved
 // against the fill: the rim is opaque in both appearances, so nothing is
 // flattened, and the shadow is one peak the drawing spreads.
@@ -224,13 +224,13 @@ func TestRimAndShadowAreThePlatformsNames(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got, want := pane.RimColor(tc.colors), tc.colors.PaneRim; got != want {
-				t.Errorf("the panel's rim is %v, want the platform's measured rim %v", got, want)
+				t.Errorf("the pane's rim is %v, want the platform's measured rim %v", got, want)
 			}
 			if got := pane.RimColor(tc.colors); got.A != 0xff {
-				t.Errorf("the panel's rim has coverage %d, want an opaque answer — the measured pixel is the colour", got.A)
+				t.Errorf("the pane's rim has coverage %d, want an opaque answer — the measured pixel is the colour", got.A)
 			}
 			if got, want := pane.Shadow(tc.colors), tc.colors.PaneShadow; got != want {
-				t.Errorf("the panel's shadow is %v, want the platform's measured reading %v", got, want)
+				t.Errorf("the pane's shadow is %v, want the platform's measured reading %v", got, want)
 			}
 		})
 	}
@@ -248,12 +248,12 @@ func TestSurfaceIsTheChromeMaterial(t *testing.T) {
 	}
 }
 
-// TestThePanelDrawsARimOnEverySideAndNoSeam reads a drawn panel: one pixel
+// TestThePaneDrawsARimOnEverySideAndNoSeam reads a drawn pane: one pixel
 // of the platform's rim down every one of its four edges, the chrome
 // material one pixel inside each of them, the window's plane darkened by
-// the panel's shadow outside them, and nowhere a separator line — an inset
+// the pane's shadow outside them, and nowhere a separator line — an inset
 // object needs no seam, and the band is crossed by nothing.
-func TestThePanelDrawsARimOnEverySideAndNoSeam(t *testing.T) {
+func TestThePaneDrawsARimOnEverySideAndNoSeam(t *testing.T) {
 	for _, tc := range themeCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var bounds image.Rectangle
@@ -270,7 +270,7 @@ func TestThePanelDrawsARimOnEverySideAndNoSeam(t *testing.T) {
 
 			// Mid-run on each edge, clear of the corners' arcs: the rim, and
 			// the fill one pixel inside it. The band's own rows are read
-			// among them, because the panel is one object from its top edge
+			// among them, because the pane is one object from its top edge
 			// to its foot and the band crosses nothing.
 			midY := (bounds.Min.Y + bounds.Max.Y) / 2
 			midX := (bounds.Min.X + bounds.Max.X) / 2
@@ -286,31 +286,31 @@ func TestThePanelDrawsARimOnEverySideAndNoSeam(t *testing.T) {
 				{"bottom", midX, bounds.Max.Y - 1, 0, -1},
 			} {
 				if got := img.RGBAAt(probe.x, probe.y); !sameColor(got, rim) {
-					t.Errorf("the panel's %s edge at (%d,%d) draws %v, want the rim %v", probe.what, probe.x, probe.y, got, rim)
+					t.Errorf("the pane's %s edge at (%d,%d) draws %v, want the rim %v", probe.what, probe.x, probe.y, got, rim)
 				}
 				if got := img.RGBAAt(probe.x+probe.inX, probe.y+probe.inY); !sameColor(got, fill) {
-					t.Errorf("one pixel inside the panel's %s edge draws %v, want the chrome material %v — the rim is wider than a hairline", probe.what, got, fill)
+					t.Errorf("one pixel inside the pane's %s edge draws %v, want the chrome material %v — the rim is wider than a hairline", probe.what, got, fill)
 				}
 				if got := img.RGBAAt(probe.x, probe.y); sameColor(got, seam) && rim != seam {
-					t.Errorf("the panel's %s edge draws the separator %v; an inset panel is bounded by its rim, not by a seam", probe.what, seam)
+					t.Errorf("the pane's %s edge draws the separator %v; an inset pane is bounded by its rim, not by a seam", probe.what, seam)
 				}
 			}
 
-			// Outside the panel stands the window's own plane, and the
-			// shadow the panel casts on it: the column beside its leading
+			// Outside the pane stands the window's own surface, and the
+			// shadow the pane casts on it: the column beside its leading
 			// rim is not the bare plane. It is not told apart from the fill
 			// here, because in the dark appearance the platform's chrome
 			// material and its shadowed plane are two of 255 apart — which
 			// is why the boundary is the rim and not a step of fill.
 			outside := img.RGBAAt(bounds.Min.X-1, midY)
 			if sameColor(outside, plane) {
-				t.Errorf("the column beside the panel's leading rim draws the bare plane %v; the panel casts a shadow on it", plane)
+				t.Errorf("the column beside the pane's leading rim draws the bare surface %v; the pane casts a shadow on it", plane)
 			}
-			// Far from the panel the plane recovers: past the reach there is
+			// Far from the pane the surface recovers: past the reach there is
 			// no shadow left to see.
 			far := img.RGBAAt(bounds.Max.X+2*int(pane.Shadow(tc.colors).Reach), midY)
 			if !sameColor(far, plane) {
-				t.Errorf("twice the shadow's reach past the panel the window draws %v, want its bare plane %v", far, plane)
+				t.Errorf("twice the shadow's reach past the pane the window draws %v, want its bare surface %v", far, plane)
 			}
 		})
 	}
@@ -329,7 +329,7 @@ func sameColor(got color.RGBA, want color.NRGBA) bool {
 }
 
 // TestPaneGolden stores the pattern's own picture in both schemes: the
-// inset rounded panel with its rim and the shadow it casts, the window's
+// inset rounded pane with its rim and the shadow it casts, the window's
 // own plane showing around it, and a column standing inside it.
 func TestPaneGolden(t *testing.T) {
 	contents := func(c color.NRGBA) layout.Widget {

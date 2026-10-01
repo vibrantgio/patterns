@@ -42,7 +42,7 @@
 // affordance to nothing leaves a sidebar that cannot collapse.
 //
 // The rail draws no line down its trailing edge. The platform's sidebar is
-// an inset panel and what parts it from the content is the panel's own rim
+// an inset pane and what parts it from the content is the pane's own rim
 // and the shadow it casts, which patterns/pane draws; a hairline here would
 // be a second boundary inside the first.
 //
@@ -221,10 +221,10 @@ type Props struct {
 // Density.ControlHeight. SpacingScale tops out at S24 = 96 dp, so neither
 // width is a spacing-token field.
 //
-// MEASURED, voicememos-multi-folder-2026-09-18.png at 1x: the panel spans
+// MEASURED, voicememos-multi-folder-2026-09-18.png at 1x: the pane spans
 // x 64–283 inside a window standing at x 56–1031 — 220 columns, rim to rim.
 // reference/macos/controls.md carries the reading under "What the sidebar
-// panel measures".
+// pane measures".
 //
 // collapsedDp is NOT measured: no stored capture holds a collapsed sidebar,
 // so the 48 stands as the pattern's own until one does.
@@ -269,18 +269,18 @@ const (
 // They are this package's for the reason RowHeight is: a chrome rail's row is
 // not a content list's.
 //
-// MEASURED off voicememos-multi-folder-2026-09-18.png, the panel at x 64–283,
+// MEASURED off voicememos-multi-folder-2026-09-18.png, the pane at x 64–283,
 // and cross-checked against finder-window-untinted-dark.png and
 // voicememos-sidebar-dark.png. reference/macos/controls.md carries the
 // readings under "What a sidebar row measures".
 //
 //   - SymbolBox 24 and SymbolInset 17: the folder mark's drawn box runs
-//     x 83.0–103.0, centred on x=93.0, which is 29 in from the panel's x=64;
+//     x 83.0–103.0, centred on x=93.0, which is 29 in from the pane's x=64;
 //     Finder's narrower page mark stands on the same centre. A 24 dp square
 //     set 17 in centres on 29.
 //   - LabelInset 48: every row's name starts at x=112 or 113 against the
-//     panel's x=64. Finder's rows start 47 in.
-//   - CountInset 17: every count is drawn to x 266 or 267 against the panel's
+//     pane's x=64. Finder's rows start 47 in.
+//   - CountInset 17: every count is drawn to x 266 or 267 against the pane's
 //     trailing rim at x=283, and the selected row's count keeps that column.
 //   - SectionHeight 42: the row above the heading ends at y=161 and the row
 //     below it begins at y=203.
@@ -325,7 +325,7 @@ const (
 // everywhere else in the library.
 //
 // DisclosureInset 10: the rail has ONE trailing column — CountInset, 17 in
-// from the panel's trailing edge, which every count in the same capture is
+// from the pane's trailing edge, which every count in the same capture is
 // drawn to — and the heading's control stands in it. components/icons draws
 // the disclosure at 8 of the mark box's 24 units, centred
 // (marks/disclosure.svg: the drawing runs x 8 to 16 of the 24-unit box), so
@@ -714,7 +714,7 @@ func clickFor(st *liveState, i int) *gesture.Click {
 // at the icon rule's size for the density (icon.Size: the control's
 // inner content box), in what a toolbar draws its own symbols in.
 //
-// MEASURED, voicememos-multi-folder-2026-09-18.png: the panel's own bare marks
+// MEASURED, voicememos-multi-folder-2026-09-18.png: the pane's own bare marks
 // — a new-folder mark and this very toggle, standing at its top trailing
 // corner with no capsule, no fill and no rim — reach #4b4b4b at their darkest,
 // a floor a 1 px stroke at 1x cannot pass, against the #4d4d4d the band's own
@@ -845,7 +845,7 @@ func SectionStyle(t tokens.Typography) tokens.TextStyle { return t.LabelSmall }
 
 // SectionForeground is what a section's heading is drawn in: the platform's
 // secondary label, which the heading in the reference capture flattens to on
-// the panel's own fill to the byte in both appearances. The caller flattens it
+// the pane's own fill to the byte in both appearances. The caller flattens it
 // onto the fill.
 func SectionForeground(colors tokens.PlatformColors) color.NRGBA { return colors.SecondaryLabel }
 
@@ -1032,7 +1032,7 @@ func paintSymbolAt(gtx layout.Context, mark icons.Painter, size image.Point, x i
 //
 // What is placed is the count's LAST COVERED COLUMN, [CountInset] in from the
 // rail's trailing edge, not the trailing edge of its layout box: the platform
-// draws every count in the reference to x 266 or 267 against a panel rim at
+// draws every count in the reference to x 266 or 267 against a pane rim at
 // x 283, and those are drawn pixels. A face leaves a trailing side bearing
 // between its last stem and the end of its advance, so a box placed by its
 // own edge lands the digits that much short of the measured column. The run's

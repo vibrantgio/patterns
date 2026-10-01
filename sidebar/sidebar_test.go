@@ -744,8 +744,8 @@ func abs(v int) int {
 	return v
 }
 
-// TestSidebarDrawsNoTrailingLine holds the rail to the panel reading: the
-// platform's sidebar is an inset panel whose rim and shadow are the boundary,
+// TestSidebarDrawsNoTrailingLine holds the rail to the pane reading: the
+// platform's sidebar is an inset pane whose rim and shadow are the boundary,
 // so the rail itself draws nothing down its trailing edge. A hairline there
 // would be a second boundary inside the first.
 func TestSidebarDrawsNoTrailingLine(t *testing.T) {

@@ -42,7 +42,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 
 // contentRect returns a layout.Widget that fills its constraints with a
 // fixed colour. A per-tab distinct colour is used so swapping the
-// selected index produces a visible diff in the content panel of each
+// selected index produces a visible diff in the content pane of each
 // golden.
 func contentRect(c color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
@@ -130,17 +130,17 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	}
 }
 
-// TestTheStripIsPartedFromThePanel guards the pattern's two areas. The
-// panel is the platform's content fill; the strip is a band of chrome over
+// TestTheStripIsPartedFromThePane guards the pattern's two areas. The
+// pane is the platform's content fill; the strip is a band of chrome over
 // it, and in the light appearance the chrome material IS that white, so the
 // separator along the strip's foot is the whole of what parts the two
 // there. The claim is read off sampled pixels and never off token
 // arithmetic.
-func TestTheStripIsPartedFromThePanel(t *testing.T) {
+func TestTheStripIsPartedFromThePane(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
-	// An out-of-range selection draws no content, so the whole panel below
+	// An out-of-range selection draws no content, so the whole pane below
 	// the strip is the pattern's own fill and nothing else.
 	stripH := int(tokens.Comfortable.ControlHeight)
 	for _, tc := range []struct {
@@ -160,13 +160,13 @@ func TestTheStripIsPartedFromThePanel(t *testing.T) {
 				return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
 			}
 			// Right of the last tab cell the strip is bare band; the
-			// strip's last row is its seam; well below it the panel is
+			// strip's last row is its seam; well below it the pane is
 			// bare plane.
 			strip := at(frameSize.X-1, stripH/2)
 			seam := at(frameSize.X-1, stripH-1)
-			panel := at(frameSize.X-1, stripH+8)
-			if strip == panel && (seam == strip || seam == panel) {
-				t.Errorf("strip and panel render the same fill %v and no seam parts them; the strip owes its panel a fill or a seam", strip)
+			pane := at(frameSize.X-1, stripH+8)
+			if strip == pane && (seam == strip || seam == pane) {
+				t.Errorf("strip and pane render the same fill %v and no seam parts them; the strip owes its pane a fill or a seam", strip)
 			}
 			want := vgcolor.Flatten(tc.colors.Separator, tc.colors.SidebarMaterial)
 			if seam != [3]uint8{want.R, want.G, want.B} {
@@ -306,7 +306,7 @@ func densityTheme(d tokens.Density) theme.Theme {
 // TestTabsCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline (the static Render path is frozen at
 // tokens.Comfortable): the strip height drops from 36 to 28 dp
-// (ControlHeight) and the content panel grows by the difference.
+// (ControlHeight) and the content pane grows by the difference.
 func TestTabsCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := tabs.Props{Tabs: threeTabs(), Selected: rx.Of(0), Shaper: defaultShaper(t)}

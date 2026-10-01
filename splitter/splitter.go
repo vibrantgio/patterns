@@ -131,7 +131,7 @@ type Props struct {
 
 	// Rest is the colour the resting line paints instead of the seam over
 	// Surface, for a boundary that is not a seam: a pane's trailing edge,
-	// where what parts the two regions is the panel's own rim and the
+	// where what parts the two regions is the pane's own rim and the
 	// splitter rides that pixel rather than laying a second line beside it.
 	// The zero value — no colour — is the seam.
 	//

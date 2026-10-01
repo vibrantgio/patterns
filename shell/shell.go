@@ -44,7 +44,7 @@ type Layout int
 
 const (
 	// SidebarHeaderMain renders the sidebar as a PANE down the leading
-	// edge — an inset rounded panel with the platform's rim and the shadow
+	// edge — an inset rounded pane with the platform's rim and the shadow
 	// it casts, the window's own plane showing around it — a navbar band
 	// across the top of the content column beside it, and a main content
 	// slot below that band. The composition is [PaneFrame]'s.
@@ -56,7 +56,7 @@ const (
 	// times that.
 	SplitPane
 	// ThreeColumn renders a navbar across the full width of the top
-	// edge (unlike SidebarHeaderMain, where the sidebar's panel claims
+	// edge (unlike SidebarHeaderMain, where the sidebar's pane claims
 	// the full height and the band starts beside it), then a leading
 	// sidebar standing flush against the window's edge, a
 	// flexed main column, and a trailing aside column separated from
@@ -91,17 +91,17 @@ type Props struct {
 	Navbar  navbar.Props
 	Main    layout.Widget
 
-	// SidebarWidth is the panel's own width, rim to rim, under
+	// SidebarWidth is the pane's own width, rim to rim, under
 	// SidebarHeaderMain. Zero means [PaneWidthDp]. It is ignored by every
 	// other Layout, whose sidebar column stands flush against the window's
 	// edge and takes the width the slot itself reports.
 	SidebarWidth unit.Dp
 
-	// SidebarHidden sends the panel out of the window under
+	// SidebarHidden sends the pane out of the window under
 	// SidebarHeaderMain: it takes no width at all and the content column
 	// reflows from the window's own leading edge. The control that brings
 	// it back stands in the band, since a control travelling with the
-	// panel cannot be the one that recalls it.
+	// pane cannot be the one that recalls it.
 	SidebarHidden bool
 
 	// SplitPane slots. Left is the leading pane and Right the trailing
@@ -127,7 +127,7 @@ type Props struct {
 	// ThreeColumn slots. Sidebar, Navbar and Main are shared with
 	// SidebarHeaderMain (see above).
 	//
-	// Aside is the trailing column layout.Widget stream — a comments panel, an
+	// Aside is the trailing column layout.Widget stream — a comments pane, an
 	// inspector, or any other contextual surface. A nil Aside omits the
 	// column and its splitter entirely.
 	Aside rx.Observable[layout.Widget]
@@ -140,7 +140,7 @@ type Props struct {
 	// AsideWidth drives the width of the aside column as an absolute dp
 	// value. Unlike SplitRatio, a window resize keeps the aside at its
 	// width and lets the main column absorb the change — the right
-	// behaviour for annotation and inspector panels. Values are clamped
+	// behaviour for annotation and inspector panes. Values are clamped
 	// to [minAsideDp, maxAsideDp]. A nil AsideWidth is treated as a
 	// constant defaultAsideDp. External updates win only while the user
 	// is not dragging the splitter.
@@ -312,11 +312,11 @@ func staticSidebarHeaderMain(
 
 // composeSidebarHeaderMain hands the three slots to [PaneFrame], which is
 // the composition: the window's own plane under everything, the sidebar's
-// panel set one margin inside the window's leading, top and bottom edges,
+// pane set one margin inside the window's leading, top and bottom edges,
 // the navbar band across the content column at the platform's measured
-// depth, the main content under it and the panel's shadow cast last.
+// depth, the main content under it and the pane's shadow cast last.
 //
-// The frame lays its slots out in reading order — panel, band, main — which
+// The frame lays its slots out in reading order — pane, band, main — which
 // is the order Gio's focus group walks, so Tab traversal follows it.
 //
 // The window's plane is the platform's WindowBackground and the content

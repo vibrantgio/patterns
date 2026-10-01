@@ -16,52 +16,52 @@ import (
 )
 
 // PaneWidthDp is the width a leading pane takes when a caller names none:
-// the sidebar panel's own column, rim to rim. It is patterns/sidebar's
+// the sidebar pane's own column, rim to rim. It is patterns/sidebar's
 // ExpandedWidth and not a second statement of it — that package took the
-// reading and owns it, and a pane frame standing a sidebar in its panel
+// reading and owns it, and a pane frame standing a sidebar in its pane
 // cannot be a column wider or narrower than the column it holds.
 const PaneWidthDp = sidebar.ExpandedWidth
 
 // PaneFrame is the window composition a leading pane makes: the window's own
-// plane under everything, the panel set one [pane.MarginDp] inside the
+// plane under everything, the pane set one [pane.MarginDp] inside the
 // window's leading, top and bottom edges with the platform's rim and the
-// shadow it casts, the content column flush against the panel's trailing
+// shadow it casts, the content column flush against the pane's trailing
 // side, a band [pane.BandDp] deep across that column's top and the main
 // content under it.
 //
 // The band is the PLATFORM's and not a density's: the window's three control
 // buttons stand a measured inset in from the glass and the band that holds
 // them centred follows from that one number, which patterns/pane states and
-// this frame reads. The panel's own top strip is cut from the same inset one
+// this frame reads. The pane's own top strip is cut from the same inset one
 // margin higher, so a control centred in the band and one centred in the
 // strip stand on one line.
 //
 // WHAT THE FRAME DRAWS AND WHAT THE WINDOW DRAWS. The frame owns the
 // geometry every window with a pane shares and nothing else: which fills
-// stand where, what the panel is, how deep the band is and when the shadow is
-// cast. What stands IN the band, what the column beside the panel holds and
-// what the panel's column shows are the window's, handed in as the three
+// stand where, what the pane is, how deep the band is and when the shadow is
+// cast. What stands IN the band, what the column beside the pane holds and
+// what the pane's column shows are the window's, handed in as the three
 // slots. A window whose columns are arranged otherwise — a trailing aside, a
 // status bar along the foot, a document laid out before the band above it —
 // keeps its own arrangement and hands over [PaneFrame.Under] alone, which is
 // the part every such window passes through unchanged.
 type PaneFrame struct {
-	// Width is the panel's own width, rim to rim. Zero means [PaneWidthDp].
+	// Width is the pane's own width, rim to rim. Zero means [PaneWidthDp].
 	Width unit.Dp
 
-	// Hidden sends the panel out of the window: it takes no width at all
+	// Hidden sends the pane out of the window: it takes no width at all
 	// and the content column reflows from the window's own leading edge.
 	Hidden bool
 
 	// Plane is the window's own plane, painted under everything — the fill
-	// that shows in the margins around the panel. A window that already
+	// that shows in the margins around the pane. A window that already
 	// stands on its plane, painting it in a layer beneath this frame, leaves
 	// it zero and the frame paints none.
 	Plane color.NRGBA
 
 	// ContentFill is the content column's own surface, painted from the
-	// panel's trailing edge to the window's and running its full height. It
-	// is also what stands behind the two corners the panel rounds away from
+	// pane's trailing edge to the window's and running its full height. It
+	// is also what stands behind the two corners the pane rounds away from
 	// on its flush side, so that neither reads as a nick of plane bitten out
 	// of the boundary.
 	ContentFill color.NRGBA
@@ -72,8 +72,8 @@ type PaneFrame struct {
 	// ContentFill, which is the arrangement of a band that carries no fill.
 	BandFill color.NRGBA
 
-	// Sidebar is the column standing inside the panel. It is laid out at the
-	// panel's full size and clipped to it.
+	// Sidebar is the column standing inside the pane. It is laid out at the
+	// pane's full size and clipped to it.
 	Sidebar layout.Widget
 
 	// Band is what the content column carries across its top, laid out at
@@ -84,10 +84,10 @@ type PaneFrame struct {
 	Main layout.Widget
 }
 
-// Bounds answers the panel's rectangle in the coordinates of a window of the
-// given size, empty in every state where there is no panel to draw. It is
+// Bounds answers the pane's rectangle in the coordinates of a window of the
+// given size, empty in every state where there is no pane to draw. It is
 // separate from the drawing so that a window can measure its own arrangement
-// — where its content column begins, whether the panel fits at all — without
+// — where its content column begins, whether the pane fits at all — without
 // laying anything out.
 func (f PaneFrame) Bounds(gtx layout.Context, size image.Point) image.Rectangle {
 	w := f.Width
@@ -97,9 +97,9 @@ func (f PaneFrame) Bounds(gtx layout.Context, size image.Point) image.Rectangle 
 	return pane.Bounds(gtx, size, w, f.Hidden)
 }
 
-// ContentX answers where the content column begins beside a panel at bounds:
-// the panel's trailing edge, which is the one side it is not set in from, or
-// the window's own leading edge where there is no panel.
+// ContentX answers where the content column begins beside a pane at bounds:
+// the pane's trailing edge, which is the one side it is not set in from, or
+// the window's own leading edge where there is no pane.
 func ContentX(bounds image.Rectangle) int {
 	if bounds.Empty() {
 		return 0
@@ -108,13 +108,13 @@ func ContentX(bounds image.Rectangle) int {
 }
 
 // Under paints everything that stands under a window's columns: the window's
-// own plane, the content column's surface, the two corners the panel rounds
-// away from on its flush side, and the panel itself with the sidebar in it.
+// own plane, the content column's surface, the two corners the pane rounds
+// away from on its flush side, and the pane itself with the sidebar in it.
 //
 // It is exported because a window whose columns are arranged its own way
 // still passes this half of the frame through unchanged. Such a caller spends
-// Under where the reading order wants the panel — first, before its own
-// columns — lays its columns out, and casts the panel's shadow with
+// Under where the reading order wants the pane — first, before its own
+// columns — lays its columns out, and casts the pane's shadow with
 // [pane.PaintShadow] once they have painted.
 func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image.Point, bounds image.Rectangle) {
 	if f.Plane.A > 0 {
@@ -130,7 +130,7 @@ func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image
 	}
 	if f.BandFill.A > 0 {
 		// A band that paints its own fill across the content column stands
-		// behind the panel's top corner; what is left of the flush side
+		// behind the pane's top corner; what is left of the flush side
 		// stands on the column below it.
 		band := min(max(gtx.Dp(unit.Dp(pane.BandDp)), bounds.Min.Y), bounds.Max.Y)
 		top, rest := bounds, bounds
@@ -144,13 +144,13 @@ func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image
 }
 
 // Layout composes the whole frame in the order it reads, which is the focus
-// ring's too: the panel's column, then the band above the content, then the
-// content itself — and last the shadow the panel casts.
+// ring's too: the pane's column, then the band above the content, then the
+// content itself — and last the shadow the pane casts.
 //
 // The shadow is cast after the columns because the ramp falls on what stands
-// AROUND the panel: a column that paints its own surface after the panel has
-// laid out would cover it. patterns/pane cuts the panel's own box out of the
-// drawing, so casting it here lands what casting it under the panel landed.
+// AROUND the pane: a column that paints its own surface after the pane has
+// laid out would cover it. patterns/pane cuts the pane's own box out of the
+// drawing, so casting it here lands what casting it under the pane landed.
 func (f PaneFrame) Layout(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
 	size := gtx.Constraints.Max
 	bounds := f.Bounds(gtx, size)

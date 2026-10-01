@@ -29,10 +29,10 @@
 // #232a2f dark over every row from y=490 to the sheet's foot at y=544, so
 // what parts the footer from the body is the line and nothing else.
 //
-// A PANEL carries neither. The same sheet draws a FIRST hairline at y=324,
+// A PANE carries neither. The same sheet draws a FIRST hairline at y=324,
 // and what that one parts is not the header from the body: it parts the
-// panel's own rows from the accessory view an application hands the Save
-// panel, one body region from another. A panel here has one body, supplied
+// pane's own rows from the accessory view an application hands the Save
+// pane, one body region from another. A pane here has one body, supplied
 // whole by its caller, so it has no such boundary to rule — and with no
 // decision to answer it has no footer either. Nothing else in this surface
 // is ruled: header and body stand on one plane.
@@ -50,13 +50,13 @@
 // none of it is separately configurable, because the wrong combinations are
 // what a boolean per affordance would let you write down.
 //
-// A PANEL ([PurposePanel], the zero value) is a place you opened and can
+// A PANE ([PurposePanel], the zero value) is a place you opened and can
 // leave. It MANDATES a ghost close X top-right, a backdrop click that
 // invokes Props.OnClose, and Escape likewise: leaving costs nothing, so
 // every cheap exit is offered. It FORBIDS claiming Return, which belongs to
-// whatever holds focus inside it. It has no footer of its own — a panel's
+// whatever holds focus inside it. It has no footer of its own — a pane's
 // changes apply live, which is the reason it can be left at any moment. If
-// you find yourself adding a Save button to a panel, you have a decision.
+// you find yourself adding a Save button to a pane, you have a decision.
 //
 // A DECISION ([PurposeDecision], [Props.Decision] non-nil) is a question you
 // must answer. It MANDATES right-aligned footer actions ending in a default
@@ -68,7 +68,7 @@
 // destructive primary — see [Decision] for why that is a matter of the
 // struct's shape rather than of documentation.
 //
-// # The panel's close mark, measured
+// # The pane's close mark, measured
 //
 // The mark is a cross 12 dp corner to corner at a 2 dp stroke, which lands
 // 14 dp on each axis — the size of this platform's own window close
@@ -89,7 +89,7 @@
 // # Arrival is not this package's business
 //
 // The modal owns dismissal. It does not own how you arrived, and it has no
-// notion of an accelerator: the ⌘,/Ctrl-, that opens a settings panel has to
+// notion of an accelerator: the ⌘,/Ctrl-, that opens a settings pane has to
 // be live when no modal exists, which is precisely the state a modal is not
 // in. Bind it in app chrome, with Gio's own key.ModShortcut (Cmd on darwin,
 // Ctrl elsewhere) rather than a GOOS test of your own, and land a message
@@ -150,7 +150,7 @@ import (
 // their affordances travel together rather than varying
 // independently:
 //
-//   - A PANEL is a place you opened and can leave. Obsidian's and
+//   - A PANE is a place you opened and can leave. Obsidian's and
 //     Claude.app's settings are the shape: a small understated X top-right,
 //     Escape and a backdrop click both close it, changes apply live so a
 //     footer is optional, and an app accelerator (⌘,) opens it. Leaving
@@ -163,7 +163,7 @@ import (
 //     give it.
 //
 // Exposing those affordances as independent booleans would permit every
-// wrong combination — e.g. a "Discard changes?" dialog wearing a panel's X
+// wrong combination — e.g. a "Discard changes?" dialog wearing a pane's X
 // over a backdrop that dismisses it. So there are no such booleans. The
 // purpose is declared once, by supplying [Props.Decision] or leaving it nil,
 // and every affordance is derived from it — which is why a decision dialog
@@ -174,7 +174,7 @@ import (
 type Purpose int
 
 const (
-	// PurposePanel is the dismissable panel: a ghost close X, a dismissing
+	// PurposePanel is the dismissable pane: a ghost close X, a dismissing
 	// backdrop, Escape closes, Return unclaimed. It is the zero value, so
 	// every Props written before this axis existed keeps its behaviour.
 	PurposePanel Purpose = iota
@@ -277,8 +277,8 @@ type Props struct {
 	Actions []layout.Widget
 
 	// Decision, when non-nil, makes this a decision dialog rather than a
-	// dismissable panel: no close X, an inert backdrop, Escape to Cancel and
-	// Return to the default action. Leave it nil for a panel. See `Purpose`
+	// dismissable pane: no close X, an inert backdrop, Escape to Cancel and
+	// Return to the default action. Leave it nil for a pane. See `Purpose`
 	// for the two purposes and [Decision] for the destructive-default rule.
 	Decision *Decision
 
@@ -290,19 +290,19 @@ type Props struct {
 	// the explicit act.
 	Arbiter *Arbiter
 
-	// HideClose, when true, omits the top-right close button on a PANEL. Use
+	// HideClose, when true, omits the top-right close button on a PANE. Use
 	// it when the footer Actions already provide explicit dismissal (e.g. a
 	// Cancel button) — Escape and a scrim click still trigger OnClose.
 	//
 	// It is not consulted on a decision dialog, which never draws the X:
 	// hiding the close affordance is derived from the purpose there, not
 	// requested. HideClose is therefore only ever additive — it can hide a
-	// panel's X, and it can never show a decision's.
+	// pane's X, and it can never show a decision's.
 	//
 	// Deprecated: a modal that hides its X because its footer answers for it
 	// is describing a decision dialog. Say so with Decision and get the inert
 	// backdrop and the key bindings that belong with it; the X goes away on
-	// its own. HideClose keeps working for panels that genuinely want no X.
+	// its own. HideClose keeps working for panes that genuinely want no X.
 	HideClose bool
 
 	// DynamicFocusTags, if non-nil, is called every frame and its tags join
@@ -316,7 +316,7 @@ type Props struct {
 	// the control the dialog OPENS with the keyboard on: the first field
 	// holds the focus when a dialog opens, as the platform's sheet shows.
 	// A body that declares none leaves the opening focus to the first tag in
-	// the cycle — the close affordance on a panel, the first action on a
+	// the cycle — the close affordance on a pane, the first action on a
 	// decision. See [initialFocus].
 	DynamicFocusTags func() []event.Tag
 
@@ -358,20 +358,20 @@ func (p Props) Purpose() Purpose {
 }
 
 // showsClose reports whether the header draws the close X. A decision dialog
-// never does; a panel does unless HideClose says otherwise.
+// never does; a pane does unless HideClose says otherwise.
 func (p Props) showsClose() bool {
 	return p.Purpose() == PurposePanel && !p.HideClose
 }
 
 // dismissOnBackdrop reports whether a press on the scrim invokes OnClose.
-// Only a panel dismisses that way: on a decision dialog dismissal is one of
+// Only a pane dismisses that way: on a decision dialog dismissal is one of
 // the answers, and a stray click must not give it.
 func (p Props) dismissOnBackdrop() bool {
 	return p.Purpose() == PurposePanel
 }
 
 // onEscape returns the callback Escape invokes: Decision.Cancel on a decision
-// dialog, OnClose on a panel — and OnClose too when a decision names no
+// dialog, OnClose on a pane — and OnClose too when a decision names no
 // Cancel, so Escape always leaves.
 func (p Props) onEscape() func(gtx layout.Context) {
 	if p.Decision != nil && p.Decision.Cancel != nil {
@@ -427,7 +427,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 		st := newState(props)
 
 		// The close affordance is a GHOST components/button icon-only variant — a
-		// panel's X is present without being the subject. The modal owns its
+		// pane's X is present without being the subject. The modal owns its
 		// clickable (&st.closeClick) so the
 		// focus trap stays keyed to a single tag and no doubled focus ring is
 		// drawn; OnClose is routed through the button's OnClick. Build once
@@ -614,7 +614,7 @@ func drawModal(
 	// focused widget.Clickable filters Return on its own tag — so whoever
 	// asks first wins. Asking here gives the desktop rule both platforms
 	// share: Return activates the DEFAULT action whatever holds focus, while
-	// Space activates the FOCUSED control. A panel claims neither key.
+	// Space activates the FOCUSED control. A pane claims neither key.
 	if live {
 		processDefaultAction(gtx, props, st)
 	}
@@ -948,7 +948,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 		st.wantInitialFocus = false
 	}
 
-	// Backdrop click → OnClose, on a PANEL only. A decision dialog drains
+	// Backdrop click → OnClose, on a PANE only. A decision dialog drains
 	// the presses (so they reach nothing behind the scrim) and answers
 	// none of them: dismissal is one of the decision's answers, and a stray
 	// click must not make it for you.
@@ -975,7 +975,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 	// NOT also check st.closeClick.Clicked here — the button has already
 	// consumed the event, so this check would always be false.
 
-	// Escape → OnClose on a panel, Decision.Cancel on a decision dialog
+	// Escape → OnClose on a pane, Decision.Cancel on a decision dialog
 	// (falling back to OnClose when the decision names no Cancel, so Escape
 	// always leaves). Register the filter against every modal focus tag so
 	// the event fires whenever any modal element has focus.
@@ -1024,7 +1024,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 }
 
 // processDefaultAction claims Return (and the numeric keypad's Enter) for a
-// decision dialog's default action. It is a no-op for a panel, which leaves
+// decision dialog's default action. It is a no-op for a pane, which leaves
 // both keys to whatever holds focus.
 //
 // The claim is unconditional within a decision dialog — it happens even when

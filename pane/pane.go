@@ -17,33 +17,33 @@
 //
 // MEASURED, voicememos-multi-folder-2026-09-18.png at 1x, Voice Memos on
 // macOS 26 over a black desktop. The window stands at x 56-1031, y 38-794
-// and the sidebar panel at x 64-283, y 46-786: eight pixels of the window's
+// and the sidebar pane at x 64-283, y 46-786: eight pixels of the window's
 // own plane on the leading, top and bottom sides, and the content column
-// beginning at x=284 with no gap on the fourth. The panel's interior is
+// beginning at x=284 with no gap on the fourth. The pane's interior is
 // flat #f9f9f9, the platform's sidebar material through glass that has
 // black behind it — finder-window-untinted-light.png, whose desktop is
 // light, reads the same sidebar material at #f7f7f7 to the byte, so what
 // the black moves is two of 255 and the fill is that material either way.
 //
-// [RadiusDp] is that panel's corner. Fitted to the rim's own centreline
+// [RadiusDp] is that pane's corner. Fitted to the rim's own centreline
 // across the three corners the window's own rounding does not overlap —
 // top-trailing, bottom-trailing and bottom-leading — a circle lands them at
 // an rms of 0.12 to 0.15 of a pixel at r=17.2, 17.5 and 17.4, which is 17.35
-// to the rim's centre and 17.85 to the panel's outer edge. The window's own
-// corner in the same capture fits r=25.94 at an rms of 0.20, so the panel's
+// to the rim's centre and 17.85 to the pane's outer edge. The window's own
+// corner in the same capture fits r=25.94 at an rms of 0.20, so the pane's
 // rounding is the window's own less the inset it stands at, which is what
 // [RadiusDp] is written as.
 //
-// THE PANEL IS READ THROUGH ITS RIM AND ITS SHADOW. A pane wears the
+// THE PANE IS READ THROUGH ITS RIM AND ITS SHADOW. A pane wears the
 // platform's chrome material in both schemes, which in the light appearance
 // is within two of 255 of the plane it stands on and in the dark appearance
 // within two of the content beside it — so neither boundary is a step of
 // fill, and both are the rim. [Surface] is the fill, [RimColor] the rim and
 // [Shadow] the shadow it casts, all three the platform's own names.
 //
-// The rim is drawn INSIDE the panel's own rounded rectangle, never on the
+// The rim is drawn INSIDE the pane's own rounded rectangle, never on the
 // plane outside it: half a line lying on the plane would blur the one
-// boundary a reader uses to tell where the panel stops. It is painted as two
+// boundary a reader uses to tell where the pane stops. It is painted as two
 // concentric fills rather than as a stroke, because a stroke is centred on
 // the path it follows and antialiases both of its sides — a one-pixel one
 // arrives as two rows of half-strength colour and the colour the palette
@@ -52,22 +52,22 @@
 // THE TOP STRIP IS DERIVED FROM THE WINDOW BUTTONS. Under a full-size
 // content treatment the window's control buttons are measured from the
 // window's own glass and from nothing drawn beneath them, and they stand
-// INSIDE this panel: MEASURED, the same capture, the three 14 px circles run
+// INSIDE this pane: MEASURED, the same capture, the three 14 px circles run
 // x 75-134 and y 57-70, nineteen pixels in from the window's glass on both
-// axes and so eleven in from the panel's own corner, their centre line at
+// axes and so eleven in from the pane's own corner, their centre line at
 // y=64. [StripDp] is that arithmetic and not a taste, and it puts the
 // buttons' centre line on the strip's middle line, where a control standing
 // in the strip centres. [BandDp] is the band the window's content column
-// carries beside it, which is the deeper number: the panel's top edge sits
+// carries beside it, which is the deeper number: the pane's top edge sits
 // one margin inside it, as the capture shows.
 //
-// THE PANEL'S OWN MARKS STAND BARE AT ITS TOP TRAILING CORNER. MEASURED,
+// THE PANE'S OWN MARKS STAND BARE AT ITS TOP TRAILING CORNER. MEASURED,
 // the same capture: the new-folder mark is drawn over x 209-230 and the
 // sidebar toggle over x 252-271, both y 57-71 — on the buttons' own centre
 // line, their centres 42 apart, the trailing one ending twelve pixels clear
-// of the panel's rim — and neither carries a capsule, a fill or a rim. The
+// of the pane's rim — and neither carries a capsule, a fill or a rim. The
 // platform's bordered toolbar control is the BAND's drawing, not the
-// panel's. [Strip] stands the caller's controls at that corner.
+// pane's. [Strip] stands the caller's controls at that corner.
 //
 // THE RECALL CONVENTION. A control that travels with the pane cannot be the
 // one that recalls it. The pane's own dismiss control rides the strip; the
@@ -108,24 +108,24 @@ import (
 // a pane's inset is a property of the window it is set into and not of how
 // tightly its rows are set.
 const (
-	// MarginDp is the inset the panel stands off the window's leading, top
+	// MarginDp is the inset the pane stands off the window's leading, top
 	// and bottom edges — the slivers of the window's own plane the reader
 	// sees around it — and the air its strip keeps at its trailing end. The
-	// panel is flush with what it stands beside on the fourth side, so the
+	// pane is flush with what it stands beside on the fourth side, so the
 	// margin is spent on three. Those slivers claim no window drag of their
 	// own: a hand aims for the strip, not for an eight-dp gap, and a move
 	// action there would promise a handle too thin to hit.
 	MarginDp = 8
 
-	// RadiusDp rounds the panel's four corners, concentric with the window's
-	// own: the platform rounds the window at 26 and the panel stands one
+	// RadiusDp rounds the pane's four corners, concentric with the window's
+	// own: the platform rounds the window at 26 and the pane stands one
 	// margin inside it, which the package comment records the fit for.
 	RadiusDp = 26 - MarginDp
 
-	// RimDp is the width of the rim drawn just inside the panel's edge. A
+	// RimDp is the width of the rim drawn just inside the pane's edge. A
 	// rim runs a whole edge, so its width is the width of the scar it leaves
 	// across everything it crosses, and the platform draws it at one pixel
-	// on every side of every stored panel.
+	// on every side of every stored pane.
 	RimDp = 1
 
 	// ButtonInsetDp is how far the window control buttons sit in from the
@@ -139,18 +139,18 @@ const (
 	// placement states it rather than defaulting to it.
 	ButtonInsetDp = 19
 
-	// StripDp is the panel's own top strip: deep enough to hold the buttons
+	// StripDp is the pane's own top strip: deep enough to hold the buttons
 	// where the window puts them with the same air below them as above. The
 	// buttons' inset is measured from the glass and the strip from the
-	// panel's own edge, so the strip owes the margin back at both ends —
+	// pane's own edge, so the strip owes the margin back at both ends —
 	// which lands the buttons' centre line on the strip's own middle.
 	StripDp = 2*(ButtonInsetDp-MarginDp) + desktop.WindowButtonDiameter
 
 	// BandDp is the toolbar band the window's other columns carry, which the
-	// panel passes through rather than cuts: nineteen pixels of inset either
+	// pane passes through rather than cuts: nineteen pixels of inset either
 	// side of a fourteen pixel circle makes 52, and 52 is the band every
 	// stored toolbar capture measures — 8 px above a 36 px control and 8
-	// below it. The panel's own top edge stands one margin inside it.
+	// below it. The pane's own top edge stands one margin inside it.
 	BandDp = 2*ButtonInsetDp + desktop.WindowButtonDiameter
 
 	// ButtonGapDp is the air a band owes the window's control buttons: the
@@ -167,7 +167,7 @@ const (
 	ButtonGapDp = 17
 
 	// MarkGapDp is the clear band between two bare marks standing in the
-	// panel's top trailing corner: MEASURED, the two marks' drawn centres
+	// pane's top trailing corner: MEASURED, the two marks' drawn centres
 	// stand 42 apart in voicememos-multi-folder-2026-09-18.png, which at the
 	// 24 dp mark box every chrome mark in this library is drawn in leaves
 	// eighteen between the boxes. A caller passes it between two controls
@@ -191,35 +191,35 @@ func Surface(c tokens.PlatformColors) color.NRGBA {
 	return c.SidebarMaterial
 }
 
-// RimColor is the colour of the rim the panel wears just inside its own
+// RimColor is the colour of the rim the pane wears just inside its own
 // edge: the platform's measured value, opaque in both appearances, so
 // nothing is flattened here.
 func RimColor(c tokens.PlatformColors) color.NRGBA {
 	return c.PaneRim
 }
 
-// Shadow is the reading of the shadow the panel casts on what lies around
-// it: the peak coverage at the edge of a rectangle sunk below the panel, how
+// Shadow is the reading of the shadow the pane casts on what lies around
+// it: the peak coverage at the edge of a rectangle sunk below the pane, how
 // far the ramp carries out of it, and how far it is sunk. The three were
 // fitted together off one capture and [PaintShadow] spends them together.
 func Shadow(c tokens.PlatformColors) tokens.DropShadow {
 	return c.PaneShadow
 }
 
-// Bounds answers the panel's rectangle in the coordinates of a window of the
+// Bounds answers the pane's rectangle in the coordinates of a window of the
 // given size: one [MarginDp] inside its leading, top and bottom edges, as
 // wide as width asks for. It is separate from the drawing so that a frame
-// can measure its arrangement — where its content begins, whether the panel
+// can measure its arrangement — where its content begins, whether the pane
 // fits at all — without laying anything out.
 //
-// The rectangle is EMPTY in the states where there is no panel to draw:
+// The rectangle is EMPTY in the states where there is no pane to draw:
 // hidden, which is the whole of the hidden contract (the pane takes no
 // width at all and the caller lays its content out from the window's own
 // leading edge, rather than collapsing to a rail that still has to be
 // reasoned about), a window with no area, and a window too small to set
 // anything into. A caller reads the emptiness rather than a flag.
 //
-// The panel and its margin may never take more than half the window: a
+// The pane and its margin may never take more than half the window: a
 // narrow window owes its document a readable column before it owes the
 // chrome its width.
 func Bounds(gtx layout.Context, size image.Point, width unit.Dp, hidden bool) image.Rectangle {
@@ -237,21 +237,21 @@ func Bounds(gtx layout.Context, size image.Point, width unit.Dp, hidden bool) im
 	return image.Rect(margin, margin, margin+w, size.Y-margin)
 }
 
-// Layout draws the panel at bounds — its rim, then its fill — and lays
-// contents inside it at the panel's full size.
+// Layout draws the pane at bounds — its rim, then its fill — and lays
+// contents inside it at the pane's full size.
 //
 // It does NOT paint the shadow. The ramp falls on what stands AROUND the
-// panel, and in a window that is a column whose own surface is painted after
+// pane, and in a window that is a column whose own surface is painted after
 // the pane has laid out, which would cover it; so the shadow is
 // [PaintShadow]'s and the caller spends it where its own painting is done.
 // A caller that paints nothing over the ramp may call it either side of
 // this.
 //
 // The contents are clipped to the FILL rather than to the boundary, so a
-// scrolled row that runs the panel's full width can neither cross an edge,
-// poke through a corner, nor paint over the rim that says the panel is an
+// scrolled row that runs the pane's full width can neither cross an edge,
+// poke through a corner, nor paint over the rim that says the pane is an
 // object. An empty rectangle draws nothing, which is the dismissed state; a
-// nil contents draws the panel and nothing in it.
+// nil contents draws the pane and nothing in it.
 func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle, contents layout.Widget) {
 	if bounds.Empty() {
 		return
@@ -260,8 +260,8 @@ func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle,
 	w := max(gtx.Dp(unit.Dp(RimDp)), 1)
 
 	// Two concentric fills rather than a stroke, for the reason the package
-	// doc gives: filling the panel in the rim's colour and filling the inset
-	// panel back in over it leaves exactly one pixel of the rim's own colour
+	// doc gives: filling the pane in the rim's colour and filling the inset
+	// pane back in over it leaves exactly one pixel of the rim's own colour
 	// down every straight run, with the corners' arcs antialiased against
 	// each other the way a fence's rim is drawn.
 	rr := clip.RRect{Rect: bounds, NE: r, NW: r, SE: r, SW: r}
@@ -277,23 +277,23 @@ func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle,
 	contents(gtx)
 }
 
-// PaintShadow paints the shadow the panel at bounds casts on what lies
+// PaintShadow paints the shadow the pane at bounds casts on what lies
 // around it: [Shadow]'s peak at the edge of the rectangle its offset sinks
-// below the panel, falling to nothing its reach out.
+// below the pane, falling to nothing its reach out.
 //
-// WHERE TO CALL IT. The ramp falls outside the panel and on whatever stands
+// WHERE TO CALL IT. The ramp falls outside the pane and on whatever stands
 // there, so it must be painted after that. A window's document column fills
 // its own surface after the pane has laid out — the pane comes first in the
 // op stream because it comes first in the reading order — and that fill
-// covers the ramp the panel cast on it. Such a caller paints the panel with
+// covers the ramp the pane cast on it. Such a caller paints the pane with
 // [Layout] where the reading order wants it and calls this LAST, once its
 // columns are down. A caller that paints nothing over the ramp calls it
 // wherever it likes.
 //
-// The panel's own rounded box is cut out of the drawing, which is what makes
-// the later call land what an earlier one landed: the panel's fill is
+// The pane's own rounded box is cut out of the drawing, which is what makes
+// the later call land what an earlier one landed: the pane's fill is
 // opaque, so a ramp under it and a ramp with its box removed are the same
-// image, and nothing this paints touches the panel's rim or its contents.
+// image, and nothing this paints touches the pane's rim or its contents.
 func PaintShadow(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle) {
 	if bounds.Empty() {
 		return
@@ -305,7 +305,7 @@ func PaintShadow(gtx layout.Context, c tokens.PlatformColors, bounds image.Recta
 	}
 	r := gtx.Dp(unit.Dp(RadiusDp))
 	sunk := bounds.Add(image.Pt(0, gtx.Dp(unit.Dp(sh.Offset))))
-	// The whole drawing's extent: the sunk rectangle and the panel's own box,
+	// The whole drawing's extent: the sunk rectangle and the pane's own box,
 	// grown by the reach. One pixel of slack keeps the ramp's last column
 	// inside the outer contour.
 	all := bounds.Union(sunk).Inset(-extent - 1)
@@ -331,7 +331,7 @@ func ringPath(ops *op.Ops, outer, box image.Rectangle, radius int) clip.PathSpec
 	p.LineTo(f32.Pt(float32(outer.Min.X), float32(outer.Max.Y)))
 	p.Close()
 
-	// The panel's box, counter-clockwise: down the leading side, along the
+	// The pane's box, counter-clockwise: down the leading side, along the
 	// foot, up the trailing side and back across the top.
 	x0, y0 := float32(box.Min.X), float32(box.Min.Y)
 	x1, y1 := float32(box.Max.X), float32(box.Max.Y)
@@ -351,17 +351,17 @@ func ringPath(ops *op.Ops, outer, box image.Rectangle, radius int) clip.PathSpec
 	return p.End()
 }
 
-// FillTrailingCorners fills the strip the panel's two trailing corners round
+// FillTrailingCorners fills the strip the pane's two trailing corners round
 // away from, in the fill of the region standing flush against that edge.
 //
-// The panel is set in from the window's leading, top and bottom edges and
+// The pane is set in from the window's leading, top and bottom edges and
 // flush with what it stands beside on the fourth, so the plane shows on
 // three sides and not on the fourth: behind a corner arc on the flush side
-// stands the region the panel abuts, not the window's plane. Without this
+// stands the region the pane abuts, not the window's surface. Without this
 // the two arcs read as nicks of plane bitten out of the boundary.
 //
 // Call it before [Layout], which paints over the whole strip but the arcs. A
-// caller that stands the panel in the open — with the plane showing on all
+// caller that stands the pane in the open — with the surface showing on all
 // four sides, as the pattern's own stored images do — calls it not at all.
 func FillTrailingCorners(gtx layout.Context, fill color.NRGBA, bounds image.Rectangle) {
 	r := gtx.Dp(unit.Dp(RadiusDp))
@@ -372,14 +372,14 @@ func FillTrailingCorners(gtx layout.Context, fill color.NRGBA, bounds image.Rect
 	paint.FillShape(gtx.Ops, fill, clip.Rect(strip).Op())
 }
 
-// EdgeSpan answers the rows the panel's trailing edge runs straight down, in
+// EdgeSpan answers the rows the pane's trailing edge runs straight down, in
 // the coordinates bounds is stated in: from where the top corner's arc lets
 // go to where the bottom corner's begins. A boundary control riding that
-// edge — a splitter resizing the panel — draws and takes hold over those
+// edge — a splitter resizing the pane — draws and takes hold over those
 // rows and no others, so its line neither crosses a rounded corner nor
 // leaves one pixel of itself out on the window's plane.
 //
-// The answer is empty where the panel is too short to have a straight run.
+// The answer is empty where the pane is too short to have a straight run.
 func EdgeSpan(gtx layout.Context, bounds image.Rectangle) (top, bottom int) {
 	r := gtx.Dp(unit.Dp(RadiusDp))
 	top, bottom = bounds.Min.Y+r, bounds.Max.Y-r
@@ -396,7 +396,7 @@ func EdgeSpan(gtx layout.Context, bounds image.Rectangle) (top, bottom int) {
 // shorter than the band has no row left to draw on and this answers its
 // foot.
 //
-// The panel itself parts from nothing with a line — its rim and the plane
+// The pane itself parts from nothing with a line — its rim and the surface
 // around it are the boundary — so this is for the window's other
 // boundaries, and it is exported so that a splitter riding one of them draws
 // over the same rows the seam does rather than beside it or through the
@@ -406,22 +406,22 @@ func SeamTop(gtx layout.Context, bounds image.Rectangle) int {
 	return min(top, bounds.Max.Y)
 }
 
-// Strip lays out the panel's top band: the window control buttons' span
+// Strip lays out the pane's top band: the window control buttons' span
 // skipped at the leading end, a stretch that moves the window across the
 // middle, and the caller's controls at the trailing corner, one margin in
-// from the panel's trailing edge.
+// from the pane's trailing edge.
 //
 // lead is where a band's own content may start, in WINDOW coordinates — the
 // buttons' trailing edge plus the air the platform leaves after it, or the
-// window's own edge inset where it has no such controls. The panel stands
-// one margin inside the window's leading edge, so the panel-local skip is
+// window's own edge inset where it has no such controls. The pane stands
+// one margin inside the window's leading edge, so the pane-local skip is
 // that measurement less the margin: the buttons are the window's and stand
-// where it puts them; it is the panel that slid in under them. The span is
+// where it puts them; it is the pane that slid in under them. The span is
 // skipped rather than claimed because a move action declared over the
 // buttons would fight them for the press.
 //
 // The controls stand at the trailing corner because that is where the
-// platform keeps a sidebar panel's own marks, which the package doc records
+// platform keeps a sidebar pane's own marks, which the package doc records
 // the measurement for. They are handed over in reading order and each takes
 // its own width; a caller wanting air between two of them passes a spacer of
 // [MarkGapDp] between them. The band's depth is the constraint the caller

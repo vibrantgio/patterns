@@ -65,7 +65,7 @@ func TestModalStandsAboveADeferredShadow(t *testing.T) {
 						button.RenderState{Variant: button.Chrome, Surface: colors.SidebarMaterial})(gtx)
 					st.Pop()
 				}
-				w := modal.Render(shaper, modal.Props{Title: panelTitle, Shaper: shaper},
+				w := modal.Render(shaper, modal.Props{Title: paneTitle, Shaper: shaper},
 					withModal, colors, tokens.Spacing, sharpRadius,
 					tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 				return w(gtx)
@@ -127,7 +127,7 @@ func TestFocusRingInsideAModalIsDrawn(t *testing.T) {
 			body := button.Render(shaper, "Save", colors, tokens.Spacing, sharpRadius,
 				tokens.DefaultTypography.LabelLarge, tokens.Comfortable,
 				button.RenderState{Focused: focused, Surface: colors.WindowBackground})
-			w := modal.Render(shaper, modal.Props{Title: panelTitle, Body: body, Shaper: shaper},
+			w := modal.Render(shaper, modal.Props{Title: paneTitle, Body: body, Shaper: shaper},
 				true, colors, tokens.Spacing, sharpRadius,
 				tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 			return w(gtx)
