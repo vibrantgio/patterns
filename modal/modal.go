@@ -622,7 +622,7 @@ func drawModal(
 	// Everything the modal paints goes into one macro handed to op.Defer, so
 	// the scrim and the surface land on the floating level: above every
 	// operation the window's content recorded, the deferred ones included —
-	// a bordered toolbar control's drop shadow, a focused control's halo —
+	// a bordered toolbar control's drop shadow, a focused control's ring —
 	// and above nothing of its own. Ruling of 2026-09-18, the Level entry:
 	// the floating level stands above everything in the window, and a modal
 	// is on it, so it defers as the popover, the tooltip and the menu do.
@@ -1094,7 +1094,7 @@ func focusTags(props Props, st *modalState) (tags []event.Tag, bodyFirst int) {
 //
 // The first field holds the keyboard focus when a dialog opens, as the
 // platform's sheet shows: its save dialog opens with the caret in "Save As:"
-// and that field wearing the focus halo, not with the keyboard on one of the
+// and that field wearing the focus ring, not with the keyboard on one of the
 // two answers in the footer. So a body that has a field is what the dialog
 // opens on, and only a body with nothing to focus — a question and two
 // answers, say — hands the keyboard to the header's close affordance or to
@@ -1133,7 +1133,7 @@ func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 //
 // It is 4 dp, which puts the cross 12 dp corner to corner in the 20 dp icon
 // box a comfortable icon button hands it — 60% of the box, the proportion a
-// glyph set draws a close mark at, and 14 dp across once the 2 dp stroke is
+// symbol set draws a close mark at, and 14 dp across once the 2 dp stroke is
 // counted. That last number is the one it was chosen for: 14 dp is what this
 // platform's own window close control measures, so the mark a dialog is left
 // by is the size the platform leaves a window by.
@@ -1174,7 +1174,7 @@ const dialogCornerDp = 27
 
 // crossIcon paints an "×" shape — two diagonal strokes — into a
 // sizePx×sizePx box at the current origin in colour col. It is the modal
-// close button's glyph, satisfying the button.Props.Icon painter contract
+// close button's symbol, satisfying the button.Props.Icon painter contract
 // (clip.Path / clip.Stroke only — no font or SVG rasterisation) so goldens
 // stay deterministic across GPU contexts.
 func crossIcon(gtx layout.Context, sizePx int, col color.NRGBA) {

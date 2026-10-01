@@ -107,16 +107,16 @@ func TestModalStandsAboveADeferredShadow(t *testing.T) {
 	}
 }
 
-// TestFocusHaloInsideAModalIsDrawn holds the other half of the modal's
+// TestFocusRingInsideAModalIsDrawn holds the other half of the modal's
 // deferral: the modal's own paint is deferred, and a focused control inside
-// it defers its halo too, so the halo is a defer recorded while a deferred
+// it defers its ring too, so the ring is a defer recorded while a deferred
 // macro runs. Gio appends those to the same pass and runs them after it, but
 // nothing in this library would notice if it stopped — a focused control
-// would simply lose its halo inside a modal and keep it everywhere else.
+// would simply lose its ring inside a modal and keep it everywhere else.
 //
 // The proof: a focused button in the modal's body draws pixels an unfocused
 // one does not.
-func TestFocusHaloInsideAModalIsDrawn(t *testing.T) {
+func TestFocusRingInsideAModalIsDrawn(t *testing.T) {
 	shaper := defaultShaper(t)
 	colors := tokens.PlatformLight
 
@@ -140,6 +140,6 @@ func TestFocusHaloInsideAModalIsDrawn(t *testing.T) {
 		return // headless unavailable; Capture called t.Skip
 	}
 	if n := golden.PixelDiff(focused, resting); n == 0 {
-		t.Error("a focused button inside a modal draws exactly what an unfocused one draws; the halo did not survive the modal's own defer")
+		t.Error("a focused button inside a modal draws exactly what an unfocused one draws; the ring did not survive the modal's own defer")
 	}
 }

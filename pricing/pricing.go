@@ -22,7 +22,7 @@
 // to bottom — the tier name in title typography (the recommended tier puts
 // its badge on that same row, trailing), a price / cadence pair in display
 // typography with the cadence muted, a vertical feature list with a leading
-// checkmark glyph rendered from a clip.Path, and a footer CTA button
+// checkmark symbol rendered from a clip.Path, and a footer CTA button
 // reusing components/button's filled visual.
 //
 // No responsive breakpoint to stack tiers vertically is provided —
@@ -77,7 +77,7 @@ type Tier struct {
 	Cadence string
 
 	// Features is the vertical bullet list rendered under the price row.
-	// Each entry gets a leading checkmark glyph.
+	// Each entry gets a leading checkmark symbol.
 	Features []string
 
 	// CTA is the footer call-to-action button. May be nil to omit.
@@ -461,7 +461,7 @@ func priceRowWidget(shaper *text.Shaper, price, cadence string, tier Tier, tok r
 }
 
 // featureRowWidget renders a single feature bullet: an accent checkmark
-// glyph followed by the feature label in BodyMedium, the platform's label,
+// symbol followed by the feature label in BodyMedium, the platform's label,
 // joined by an S2 gap and centred vertically.
 func featureRowWidget(shaper *text.Shaper, label string, tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {

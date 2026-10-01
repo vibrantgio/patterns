@@ -1,6 +1,6 @@
 // Package popover provides the Patterns Popover pattern: an anchored
 // floating surface placed adjacent to a caller-supplied anchor,
-// with a small triangular tail glyph pointing at the anchor. Outside-
+// with a small triangular tail pointing at the anchor. Outside-
 // click dismissal and popover-vs-popover arbitration are frame state:
 // opening a second popover dismisses the first, through a plain Arbiter
 // written and read during layout on the frame goroutine. See ADR-008 and
@@ -107,7 +107,7 @@ const outsideMargin = unit.Dp(8192)
 
 // tailRun is the tail's span along the surface edge it stands on. Its depth
 // is not a constant: it is whatever gap the placement left between the
-// surface and the anchor, so the glyph always bridges exactly.
+// surface and the anchor, so the tail always bridges exactly.
 const tailRun = unit.Dp(12)
 
 // strokeWidth is the surface outline's weight, and the depth the tail's fill
@@ -275,7 +275,7 @@ func newState(props Props) *popoverState {
 
 // drawPopover stands the anchor at Align's edge of the frame, then — when
 // open — the floating surface adjacent to it per Placement, nudged back
-// inside the frame where it would run off, plus a tail glyph seated on the
+// inside the frame where it would run off, plus a tail seated on the
 // anchor. When live, it also registers three event tags (outside, anchor,
 // surface) and dispatches the events drained for them.
 func drawPopover(
@@ -487,9 +487,9 @@ func clampToFrame(surface image.Rectangle, frame image.Point, p Placement) image
 	return surface
 }
 
-// drawTail paints the glyph bridging the gap between the surface and the
+// drawTail paints the tail bridging the gap between the surface and the
 // anchor, with its tip on the anchor. Its base stands on the surface edge
-// facing the anchor and its depth is that gap, so the glyph meets both and
+// facing the anchor and its depth is that gap, so the tail meets both and
 // floats over neither. Its centre is the DRAWN anchor's midline, held back
 // from the surface's rounded corners by the radius so the base always
 // stands on the flat run of the edge.

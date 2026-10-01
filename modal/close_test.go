@@ -18,7 +18,7 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// A panel's close mark is a drawn cross, not a glyph and not a filled
+// A panel's close mark is a drawn cross, not a symbol and not a filled
 // control, so what it has to clear is the floor for a mark that carries
 // meaning without being read as text — tokens.GraphicFloor, in the APCA
 // lightness contrast this system measures in since CC1.2. The text floor is

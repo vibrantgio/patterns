@@ -56,7 +56,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 // tierSpec is one tier's text. Latin text in Roboto rasterises identically
 // on every machine with the faces pinned and DeterministicShaper in use.
 // ASCII only — no symbol reaches a stored image, and the leading checkmark
-// on each feature is a clip path the package draws itself, not a glyph.
+// on each feature is a clip path the package draws itself, not a symbol.
 type tierSpec struct {
 	name     string
 	price    string

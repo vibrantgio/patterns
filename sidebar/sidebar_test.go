@@ -849,7 +849,7 @@ func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
 					t.Errorf("the pill %s reads %v at (%d, %d), want the measured %v", c.what, got, x, y, c.want)
 				}
 			}
-			// No halo: a rail says where the keyboard is in the pill's
+			// No ring: a rail says where the keyboard is in the pill's
 			// colour, so the list's own edges must read the same in both
 			// frames. The band would land on the viewport's outermost
 			// columns and rows, which is where these four points stand —
@@ -864,7 +864,7 @@ func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
 				{X: expandedW / 2, Y: frameH - 1},
 			} {
 				if bare.RGBAAt(at.X, at.Y) != held.RGBAAt(at.X, at.Y) {
-					t.Errorf("the rail's edge at %v reads %v while it holds the keyboard and %v while it does not: a rail draws no halo",
+					t.Errorf("the rail's edge at %v reads %v while it holds the keyboard and %v while it does not: a rail draws no ring",
 						at, held.RGBAAt(at.X, at.Y), bare.RGBAAt(at.X, at.Y))
 				}
 			}

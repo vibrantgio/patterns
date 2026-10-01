@@ -9,7 +9,7 @@
 //
 // Layout: each Item renders as a rounded Surface card with a 1 dp strong
 // border and S5 padding on all sides. The card stacks (top to bottom) an
-// opening double-quotation glyph in the accent rendered from a clip.Path,
+// opening double-quotation symbol in the accent rendered from a clip.Path,
 // the Quote body in body-large typography in Text, and a horizontal
 // author block — the AuthorAvatar (or, when nil, a border-stroked
 // circular placeholder containing the first letter of AuthorName) sized
@@ -254,11 +254,11 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	return layout.Dimensions{Size: image.Pt(width, height)}
 }
 
-// drawCardContent stacks the card's inner parts — quote glyph, quote
+// drawCardContent stacks the card's inner parts — quote symbol, quote
 // body, author block — top to bottom with S3 gaps between adjacent items.
 func drawCardContent(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTokens) layout.Dimensions {
 	ws := []layout.Widget{
-		quoteGlyphWidget(tok),
+		quoteSymbolWidget(tok),
 		quoteBodyWidget(shaper, item.Quote, tok),
 		authorBlockWidget(shaper, item, tok),
 	}
@@ -273,11 +273,11 @@ func drawCardContent(gtx layout.Context, shaper *text.Shaper, item Item, tok res
 	return pllayout.Col(gtx, spaced...)
 }
 
-// quoteGlyphWidget paints an opening double-quotation glyph in the accent
+// quoteSymbolWidget paints an opening double-quotation symbol in the accent
 // using a clip.Path. Two filled "comma" shapes — each a pentagon with a
 // rectangular cap and a tail tapering down — sit side-by-side, separated
 // by an S1 gap. The total size is roughly (2 × S3 + S1) × S4.
-func quoteGlyphWidget(tok resolvedTokens) layout.Widget {
+func quoteSymbolWidget(tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		commaW := gtx.Dp(unit.Dp(tok.spacing.S3))
 		gap := gtx.Dp(unit.Dp(tok.spacing.S1))

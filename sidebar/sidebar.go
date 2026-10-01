@@ -9,14 +9,14 @@
 //
 // A list shows its focus as the platform does for the place it stands in,
 // and a sidebar's place shows it in the pill's colour rather than in a
-// halo. The rail draws the accent pill under a white label while its list
+// ring. The rail draws the accent pill under a white label while its list
 // holds the keyboard, and the grey pill under the label in the accent
 // colour while it does not — both measured, the first off
 // voicememos-sidebar-{light,dark}.png and the second off
 // finder-sidebar-unfocused-{light,dark}.png, where the pill keeps the same
 // geometry in both states. The switch is gtx.Focused on the list's own tag
 // ([list.State.Focus]), so the rail wears the emphasized pill exactly while
-// the keys reach it, and no halo is drawn at all: the pill IS this place's
+// the keys reach it, and no ring is drawn at all: the pill IS this place's
 // answer, and a band around the rail would be a second one.
 //
 // A still render — [Render], a golden, a specimen — processes no events, so
@@ -92,7 +92,7 @@
 //
 // The collapse affordance takes no focus tag either — it answers
 // pointer clicks only — so the rail's single stop stays the item list.
-// Its glyph is the icon set's sidebar mark (components/icons) — the
+// Its symbol is the icon set's sidebar mark (components/icons) — the
 // control that shows and hides a window's sidebar — drawn at the icon
 // rule's size for the density (components/icon.Size).
 //
@@ -310,7 +310,7 @@ const (
 // NEITHER IS MEASURED. No stored capture holds a sidebar section's
 // disclosure: mail-window.png and mail-window-light.png carry a Mail window
 // whose sidebar is redacted — the whole column reads one flat fill with no
-// glyph in it — Finder's three headings show no control at rest, and the
+// symbol in it — Finder's three headings show no control at rest, and the
 // "My Folders" heading in voicememos-multi-folder-2026-09-18.png has none.
 // reference/macos/controls.md records the gap and names the capture that
 // would close it. Both numbers below are derived from readings the reference
@@ -704,21 +704,21 @@ func clickFor(st *liveState, i int) *gesture.Click {
 	return &st.clicks[i]
 }
 
-// drawToggle paints the collapse affordance's glyph centred in a
+// drawToggle paints the collapse affordance's symbol centred in a
 // (w × h) area at the current offset and registers a pointer.Press hit
 // area against tt. In test or static rendering (tt == nil) only the
-// glyph is drawn.
+// symbol is drawn.
 //
-// The glyph is the icon set's sidebar mark — the control that shows and
+// The symbol is the icon set's sidebar mark — the control that shows and
 // hides a window's sidebar, resolved to the host platform's drawing —
 // at the icon rule's size for the density (icon.Size: the control's
-// inner content box), in what a toolbar draws its own glyphs in.
+// inner content box), in what a toolbar draws its own symbols in.
 //
 // MEASURED, voicememos-multi-folder-2026-09-18.png: the panel's own bare marks
 // — a new-folder mark and this very toggle, standing at its top trailing
 // corner with no capsule, no fill and no rim — reach #4b4b4b at their darkest,
 // a floor a 1 px stroke at 1x cannot pass, against the #4d4d4d the band's own
-// glyphs plateau at. The platform's secondary label over the light chrome
+// symbols plateau at. The platform's secondary label over the light chrome
 // would land near #818181, forty levels lighter than the capture.
 func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors tokens.PlatformColors, d tokens.Density) {
 	g := gtx.Dp(icon.Size(d))
