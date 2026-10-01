@@ -27,7 +27,6 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -361,7 +360,7 @@ func ctaGtx(gtx layout.Context, shaper *text.Shaper, title string, tok resolvedT
 	avail := gtx.Constraints.Max.X
 
 	w := gtx.Dp(ctaIntrinsicWidth)
-	if need := ctaTitleWidth(gtx, shaper, title, tok) + 2*gtx.Dp(unit.Dp(tok.density.PaddingX)); need > w {
+	if need := typeset.LineWidth(gtx, shaper, title, tok.ctaTitle, font.Normal) + 2*gtx.Dp(unit.Dp(tok.density.PaddingX)); need > w {
 		w = need
 	}
 	if avail > 0 && w > avail {
@@ -373,18 +372,4 @@ func ctaGtx(gtx layout.Context, shaper *text.Shaper, title string, tok resolvedT
 		gtx.Constraints.Max.X = w
 	}
 	return gtx
-}
-
-// ctaTitleWidth is the width title wants on one line in the CTA's type role,
-// measured with the constraints off so the answer is the title's own and not
-// the cell's. The ops are recorded and dropped; only the measurement is kept.
-func ctaTitleWidth(gtx layout.Context, shaper *text.Shaper, title string, tok resolvedTokens) int {
-	mgtx := gtx
-	mgtx.Constraints = layout.Constraints{Max: image.Pt(1<<20, 1<<20)}
-
-	wl := typeset.Label(tok.ctaTitle, 1)
-	rec := op.Record(gtx.Ops)
-	dims := typeset.Layout(mgtx, shaper, wl, typeset.Font(tok.ctaTitle, font.Normal), unit.Sp(tok.ctaTitle.Size), title, op.CallOp{})
-	rec.Stop()
-	return dims.Size.X
 }

@@ -1062,9 +1062,10 @@ func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style token
 
 // coveredWidth reports how far a one-line run's drawn pixels reach from the
 // line's own origin, in whole columns, or 0 when the run cannot be measured.
-// It is the glyphs' covered extent rather than the advance they spend: a
-// face leaves a trailing side bearing between its last stem and the end of
-// the advance, and the platform's own column is a drawn pixel.
+// It is the glyphs' covered extent rather than the advance they spend, which
+// is the width [typeset.LineWidth] answers and the reason this is not that
+// call: a face leaves a trailing side bearing between its last stem and the
+// end of the advance, and the platform's own column is a drawn pixel.
 //
 // It shapes the run with the parameters the paint pass will, so it is a hit
 // in the shaper's cache rather than a second shaping. A shaper lays one

@@ -384,15 +384,9 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 
 	letterGtx := gtx
 	letterGtx.Constraints = layout.Constraints{Max: image.Pt(size, size)}
-	mColor := op.Record(gtx.Ops)
-	paint.ColorOp{Color: vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.CardFill)}.Add(gtx.Ops)
-	material := mColor.Stop()
 	mLetter := op.Record(gtx.Ops)
-	// The explicit form, not typeset.Text: the letter stands centred in the
-	// avatar's square, which is widget.Label's Alignment.
-	wl := typeset.Label(tok.body, 1)
-	wl.Alignment = text.Middle
-	letterDims := typeset.Layout(letterGtx, shaper, wl, typeset.Font(tok.body, font.SemiBold), unit.Sp(tok.body.Size), letter, material)
+	letterDims := typeset.TextAligned(letterGtx, shaper, letter, tok.body,
+		vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.CardFill), 1, font.SemiBold, text.Middle)
 	letterCall := mLetter.Stop()
 
 	off := op.Offset(image.Pt((size-letterDims.Size.X)/2, (size-letterDims.Size.Y)/2)).Push(gtx.Ops)
