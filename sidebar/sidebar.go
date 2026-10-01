@@ -54,7 +54,7 @@
 // row's pill all three parts wear the foreground the platform pairs with
 // that fill. A row with no symbol or no count draws without one and the
 // columns do not move, so the titles of a list whose entries differ still
-// line up. A run of rows may be headed by a small label — [Item.Section] on
+// line up. A run of rows may be headed by a small heading — [Item.Section] on
 // the row that begins it — which stands in a block of [SectionHeight] above
 // that row and is parted from the rows by air alone: the platform draws no
 // line there, and neither does this.
@@ -161,7 +161,7 @@ type Item struct {
 	// draws without one; nothing else about the row moves.
 	Count string
 
-	// Section heads the run of rows this item begins with a small label.
+	// Section heads the run of rows this item begins with a small heading.
 	// It is set on the first item of the run and left empty on the rest;
 	// an item carrying one is laid out [SectionHeight] taller, with the
 	// heading in that block above the row. The heading is not an item: it
@@ -316,7 +316,7 @@ const (
 // would close it. Both numbers below are derived from readings the reference
 // does hold.
 //
-// DisclosureBox 20: the row's symbol box measures 24 and the heading's label
+// DisclosureBox 20: the row's symbol box measures 24 and the heading
 // measures four fifths of the row's — MEASURED,
 // voicememos-multi-folder-2026-09-18.png, an 8 px cap against the row
 // title's 10 — so the heading's own mark takes the same four fifths of the
@@ -876,14 +876,14 @@ func CountForeground(colors tokens.PlatformColors, selected, unemphasized bool) 
 }
 
 // PaintSection draws a section's heading into a block of the given size at the
-// current offset: the label at [SectionInset] from the leading edge, its
+// current offset: the heading at [SectionInset] from the leading edge, its
 // baseline [SectionBaseline] down the block, and nothing else — the platform
 // parts a section from the rows above it by air, not by a line.
 //
 // It is exported so an application drawing its own chrome rail heads its
 // sections the way the platform heads them.
-func PaintSection(gtx layout.Context, shaper *text.Shaper, label string, style tokens.TextStyle, size image.Point, fg color.NRGBA) layout.Dimensions {
-	if label == "" || size.X <= 0 || size.Y <= 0 {
+func PaintSection(gtx layout.Context, shaper *text.Shaper, heading string, style tokens.TextStyle, size image.Point, fg color.NRGBA) layout.Dimensions {
+	if heading == "" || size.X <= 0 || size.Y <= 0 {
 		return layout.Dimensions{Size: size}
 	}
 	lead := gtx.Dp(SectionInset)
@@ -895,7 +895,7 @@ func PaintSection(gtx layout.Context, shaper *text.Shaper, label string, style t
 	lGtx.Constraints.Min = image.Point{}
 	lGtx.Constraints.Max = image.Pt(room, size.Y)
 	rec := op.Record(gtx.Ops)
-	dims := drawText(lGtx, shaper, label, style, fg)
+	dims := drawText(lGtx, shaper, heading, style, fg)
 	call := rec.Stop()
 	// The block's own top to the heading's baseline is what was measured, and
 	// a line box is placed by its top, so the baseline the shaper reports is
@@ -920,17 +920,17 @@ func DisclosureForeground(colors tokens.PlatformColors) color.NRGBA {
 // [DisclosureInset] in from the block's trailing edge, in fg.
 //
 // The square is centred on the HEADING'S OWN LINE and not on the block: the
-// block carries 22 dp of air above the label's cap and 12 below its baseline,
+// block carries 22 dp of air above the heading's cap and 12 below its baseline,
 // so a mark centred in it would stand half a cap height above the name it
 // belongs to. The line is the middle of [SectionCapTop] and
-// [SectionBaseline], which is where the label's own cap band centres.
+// [SectionBaseline], which is where the heading's own cap band centres.
 //
 // There is one drawing and not two. The set draws the mark as the section
 // stands CLOSED — pointing at the rows it would open — and an open section
 // turns it a quarter about the square's own centre, which is what the
 // platform does and what keeps the figure recognisable through the turn.
 //
-// It reports the block it filled, so a caller lays the heading's label out
+// It reports the block it filled, so a caller lays the heading out
 // against the room the control leaves rather than writing the arithmetic
 // again. A section that does not collapse takes no control and calls this not
 // at all.

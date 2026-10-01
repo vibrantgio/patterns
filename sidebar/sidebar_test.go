@@ -538,7 +538,7 @@ func itemMid(i int) int {
 }
 
 // sectionItems returns the rail the row goldens picture: two runs of entries,
-// the second headed by a small label, each row a symbol, a name and a count,
+// the second headed by a small heading, each row a symbol, a name and a count,
 // and one row with neither symbol nor count to show that the columns do not
 // move when an entry has less to say.
 func sectionItems() []sidebar.Item {
@@ -553,7 +553,7 @@ func sectionItems() []sidebar.Item {
 
 // TestSidebarSectionGolden records or diffs the rail as the platform draws
 // one: rows of a symbol, a title and a count, and a second run headed by a
-// small label with air above it and no line.
+// small heading with air above it and no line.
 func TestSidebarSectionGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	cases := []struct {
@@ -955,7 +955,7 @@ func TestSectionDisclosureStandsInTheRailsTrailingColumn(t *testing.T) {
 		t.Errorf("the closed mark's last covered column is x=%d, want %d — CountInset %v in from the rail's %d, the column the counts below it are drawn to",
 			cx1, want, sidebar.CountInset, size.X)
 	}
-	// The heading's own line, not the block's: the label's cap band centres on
+	// The heading's own line, not the block's: the heading's cap band centres on
 	// the middle of SectionCapTop and SectionBaseline, and the mark centres
 	// there too.
 	line := (int(sidebar.SectionCapTop) + int(sidebar.SectionBaseline)) / 2
