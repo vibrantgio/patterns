@@ -576,7 +576,7 @@ func TestSidebarSectionGolden(t *testing.T) {
 
 // TestSidebarRowStandsInTheMeasuredColumns reads the three parts of a row off
 // a rendered rail and holds each to the column the platform draws it in:
-// the symbol's square at SymbolInset, the label's first column at LabelInset,
+// the symbol's square at SymbolInset, the label's first column at TitleInset,
 // and the count's trailing edge CountInset in from the rail's.
 //
 // The symbol is a flat blue square, so its own columns are told from the text
@@ -622,11 +622,11 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 		t.Errorf("the symbol starts at x=%d, want %d — SymbolInset %v and a 16 px mark centred in SymbolBox %v",
 			symMin, wantSym, sidebar.SymbolInset, sidebar.SymbolBox)
 	}
-	if textMin < int(sidebar.LabelInset) {
-		t.Errorf("the label starts at x=%d, before LabelInset %v", textMin, sidebar.LabelInset)
+	if textMin < int(sidebar.TitleInset) {
+		t.Errorf("the label starts at x=%d, before TitleInset %v", textMin, sidebar.TitleInset)
 	}
-	if textMin > int(sidebar.LabelInset)+2 {
-		t.Errorf("the label starts at x=%d, want LabelInset %v or the glyph's own bearing past it", textMin, sidebar.LabelInset)
+	if textMin > int(sidebar.TitleInset)+2 {
+		t.Errorf("the label starts at x=%d, want TitleInset %v or the glyph's own bearing past it", textMin, sidebar.TitleInset)
 	}
 	// The count is placed by its DRAWN pixels: its last covered column is
 	// CountInset in from the rail's trailing edge exactly, the face's own

@@ -211,7 +211,7 @@ func drawThreeColumn(
 	}
 
 	// Backstop so the splitter and the empty slots read against something.
-	// It is the BACKDROP — the bare window plane, which is what a
+	// It is the BACKDROP — the bare window surface, which is what a
 	// three-column frame shows wherever nothing stands.
 	paint.FillShape(gtx.Ops, surface.Backdrop(colors), clip.Rect{Max: size}.Op())
 
@@ -258,7 +258,7 @@ func drawThreeColumn(
 
 	// Main. The frame states where the document stands even when the slot
 	// is empty: the content region is the platform's content fill, not the
-	// bare window plane the backstop paints.
+	// bare window surface the backstop paints.
 	if rowH > 0 && mainW > 0 {
 		mainRect := image.Rect(sbW, navH, sbW+mainW, navH+rowH)
 		paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect(mainRect).Op())

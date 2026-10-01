@@ -45,7 +45,7 @@ type Layout int
 const (
 	// SidebarHeaderMain renders the sidebar as a PANE down the leading
 	// edge — an inset rounded pane with the platform's rim and the shadow
-	// it casts, the window's own plane showing around it — a navbar band
+	// it casts, the window's own surface showing around it — a navbar band
 	// across the top of the content column beside it, and a main content
 	// slot below that band. The composition is [PaneFrame]'s.
 	SidebarHeaderMain Layout = iota
@@ -319,9 +319,9 @@ func staticSidebarHeaderMain(
 // The frame lays its slots out in reading order — pane, band, main — which
 // is the order Gio's focus group walks, so Tab traversal follows it.
 //
-// The window's plane is the platform's WindowBackground and the content
+// The window's surface is the platform's WindowBackground and the content
 // column stands on its ControlBackground: a pane is read through its rim and
-// the plane showing around it, so both fills are the platform's own names
+// the surface showing around it, so both fills are the platform's own names
 // and neither boundary is a step of fill the caller chooses.
 func composeSidebarHeaderMain(sb, nb layout.Widget, props Props, colors tokens.PlatformColors) layout.Widget {
 	main := props.Main
@@ -489,7 +489,7 @@ func drawSplitPane(
 
 	// Backstop so the seam is visible even if Left/Right are nil. It is the
 	// BACKDROP: whatever a split pane does not cover is the bare window
-	// plane, which nothing is drawn at and which is darker than the chrome
+	// surface, which nothing is drawn at and which is darker than the chrome
 	// standing on it in both schemes.
 	paint.FillShape(gtx.Ops, surface.Backdrop(colors), clip.Rect{Max: size}.Op())
 

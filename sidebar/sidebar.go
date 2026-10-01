@@ -48,7 +48,7 @@
 //
 // A row is a symbol, a label and, at the trailing end, a count when the
 // entry has one: [Item.Icon], [Item.Title] and [Item.Count], each drawn in
-// the column the platform draws it in ([SymbolInset], [LabelInset],
+// the column the platform draws it in ([SymbolInset], [TitleInset],
 // [CountInset]). The symbol wears [SymbolForeground] and the count
 // [CountForeground], both measured values of the sidebar; on the selected
 // row's pill all three parts wear the foreground the platform pairs with
@@ -263,7 +263,7 @@ const (
 	SelectionRadius unit.Dp = 8
 )
 
-// SymbolBox, SymbolInset, LabelInset and CountInset are where the three parts
+// SymbolBox, SymbolInset, TitleInset and CountInset are where the three parts
 // of a row stand, each an inset from the rail's own edge, and SectionHeight,
 // SectionInset and SectionBaseline are the block a section's heading occupies.
 // They are this package's for the reason RowHeight is: a chrome rail's row is
@@ -278,7 +278,7 @@ const (
 //     x 83.0–103.0, centred on x=93.0, which is 29 in from the pane's x=64;
 //     Finder's narrower page mark stands on the same centre. A 24 dp square
 //     set 17 in centres on 29.
-//   - LabelInset 48: every row's name starts at x=112 or 113 against the
+//   - TitleInset 48: every row's name starts at x=112 or 113 against the
 //     pane's x=64. Finder's rows start 47 in.
 //   - CountInset 17: every count is drawn to x 266 or 267 against the pane's
 //     trailing rim at x=283, and the selected row's count keeps that column.
@@ -293,7 +293,7 @@ const (
 const (
 	SymbolBox   unit.Dp = 24
 	SymbolInset unit.Dp = 17
-	LabelInset  unit.Dp = 48
+	TitleInset  unit.Dp = 48
 	CountInset  unit.Dp = 17
 
 	SectionHeight   unit.Dp = 42
@@ -802,7 +802,7 @@ func drawItem(
 		if item.Count != "" {
 			countW = PaintCount(gtx, shaper, item.Count, style, size, countFG)
 		}
-		lead := gtx.Dp(LabelInset)
+		lead := gtx.Dp(TitleInset)
 		gap := gtx.Dp(unit.Dp(sp.S2))
 		room := size.X - lead - gtx.Dp(CountInset) - countW
 		if countW > 0 {
@@ -970,7 +970,7 @@ func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.N
 // PaintSymbol paints a row's symbol into a block of the given size at the
 // current offset, in the column the platform draws it in: a [SymbolBox]
 // square set [SymbolInset] in from the block's leading edge and centred on
-// its height, in fg. It reports the block it filled — [LabelInset] wide, the
+// its height, in fg. It reports the block it filled — [TitleInset] wide, the
 // column the name beside it begins at — so a caller lays the name out against
 // the same reading the symbol was painted from.
 //
@@ -986,7 +986,7 @@ func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.N
 // across against the 20 the platform's own folder measures.
 func PaintSymbol(gtx layout.Context, mark icons.Painter, size image.Point, fg color.NRGBA) layout.Dimensions {
 	paintSymbolAt(gtx, mark, size, gtx.Dp(SymbolInset), fg)
-	return layout.Dimensions{Size: image.Pt(gtx.Dp(LabelInset), size.Y)}
+	return layout.Dimensions{Size: image.Pt(gtx.Dp(TitleInset), size.Y)}
 }
 
 // drawSymbol paints a row's symbol in the square the platform draws it in.

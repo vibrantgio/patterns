@@ -1093,7 +1093,7 @@ func focusTags(props Props, st *modalState) (tags []event.Tag, bodyFirst int) {
 // the Tab cycle when it does not.
 //
 // The first field holds the keyboard focus when a dialog opens, as the
-// platform's sheet shows: its save dialog opens with the caret in "Save As:"
+// platform's sheet shows: its save panel opens with the caret in "Save As:"
 // and that field wearing the focus ring, not with the keyboard on one of the
 // two answers in the footer. So a body that has a field is what the dialog
 // opens on, and only a body with nothing to focus — a question and two
