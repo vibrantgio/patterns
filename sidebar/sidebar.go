@@ -685,12 +685,12 @@ func PaintSelection(gtx layout.Context, size image.Point, colors tokens.Platform
 //
 // It is exported so an application drawing its own chrome rail — a file tree,
 // a list of feeds — wires the row the platform's way rather than its own.
-func RowTarget(gtx layout.Context, click *gesture.Click, size image.Point, label string) {
+func RowTarget(gtx layout.Context, click *gesture.Click, size image.Point, title string) {
 	if click == nil {
 		return
 	}
 	area := clip.Rect{Max: size}.Push(gtx.Ops)
-	semantic.LabelOp(label).Add(gtx.Ops)
+	semantic.LabelOp(title).Add(gtx.Ops)
 	semantic.EnabledOp(true).Add(gtx.Ops)
 	click.Add(gtx.Ops)
 	area.Pop()
