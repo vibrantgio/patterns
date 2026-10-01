@@ -311,7 +311,7 @@ func staticSidebarHeaderMain(
 }
 
 // composeSidebarHeaderMain hands the three slots to [PaneFrame], which is
-// the composition: the window's own plane under everything, the sidebar's
+// the composition: the window's own surface under everything, the sidebar's
 // pane set one margin inside the window's leading, top and bottom edges,
 // the navbar band across the content column at the platform's measured
 // depth, the main content under it and the pane's shadow cast last.
@@ -331,7 +331,7 @@ func composeSidebarHeaderMain(sb, nb layout.Widget, props Props, colors tokens.P
 	f := PaneFrame{
 		Width:       props.SidebarWidth,
 		Hidden:      props.SidebarHidden,
-		Plane:       colors.WindowBackground,
+		Surface:     colors.WindowBackground,
 		ContentFill: colors.ControlBackground,
 		Sidebar:     sb,
 		Band:        nb,

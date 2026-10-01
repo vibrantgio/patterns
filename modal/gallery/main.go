@@ -101,7 +101,7 @@ func run(w *app.Window) error {
 	// modal's footer actions use.
 	var err error
 	d.openBtn, err = button.Button(th, button.Props{
-		Label:   "Open dialog",
+		Title:   "Open dialog",
 		Shaper:  shaper,
 		OnClick: func(_ layout.Context) { d.openObserver.Next(true); w.Invalidate() },
 	}).First()
@@ -125,7 +125,7 @@ func run(w *app.Window) error {
 	// draws its own focus ring; passing &clickable in ActionFocusTags adds it
 	// to the modal's Tab cycle with no doubled outer ring.
 	cancelBtn, err := button.Button(th, button.Props{
-		Label:     "Cancel",
+		Title:     "Cancel",
 		Emphasis:  button.Tonal,
 		Shaper:    shaper,
 		Clickable: &d.cancelClk,
@@ -135,7 +135,7 @@ func run(w *app.Window) error {
 		return err
 	}
 	okBtn, err := button.Button(th, button.Props{
-		Label:     "OK",
+		Title:     "OK",
 		Shaper:    shaper,
 		Clickable: &d.okClk,
 		OnClick:   func(_ layout.Context) { closeDialog() },

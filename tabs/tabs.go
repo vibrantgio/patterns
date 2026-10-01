@@ -42,7 +42,7 @@ import (
 // Tab is one entry in the tab strip. Content may be nil; a nil content
 // renders as an empty content pane when this tab is selected.
 type Tab struct {
-	Label   string
+	Title   string
 	Content layout.Widget
 }
 
@@ -297,7 +297,7 @@ func drawStrip(
 	for i := range props.Tabs {
 		i := i
 		children = append(children, layout.Rigid(tabCell(
-			shaper, props.Tabs[i].Label, clickFor(clicks, i), i == selected,
+			shaper, props.Tabs[i].Title, clickFor(clicks, i), i == selected,
 			colors, sp, style, mark,
 		)))
 	}
@@ -327,7 +327,7 @@ func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 // with a strip-height cell. When selected, an underline of underlineDp px
 // is drawn along the cell's bottom edge in mark ([activeMark]). The cell
 // width is at least 2×S3 so the underline is visible even when the label
-// rasterises to zero width, which an empty Tab.Label does.
+// rasterises to zero width, which an empty Tab.Title does.
 func tabCell(
 	shaper *text.Shaper,
 	label string,

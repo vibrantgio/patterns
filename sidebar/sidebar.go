@@ -47,7 +47,7 @@
 // be a second boundary inside the first.
 //
 // A row is a symbol, a label and, at the trailing end, a count when the
-// entry has one: [Item.Icon], [Item.Label] and [Item.Count], each drawn in
+// entry has one: [Item.Icon], [Item.Title] and [Item.Count], each drawn in
 // the column the platform draws it in ([SymbolInset], [LabelInset],
 // [CountInset]). The symbol wears [SymbolForeground] and the count
 // [CountForeground], both measured values of the sidebar; on the selected
@@ -154,7 +154,7 @@ type Item struct {
 	// Icon is a row with no symbol, and the columns beside it do not move.
 	Icon icons.Painter
 
-	Label string
+	Title string
 
 	// Count is what stands at the row's trailing end — how many things the
 	// entry holds. An empty Count is an entry with no count, and the row
@@ -815,7 +815,7 @@ func drawItem(
 		lGtx.Constraints.Min = image.Point{}
 		lGtx.Constraints.Max = image.Pt(room, size.Y)
 		rec := op.Record(gtx.Ops)
-		dims := drawText(lGtx, shaper, item.Label, style, foreground)
+		dims := drawText(lGtx, shaper, item.Title, style, foreground)
 		call := rec.Stop()
 		stk := op.Offset(image.Pt(lead, (size.Y-dims.Size.Y)/2)).Push(gtx.Ops)
 		call.Add(gtx.Ops)
@@ -830,7 +830,7 @@ func drawItem(
 		return layout.Dimensions{Size: cell}
 	}
 	dims := inner(rGtx)
-	RowTarget(gtx, click, dims.Size, item.Label)
+	RowTarget(gtx, click, dims.Size, item.Title)
 	return layout.Dimensions{Size: cell}
 }
 

@@ -50,7 +50,7 @@
 // none of it is separately configurable, because the wrong combinations are
 // what a boolean per affordance would let you write down.
 //
-// A PANE ([PurposePanel], the zero value) is a place you opened and can
+// A PANE ([PurposePane], the zero value) is a place you opened and can
 // leave. It MANDATES a ghost close X top-right, a backdrop click that
 // invokes Props.OnClose, and Escape likewise: leaving costs nothing, so
 // every cheap exit is offered. It FORBIDS claiming Return, which belongs to
@@ -174,10 +174,10 @@ import (
 type Purpose int
 
 const (
-	// PurposePanel is the dismissable pane: a ghost close X, a dismissing
+	// PurposePane is the dismissable pane: a ghost close X, a dismissing
 	// backdrop, Escape closes, Return unclaimed. It is the zero value, so
 	// every Props written before this axis existed keeps its behaviour.
-	PurposePanel Purpose = iota
+	PurposePane Purpose = iota
 
 	// PurposeDecision is the decision dialog: no X, an inert backdrop,
 	// Escape invokes Cancel, Return activates the default action.
@@ -188,8 +188,8 @@ const (
 // uses everywhere else.
 func (i Purpose) String() string {
 	switch i {
-	case PurposePanel:
-		return "panel"
+	case PurposePane:
+		return "pane"
 	case PurposeDecision:
 		return "decision"
 	}
@@ -354,20 +354,20 @@ func (p Props) Purpose() Purpose {
 	if p.Decision != nil {
 		return PurposeDecision
 	}
-	return PurposePanel
+	return PurposePane
 }
 
 // showsClose reports whether the header draws the close X. A decision dialog
 // never does; a pane does unless HideClose says otherwise.
 func (p Props) showsClose() bool {
-	return p.Purpose() == PurposePanel && !p.HideClose
+	return p.Purpose() == PurposePane && !p.HideClose
 }
 
 // dismissOnBackdrop reports whether a press on the scrim invokes OnClose.
 // Only a pane dismisses that way: on a decision dialog dismissal is one of
 // the answers, and a stray click must not give it.
 func (p Props) dismissOnBackdrop() bool {
-	return p.Purpose() == PurposePanel
+	return p.Purpose() == PurposePane
 }
 
 // onEscape returns the callback Escape invokes: Decision.Cancel on a decision

@@ -55,7 +55,7 @@ import (
 
 // Props configures a Group.
 type Props struct {
-	// Label names what the group holds. Empty leaves the group unlabelled
+	// Title names what the group holds. Empty leaves the group unlabelled
 	// and its hairline unbroken.
 	//
 	// It is drawn top-leading, inside the hairline, as the first row of
@@ -63,7 +63,7 @@ type Props struct {
 	// header over a bordered container. A label cut into the top line is
 	// the fieldset legend's idiom, which has no native counterpart here
 	// and does not survive a Lg corner radius.
-	Label string
+	Title string
 
 	// Content is what the group holds, stacked top to bottom under the
 	// label with S3 gaps. Nil entries are dropped.
@@ -128,7 +128,7 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 //
 // label is the LabelLarge role's whole text style — typeface, weight, size
 // and line height all reach the shaper, exactly as they do on the live
-// path. A group with no Label never asks the shaper anything, so a nil
+// path. A group with no Title never asks the shaper anything, so a nil
 // shaper is only an error for a labelled one.
 func Render(
 	shaper *text.Shaper,
@@ -164,8 +164,8 @@ func draw(
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		ws := make([]layout.Widget, 0, len(props.Content)+1)
-		if props.Label != "" {
-			ws = append(ws, labelWidget(shaper, props.Label, label, vgcolor.Flatten(colors.SecondaryLabel, plane)))
+		if props.Title != "" {
+			ws = append(ws, labelWidget(shaper, props.Title, label, vgcolor.Flatten(colors.SecondaryLabel, plane)))
 		}
 		ws = append(ws, props.Content...)
 		return stack(gtx, gap, ws...)

@@ -72,15 +72,15 @@ var tabLabels = []string{"Preview", "Code", "Notes"}
 // light and dark goldens; the labels carry the typography.
 func threeTabs() []tabs.Tab {
 	return []tabs.Tab{
-		{Label: tabLabels[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
-		{Label: tabLabels[1], Content: contentRect(color.NRGBA{R: 0x40, G: 0xc0, B: 0x60, A: 0xff})},
-		{Label: tabLabels[2], Content: contentRect(color.NRGBA{R: 0x40, G: 0x70, B: 0xff, A: 0xff})},
+		{Title: tabLabels[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
+		{Title: tabLabels[1], Content: contentRect(color.NRGBA{R: 0x40, G: 0xc0, B: 0x60, A: 0xff})},
+		{Title: tabLabels[2], Content: contentRect(color.NRGBA{R: 0x40, G: 0x70, B: 0xff, A: 0xff})},
 	}
 }
 
 func singleTab() []tabs.Tab {
 	return []tabs.Tab{
-		{Label: tabLabels[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
+		{Title: tabLabels[0], Content: contentRect(color.NRGBA{R: 0xff, G: 0x40, B: 0x40, A: 0xff})},
 	}
 }
 

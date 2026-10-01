@@ -80,7 +80,7 @@ var itemLabels = []string{
 func navItems(n, activeIdx int) []sidebar.Item {
 	out := make([]sidebar.Item, n)
 	for i := range out {
-		out[i] = sidebar.Item{Icon: testIcon(), Label: itemLabels[i], OnClick: func(_ layout.Context) {}}
+		out[i] = sidebar.Item{Icon: testIcon(), Title: itemLabels[i], OnClick: func(_ layout.Context) {}}
 		out[i].Active = i == activeIdx
 	}
 	return out
@@ -214,9 +214,9 @@ func TestSidebarArrowTraversalAndEnter(t *testing.T) {
 	var fired [3]int
 	props := sidebar.Props{
 		Items: []sidebar.Item{
-			{Icon: testIcon(), Label: itemLabels[0], OnClick: func(_ layout.Context) { fired[0]++ }},
-			{Icon: testIcon(), Label: itemLabels[1], OnClick: func(_ layout.Context) { fired[1]++ }},
-			{Icon: testIcon(), Label: itemLabels[2], OnClick: func(_ layout.Context) { fired[2]++ }},
+			{Icon: testIcon(), Title: itemLabels[0], OnClick: func(_ layout.Context) { fired[0]++ }},
+			{Icon: testIcon(), Title: itemLabels[1], OnClick: func(_ layout.Context) { fired[1]++ }},
+			{Icon: testIcon(), Title: itemLabels[2], OnClick: func(_ layout.Context) { fired[2]++ }},
 		},
 		Collapsed: rx.Of(false),
 		Shaper:    defaultShaper(t),
@@ -291,7 +291,7 @@ func TestSidebarKeyboardReachesAnItemNeverLaidOut(t *testing.T) {
 	items := make([]sidebar.Item, n)
 	for i := range items {
 		i := i
-		items[i] = sidebar.Item{Icon: indexIcon(i), Label: itemLabels[i], OnClick: func(_ layout.Context) { fired[i]++ }}
+		items[i] = sidebar.Item{Icon: indexIcon(i), Title: itemLabels[i], OnClick: func(_ layout.Context) { fired[i]++ }}
 	}
 	props := sidebar.Props{Items: items, Collapsed: rx.Of(false), Shaper: defaultShaper(t)}
 	w := liveWidget(t, sidebar.Sidebar(rx.Of(theme.Default()), props))
@@ -402,7 +402,7 @@ func TestSidebarToggleDispatchesOnToggleCollapse(t *testing.T) {
 	var toggleCount int
 	props := sidebar.Props{
 		Items: []sidebar.Item{
-			{Icon: testIcon(), Label: itemLabels[0], OnClick: func(_ layout.Context) {}},
+			{Icon: testIcon(), Title: itemLabels[0], OnClick: func(_ layout.Context) {}},
 		},
 		Collapsed:        rx.Of(false),
 		OnToggleCollapse: func(_ layout.Context) { toggleCount++ },
@@ -490,7 +490,7 @@ func TestSidebarOverflowGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			items := make([]sidebar.Item, n)
 			for i := range items {
-				items[i] = sidebar.Item{Icon: indexIcon(i), Label: itemLabels[i], OnClick: func(_ layout.Context) {}}
+				items[i] = sidebar.Item{Icon: indexIcon(i), Title: itemLabels[i], OnClick: func(_ layout.Context) {}}
 			}
 			items[n-1].Active = true
 			props := sidebar.Props{
@@ -543,11 +543,11 @@ func itemMid(i int) int {
 // move when an entry has less to say.
 func sectionItems() []sidebar.Item {
 	return []sidebar.Item{
-		{Icon: testIcon(), Label: "Everything", Count: "128", Active: true, OnClick: func(_ layout.Context) {}},
-		{Icon: testIcon(), Label: "Recently Deleted", Count: "2", OnClick: func(_ layout.Context) {}},
-		{Icon: testIcon(), Label: "Tokens", Count: "46", Section: "My Folders", OnClick: func(_ layout.Context) {}},
-		{Icon: testIcon(), Label: "Colour", Count: "16", OnClick: func(_ layout.Context) {}},
-		{Label: "Type", OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Title: "Everything", Count: "128", Active: true, OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Title: "Recently Deleted", Count: "2", OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Title: "Tokens", Count: "46", Section: "My Folders", OnClick: func(_ layout.Context) {}},
+		{Icon: testIcon(), Title: "Colour", Count: "16", OnClick: func(_ layout.Context) {}},
+		{Title: "Type", OnClick: func(_ layout.Context) {}},
 	}
 }
 
@@ -585,7 +585,7 @@ func TestSidebarSectionGolden(t *testing.T) {
 func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	shaper := defaultShaper(t)
 	props := sidebar.Props{
-		Items:  []sidebar.Item{{Icon: testIcon(), Label: "Tokens", Count: "46", OnClick: func(_ layout.Context) {}}},
+		Items:  []sidebar.Item{{Icon: testIcon(), Title: "Tokens", Count: "46", OnClick: func(_ layout.Context) {}}},
 		Shaper: shaper,
 	}
 	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
@@ -690,8 +690,8 @@ func TestSidebarSymbolWearsTheMeasuredColour(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := sidebar.Props{
 				Items: []sidebar.Item{
-					{Icon: icons.Mark(icons.Folder), Label: "Notes"},
-					{Icon: icons.Mark(icons.Folder), Label: "Archive", Active: true},
+					{Icon: icons.Mark(icons.Folder), Title: "Notes"},
+					{Icon: icons.Mark(icons.Folder), Title: "Archive", Active: true},
 				},
 				Shaper: shaper,
 			}
@@ -792,8 +792,8 @@ func TestTheRailDrawsThePlatformsTwoPills(t *testing.T) {
 			// not a test shape.
 			props := sidebar.Props{
 				Items: []sidebar.Item{
-					{Icon: icons.Mark(icons.Folder), Label: itemLabels[0], Active: true, OnClick: func(layout.Context) {}},
-					{Icon: icons.Mark(icons.Folder), Label: itemLabels[1], OnClick: func(layout.Context) {}},
+					{Icon: icons.Mark(icons.Folder), Title: itemLabels[0], Active: true, OnClick: func(layout.Context) {}},
+					{Icon: icons.Mark(icons.Folder), Title: itemLabels[1], OnClick: func(layout.Context) {}},
 				},
 				Collapsed: rx.Of(false),
 				Shaper:    shaper,

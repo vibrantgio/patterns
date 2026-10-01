@@ -51,10 +51,10 @@ import (
 // widens the cell to label + 2×PaddingX, up to whatever the row can give.
 const ctaIntrinsicWidth = unit.Dp(120)
 
-// CTA describes a hero call-to-action. Label populates the button label and
+// CTA describes a hero call-to-action. Title populates the button title and
 // also seeds the accessibility name; OnClick fires on activation.
 type CTA struct {
-	Label   string
+	Title   string
 	OnClick func(gtx layout.Context)
 }
 
@@ -300,13 +300,13 @@ func ctaRowWidget(
 	return func(gtx layout.Context) layout.Dimensions {
 		var children []layout.FlexChild
 		if props.PrimaryCTA != nil {
-			children = append(children, layout.Rigid(primaryCTAWidget(shaper, props.PrimaryCTA.Label, tok, primaryClick)))
+			children = append(children, layout.Rigid(primaryCTAWidget(shaper, props.PrimaryCTA.Title, tok, primaryClick)))
 		}
 		if props.PrimaryCTA != nil && props.SecondaryCTA != nil {
 			children = append(children, layout.Rigid(pllayout.HSpacer(tok.spacing.S3)))
 		}
 		if props.SecondaryCTA != nil {
-			children = append(children, layout.Rigid(secondaryCTAWidget(shaper, props.SecondaryCTA.Label, tok, secondaryClick)))
+			children = append(children, layout.Rigid(secondaryCTAWidget(shaper, props.SecondaryCTA.Title, tok, secondaryClick)))
 		}
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
 	}

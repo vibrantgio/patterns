@@ -23,7 +23,7 @@ import (
 const PaneWidthDp = sidebar.ExpandedWidth
 
 // PaneFrame is the window composition a leading pane makes: the window's own
-// plane under everything, the pane set one [pane.MarginDp] inside the
+// surface under everything, the pane set one [pane.MarginDp] inside the
 // window's leading, top and bottom edges with the platform's rim and the
 // shadow it casts, the content column flush against the pane's trailing
 // side, a band [pane.BandDp] deep across that column's top and the main
@@ -53,16 +53,16 @@ type PaneFrame struct {
 	// and the content column reflows from the window's own leading edge.
 	Hidden bool
 
-	// Plane is the window's own plane, painted under everything — the fill
+	// Surface is the window's own surface, painted under everything — the fill
 	// that shows in the margins around the pane. A window that already
-	// stands on its plane, painting it in a layer beneath this frame, leaves
+	// stands on its surface, painting it in a layer beneath this frame, leaves
 	// it zero and the frame paints none.
-	Plane color.NRGBA
+	Surface color.NRGBA
 
 	// ContentFill is the content column's own surface, painted from the
 	// pane's trailing edge to the window's and running its full height. It
 	// is also what stands behind the two corners the pane rounds away from
-	// on its flush side, so that neither reads as a nick of plane bitten out
+	// on its flush side, so that neither reads as a nick of the window's surface bitten out
 	// of the boundary.
 	ContentFill color.NRGBA
 
@@ -108,7 +108,7 @@ func ContentX(bounds image.Rectangle) int {
 }
 
 // Under paints everything that stands under a window's columns: the window's
-// own plane, the content column's surface, the two corners the pane rounds
+// own surface, the content column's surface, the two corners the pane rounds
 // away from on its flush side, and the pane itself with the sidebar in it.
 //
 // It is exported because a window whose columns are arranged its own way
@@ -117,8 +117,8 @@ func ContentX(bounds image.Rectangle) int {
 // columns — lays its columns out, and casts the pane's shadow with
 // [pane.PaintShadow] once they have painted.
 func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image.Point, bounds image.Rectangle) {
-	if f.Plane.A > 0 {
-		paint.FillShape(gtx.Ops, f.Plane, clip.Rect{Max: size}.Op())
+	if f.Surface.A > 0 {
+		paint.FillShape(gtx.Ops, f.Surface, clip.Rect{Max: size}.Op())
 	}
 	x := ContentX(bounds)
 	if f.ContentFill.A > 0 && x < size.X {

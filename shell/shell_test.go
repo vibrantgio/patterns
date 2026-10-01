@@ -72,7 +72,7 @@ var (
 func shellNavbar(shaper *text.Shaper) navbar.Props {
 	links := make([]navbar.Link, len(navLinkLabels))
 	for i, l := range navLinkLabels {
-		links[i] = navbar.Link{Label: l}
+		links[i] = navbar.Link{Title: l}
 	}
 	return navbar.Props{Links: links, Shaper: shaper}
 }
@@ -81,7 +81,7 @@ func shellNavbar(shaper *text.Shaper) navbar.Props {
 func shellSidebar(shaper *text.Shaper) sidebar.Props {
 	items := make([]sidebar.Item, len(sidebarItemLabels))
 	for i, l := range sidebarItemLabels {
-		items[i] = sidebar.Item{Icon: testIcon(), Label: l, OnClick: func(_ layout.Context) {}}
+		items[i] = sidebar.Item{Icon: testIcon(), Title: l, OnClick: func(_ layout.Context) {}}
 	}
 	return sidebar.Props{Items: items, Shaper: shaper}
 }
@@ -479,7 +479,7 @@ func TestShellSidebarHeaderMainTabTraversal(t *testing.T) {
 		Layout: shell.SidebarHeaderMain,
 		Sidebar: sidebar.Sidebar(rx.Of(theme.Default()), sidebar.Props{
 			Items: []sidebar.Item{
-				{Icon: testIcon(), Label: sidebarItemLabels[0], OnClick: func(_ layout.Context) {}},
+				{Icon: testIcon(), Title: sidebarItemLabels[0], OnClick: func(_ layout.Context) {}},
 			},
 			Collapsed: rx.Of(false),
 			Shaper:    shaper,
@@ -487,7 +487,7 @@ func TestShellSidebarHeaderMainTabTraversal(t *testing.T) {
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
-				{Label: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
+				{Title: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
 			},
 			Shaper: shaper,
 		},
@@ -628,7 +628,7 @@ func TestShellCustomSidebarWidget(t *testing.T) {
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
-				{Label: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
+				{Title: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
 			},
 			Shaper: shaper,
 		},

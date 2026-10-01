@@ -58,10 +58,10 @@ import (
 	"github.com/vibrantgio/theme/typeset"
 )
 
-// CTA describes a per-tier call-to-action. Label populates the button
-// label and seeds the accessibility name; OnClick fires on activation.
+// CTA describes a per-tier call-to-action. Title populates the button
+// title and seeds the accessibility name; OnClick fires on activation.
 type CTA struct {
-	Label   string
+	Title   string
 	OnClick func(gtx layout.Context)
 }
 
@@ -503,14 +503,14 @@ func checkmarkWidget(tier Tier, tok resolvedTokens) layout.Widget {
 // button fills the card's inner width (components/button's intrinsic
 // "fill Max.X" sizing), giving the typical full-width pricing CTA.
 func ctaWidget(shaper *text.Shaper, cta *CTA, tier Tier, tok resolvedTokens, click *widget.Clickable) layout.Widget {
-	rendered := button.Render(shaper, cta.Label, tok.color, tok.spacing, tok.radius, tok.label, tok.density,
+	rendered := button.Render(shaper, cta.Title, tok.color, tok.spacing, tok.radius, tok.label, tok.density,
 		button.RenderState{Surface: tierFill(tok.color, tier)})
 	return func(gtx layout.Context) layout.Dimensions {
 		if click == nil {
 			return rendered(gtx)
 		}
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			semantic.LabelOp(cta.Label).Add(gtx.Ops)
+			semantic.LabelOp(cta.Title).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
 			dims := rendered(gtx)
 			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)

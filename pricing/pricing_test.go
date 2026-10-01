@@ -83,7 +83,7 @@ func tier(i int, recommended bool) pricing.Tier {
 		Price:       spec.price,
 		Cadence:     spec.cadence,
 		Features:    spec.features,
-		CTA:         &pricing.CTA{Label: "Choose"},
+		CTA:         &pricing.CTA{Title: "Choose"},
 		Recommended: recommended,
 	}
 }
@@ -216,7 +216,7 @@ func TestPricingLightDarkDiffer(t *testing.T) {
 // height.
 func TestPricingUnevenFeaturesMatchTallest(t *testing.T) {
 	shaper := defaultShaper(t)
-	cta := &pricing.CTA{Label: "Go"}
+	cta := &pricing.CTA{Title: "Go"}
 	short := pricing.Tier{Name: "A", Features: []string{"one"}, CTA: cta}
 	tall := pricing.Tier{Name: "B", Features: []string{"one", "two", "three", "four"}, CTA: cta}
 	mid := pricing.Tier{Name: "C", Features: []string{"one", "two"}, CTA: cta}

@@ -96,7 +96,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 // pair a decision's title with a pane's X over a dismissing scrim — that
 // combination is not a valid purpose.
 const (
-	paneTitle    = "Preferences"
+	paneTitle     = "Preferences"
 	decisionTitle = "Discard changes?"
 	// modalTitle is the interaction tests' title; those tests are mostly
 	// decisions, and none of them looks at pixels.
@@ -248,7 +248,7 @@ func liveModal(t *testing.T, props modal.Props) layout.Widget {
 func liveButtonAction(t *testing.T, label string, clk *widget.Clickable) layout.Widget {
 	t.Helper()
 	obs := button.Button(rx.Of(theme.Default()), button.Props{
-		Label:     label,
+		Title:     label,
 		Clickable: clk,
 		Shaper:    defaultShaper(t),
 	})
@@ -806,7 +806,7 @@ func TestReturnActivatesTheDefaultAction(t *testing.T) {
 	var confirmed, cancelled, buttonClicked int
 	var clk widget.Clickable
 	action, err := button.Button(rx.Of(theme.Default()), button.Props{
-		Label:     "Cancel",
+		Title:     "Cancel",
 		Clickable: &clk,
 		Shaper:    defaultShaper(t),
 		OnClick:   func(_ layout.Context) { buttonClicked++ },
@@ -880,7 +880,7 @@ func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
 		var discarded, buttonClicked int
 		var clk widget.Clickable
 		action, err := button.Button(rx.Of(theme.Default()), button.Props{
-			Label:     "Discard",
+			Title:     "Discard",
 			Clickable: &clk,
 			Shaper:    defaultShaper(t),
 			OnClick:   func(_ layout.Context) { buttonClicked++ },
@@ -1019,16 +1019,16 @@ func TestDefaultActionDerivation(t *testing.T) {
 // TestPurposeIsDerivedFromDecision pins the single source of truth: there is no
 // purpose field to fall out of step with the callbacks.
 func TestPurposeIsDerivedFromDecision(t *testing.T) {
-	if got := (modal.Props{}).Purpose(); got != modal.PurposePanel {
-		t.Errorf("zero Props derive %v, want %v", got, modal.PurposePanel)
+	if got := (modal.Props{}).Purpose(); got != modal.PurposePane {
+		t.Errorf("zero Props derive %v, want %v", got, modal.PurposePane)
 	}
-	if got := (modal.Props{HideClose: true}).Purpose(); got != modal.PurposePanel {
-		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, modal.PurposePanel)
+	if got := (modal.Props{HideClose: true}).Purpose(); got != modal.PurposePane {
+		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, modal.PurposePane)
 	}
 	if got := (modal.Props{Decision: &modal.Decision{}}).Purpose(); got != modal.PurposeDecision {
 		t.Errorf("Props with a Decision derive %v, want %v", got, modal.PurposeDecision)
 	}
-	if got, want := modal.PurposePanel.String()+"/"+modal.PurposeDecision.String(), "panel/decision"; got != want {
+	if got, want := modal.PurposePane.String()+"/"+modal.PurposeDecision.String(), "pane/decision"; got != want {
 		t.Errorf("the purpose names pair = %q, want %q", got, want)
 	}
 }

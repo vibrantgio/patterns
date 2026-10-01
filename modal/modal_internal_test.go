@@ -152,7 +152,7 @@ func liveCloseWidget(t *testing.T, st *modalState, shaper *text.Shaper) layout.W
 func liveButton(t *testing.T, shaper *text.Shaper, label string, clk *widget.Clickable) layout.Widget {
 	t.Helper()
 	obs := button.Button(rx.Of(theme.Default()), button.Props{
-		Label:     label,
+		Title:     label,
 		Clickable: clk,
 		Shaper:    shaper,
 	})
@@ -210,9 +210,9 @@ func TestAffordancesAreDerivedFromPurpose(t *testing.T) {
 		wantEscapeCancel bool // Escape routes to Decision.Cancel rather than OnClose
 	}{
 		{"a bare pane", Props{OnClose: onClose},
-			PurposePanel, true, true, false},
+			PurposePane, true, true, false},
 		{"a pane that hides its X", Props{OnClose: onClose, HideClose: true},
-			PurposePanel, false, true, false},
+			PurposePane, false, true, false},
 		{"a decision", Props{OnClose: onClose, Decision: &Decision{Cancel: cancel}},
 			PurposeDecision, false, false, true},
 		{"a decision that asked for its X back", Props{OnClose: onClose, HideClose: false, Decision: &Decision{Cancel: cancel}},

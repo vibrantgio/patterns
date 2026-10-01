@@ -64,7 +64,7 @@ import (
 // participate in focus traversal. Active selects the underline indicator
 // and is independent of OnClick.
 type Link struct {
-	Label   string
+	Title   string
 	OnClick func(gtx layout.Context)
 	Active  bool
 }
@@ -344,7 +344,7 @@ func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 // (S3, Density.PaddingY) padding — the horizontal 12 dp stays on the
 // spacing scale, the vertical padding follows density. The cell width is
 // at least 2×S3 so the Active underline is visible even when the label
-// rasterises to zero width, which an empty Link.Label does. Links are
+// rasterises to zero width, which an empty Link.Title does. Links are
 // adjacent cells in a row, so their hit area stays the cell bounds
 // (extension would steal a neighbour's slop). The underline itself is
 // [activeMark].
@@ -373,7 +373,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 			f := typeset.Font(style, font.Normal)
 			wl := typeset.Label(style, 1)
 			mLabel := op.Record(gtx.Ops)
-			labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(style.Size), l.Label, textMaterial)
+			labelDims := typeset.Layout(labelGtx, shaper, wl, f, unit.Sp(style.Size), l.Title, textMaterial)
 			labelCall := mLabel.Stop()
 
 			cellW := labelDims.Size.X + 2*padH
@@ -394,7 +394,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 			return inner(gtx)
 		}
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			semantic.LabelOp(l.Label).Add(gtx.Ops)
+			semantic.LabelOp(l.Title).Add(gtx.Ops)
 			semantic.EnabledOp(true).Add(gtx.Ops)
 			dims := inner(gtx)
 			pointershape.OverSize(gtx.Ops, dims.Size, pointer.CursorPointer)

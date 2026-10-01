@@ -58,7 +58,7 @@ var linkLabels = [2]string{"Docs", "Components"}
 func links(activeIdx int) []navbar.Link {
 	out := make([]navbar.Link, len(linkLabels))
 	for i, l := range linkLabels {
-		out[i] = navbar.Link{Label: l, Active: i == activeIdx}
+		out[i] = navbar.Link{Title: l, Active: i == activeIdx}
 	}
 	return out
 }
@@ -173,8 +173,8 @@ func TestNavbarTabTraversal(t *testing.T) {
 	props := navbar.Props{
 		Brand: brand,
 		Links: []navbar.Link{
-			{Label: linkLabels[0], OnClick: func(_ layout.Context) {}},
-			{Label: linkLabels[1], OnClick: func(_ layout.Context) {}},
+			{Title: linkLabels[0], OnClick: func(_ layout.Context) {}},
+			{Title: linkLabels[1], OnClick: func(_ layout.Context) {}},
 		},
 		Actions: []layout.Widget{action},
 		Shaper:  defaultShaper(t),
@@ -276,8 +276,8 @@ func TestNavbarLinkClickFiresOnClick(t *testing.T) {
 	var fired0, fired1 int
 	props := navbar.Props{
 		Links: []navbar.Link{
-			{Label: linkLabels[0], OnClick: func(_ layout.Context) { fired0++ }},
-			{Label: linkLabels[1], OnClick: func(_ layout.Context) { fired1++ }},
+			{Title: linkLabels[0], OnClick: func(_ layout.Context) { fired0++ }},
+			{Title: linkLabels[1], OnClick: func(_ layout.Context) { fired1++ }},
 		},
 		Shaper: defaultShaper(t),
 	}
@@ -342,8 +342,8 @@ func TestNavbarCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := navbar.Props{
 		Links: []navbar.Link{
-			{Label: linkLabels[0], Active: true, OnClick: func(_ layout.Context) {}},
-			{Label: linkLabels[1], OnClick: func(_ layout.Context) {}},
+			{Title: linkLabels[0], Active: true, OnClick: func(_ layout.Context) {}},
+			{Title: linkLabels[1], OnClick: func(_ layout.Context) {}},
 		},
 		Shaper: defaultShaper(t),
 	}
@@ -410,7 +410,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	for _, h := range []int{barHeight(d, style), 64, 80} {
 		props := navbar.Props{
 			Brand:   brand,
-			Links:   []navbar.Link{{Label: linkLabels[0], Active: true}, {Label: linkLabels[1]}},
+			Links:   []navbar.Link{{Title: linkLabels[0], Active: true}, {Title: linkLabels[1]}},
 			Actions: []layout.Widget{fillRect(actionColor, 30, actionH)},
 			Shaper:  shaper,
 		}
@@ -458,7 +458,7 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 
 	for _, d := range []tokens.Density{tokens.Comfortable, tokens.Compact} {
 		props := navbar.Props{
-			Links:  []navbar.Link{{Label: linkLabels[0], Active: true, OnClick: func(_ layout.Context) {}}},
+			Links:  []navbar.Link{{Title: linkLabels[0], Active: true, OnClick: func(_ layout.Context) {}}},
 			Shaper: defaultShaper(t),
 		}
 		w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(d)), props))

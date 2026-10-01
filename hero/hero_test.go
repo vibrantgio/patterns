@@ -75,8 +75,8 @@ func withVisual(p hero.Props, visual layout.Widget) hero.Props {
 // withEyebrowAndCTAs adds the eyebrow kicker and both call-to-action buttons.
 func withEyebrowAndCTAs(p hero.Props) hero.Props {
 	p.Eyebrow = heroEyebrow
-	p.PrimaryCTA = &hero.CTA{Label: primaryCTA}
-	p.SecondaryCTA = &hero.CTA{Label: secondaryCTA}
+	p.PrimaryCTA = &hero.CTA{Title: primaryCTA}
+	p.SecondaryCTA = &hero.CTA{Title: secondaryCTA}
 	return p
 }
 
@@ -201,7 +201,7 @@ func TestLongCTALabelGrowsTheButton(t *testing.T) {
 
 	ctaWidth := func(label string) int {
 		p := heroText(shaper)
-		p.PrimaryCTA = &hero.CTA{Label: label}
+		p.PrimaryCTA = &hero.CTA{Title: label}
 		w := hero.Render(shaper, p, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography, tokens.Comfortable)
 		img := golden.Capture(t, frameSize, scene(w, bg))
 		return widestRunOf(img, fill)

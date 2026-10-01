@@ -278,7 +278,7 @@ func TestShellStackedPageTabTraversal(t *testing.T) {
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
-				{Label: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
+				{Title: navLinkLabels[0], OnClick: func(_ layout.Context) {}},
 			},
 			Shaper: shaper,
 		},

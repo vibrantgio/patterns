@@ -99,7 +99,7 @@ func TestGroupGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := group.Render(defaultShaper(t),
-				group.Props{Label: tc.label, Content: content(t, tc.colors)},
+				group.Props{Title: tc.label, Content: content(t, tc.colors)},
 				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.ControlBackground))
 		})
@@ -160,15 +160,15 @@ func TestGroupHairlineIsTheSeam(t *testing.T) {
 	}
 }
 
-// TestGroupLabelChangesPixels confirms the label is drawn: an unlabelled
-// group and a labelled one differ, so a Label that never reached the shaper
+// TestGroupTitleChangesPixels confirms the label is drawn: an unlabelled
+// group and a labelled one differ, so a Title that never reached the shaper
 // cannot pass silently.
-func TestGroupLabelChangesPixels(t *testing.T) {
+func TestGroupTitleChangesPixels(t *testing.T) {
 	c := tokens.PlatformLight
 	shaper := defaultShaper(t)
 	bare := group.Render(shaper, group.Props{Content: content(t, c)}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
-	named := group.Render(shaper, group.Props{Label: "Density", Content: content(t, c)}, c,
+	named := group.Render(shaper, group.Props{Title: "Density", Content: content(t, c)}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
 	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.ControlBackground))
 	b := golden.Capture(t, frameSize, scene(named, marginPx, c.ControlBackground))
