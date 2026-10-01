@@ -815,7 +815,7 @@ func drawItem(
 		lGtx.Constraints.Min = image.Point{}
 		lGtx.Constraints.Max = image.Pt(room, size.Y)
 		rec := op.Record(gtx.Ops)
-		dims := drawText(lGtx, shaper, item.Title, style, foreground)
+		dims := typeset.Text(lGtx, shaper, item.Title, style, foreground, 1)
 		call := rec.Stop()
 		stk := op.Offset(image.Pt(lead, (size.Y-dims.Size.Y)/2)).Push(gtx.Ops)
 		call.Add(gtx.Ops)
@@ -895,7 +895,7 @@ func PaintSection(gtx layout.Context, shaper *text.Shaper, heading string, style
 	lGtx.Constraints.Min = image.Point{}
 	lGtx.Constraints.Max = image.Pt(room, size.Y)
 	rec := op.Record(gtx.Ops)
-	dims := drawText(lGtx, shaper, heading, style, fg)
+	dims := typeset.Text(lGtx, shaper, heading, style, fg, 1)
 	call := rec.Stop()
 	// The block's own top to the heading's baseline is what was measured, and
 	// a line box is placed by its top, so the baseline the shaper reports is
@@ -1045,7 +1045,7 @@ func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style token
 	cGtx.Constraints.Min = image.Point{}
 	cGtx.Constraints.Max = image.Pt(size.X, size.Y)
 	rec := op.Record(gtx.Ops)
-	dims := drawText(cGtx, shaper, txt, style, fg)
+	dims := typeset.Text(cGtx, shaper, txt, style, fg, 1)
 	call := rec.Stop()
 	x := size.X - gtx.Dp(CountInset) - dims.Size.X
 	if covered > 0 {
@@ -1096,14 +1096,4 @@ func coveredWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tok
 		}
 	}
 	return covered.Ceil()
-}
-
-// drawText lays one line out in the role's own typeface, weight, size and
-// line height. Zero fields — the Render path can synthesize a size-only style
-// — fall back to the shaper's defaults.
-func drawText(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, fg color.NRGBA) layout.Dimensions {
-	m := op.Record(gtx.Ops)
-	paint.ColorOp{Color: fg}.Add(gtx.Ops)
-	material := m.Stop()
-	return typeset.Layout(gtx, shaper, typeset.Label(style, 1), typeset.Font(style, font.Normal), unit.Sp(style.Size), txt, material)
 }

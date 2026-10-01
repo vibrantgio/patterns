@@ -17,7 +17,6 @@ import (
 	"image/color"
 
 	"gioui.org/f32"
-	"gioui.org/font"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
@@ -298,17 +297,9 @@ func drawHeader(
 			titleGtx.Constraints.Max.X = titleMaxW
 			titleGtx.Constraints.Max.Y = size.Y
 
-			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, plane)}.Add(gtx.Ops)
-			material := mColor.Stop()
-
-			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. Zero fields (the Render path can synthesize a
-			// size-only style) fall back to the shaper's defaults.
-			f := typeset.Font(style, font.Normal)
-			wl := typeset.Label(style, 1)
+			fg := vgcolor.Flatten(colors.Label, plane)
 			mTitle := op.Record(gtx.Ops)
-			titleDims := typeset.Layout(titleGtx, shaper, wl, f, unit.Sp(style.Size), sec.Title, material)
+			titleDims := typeset.Text(titleGtx, shaper, sec.Title, style, fg, 1)
 			titleCall := mTitle.Stop()
 
 			offY := (size.Y - titleDims.Size.Y) / 2

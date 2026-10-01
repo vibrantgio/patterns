@@ -447,26 +447,11 @@ func drawHeaderCell[T any](
 			titleGtx.Constraints.Max.X = titleMaxW
 			titleGtx.Constraints.Max.Y = size.Y
 
-			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: vgcolor.Flatten(tok.color.HeaderText, tok.color.ControlBackground)}.Add(gtx.Ops)
-			material := mColor.Stop()
-
-			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. A zero Weight (a hand-built size-only style)
-			// keeps the header's bold weight.
-			style := tok.header
-			f := typeset.Font(style, font.Bold)
-			wl := typeset.Label(style, 1)
+			fg := vgcolor.Flatten(tok.color.HeaderText, tok.color.ControlBackground)
 			mTitle := op.Record(gtx.Ops)
-			titleDims := typeset.Layout(
-				titleGtx,
-				shaper,
-				wl,
-				f,
-				unit.Sp(style.Size),
-				col.Header,
-				material,
-			)
+			// Bold is the fallback so a hand-built size-only style still
+			// draws the header's weight.
+			titleDims := typeset.TextWeight(titleGtx, shaper, col.Header, tok.header, fg, 1, font.Bold)
 			titleCall := mTitle.Stop()
 
 			offY := (size.Y - titleDims.Size.Y) / 2
@@ -602,17 +587,9 @@ func RenderTextCell(
 		textGtx.Constraints.Max.X = textMaxW
 		textGtx.Constraints.Max.Y = size.Y
 
-		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.ControlBackground)}.Add(gtx.Ops)
-		material := mColor.Stop()
-
-		// Shape with the BodyMedium role's typeface, weight, size and line
-		// height. A zero Weight (a hand-built size-only style) keeps the
-		// shaper's default weight, as this cell always did.
-		f := typeset.Font(body, font.Normal)
-		wl := typeset.Label(body, 1)
+		fg := vgcolor.Flatten(colors.Label, colors.ControlBackground)
 		mText := op.Record(gtx.Ops)
-		textDims := typeset.Layout(textGtx, shaper, wl, f, unit.Sp(body.Size), s, material)
+		textDims := typeset.Text(textGtx, shaper, s, body, fg, 1)
 		textCall := mText.Stop()
 
 		offY := (size.Y - textDims.Size.Y) / 2

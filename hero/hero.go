@@ -28,7 +28,6 @@ import (
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -278,11 +277,7 @@ func textWidget(shaper *text.Shaper, txt string, fg color.NRGBA, style tokens.Te
 		if txt == "" {
 			return layout.Dimensions{}
 		}
-		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: fg}.Add(gtx.Ops)
-		material := mColor.Stop()
-		wl := typeset.Label(style, 2)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), txt, material)
+		return typeset.TextWeight(gtx, shaper, txt, style, fg, 2, fallbackWeight)
 	}
 }
 

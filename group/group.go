@@ -37,10 +37,7 @@ import (
 	"image"
 	"image/color"
 
-	"gioui.org/font"
 	"gioui.org/layout"
-	"gioui.org/op"
-	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
 
@@ -181,17 +178,11 @@ func draw(
 // header the weight of the content it names.
 func titleWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		m := op.Record(gtx.Ops)
-		paint.ColorOp{Color: foreground}.Add(gtx.Ops)
-		material := m.Stop()
-
-		f := typeset.Font(style, font.Normal)
-		lbl := typeset.Label(style, 1)
-		// Min is dropped so the label reports the text it drew rather than
-		// the group's own minimum, which is what keeps the S3 gap under it
-		// the gap and not the rest of the column.
+		// Min is dropped so the text reports what it drew rather than the
+		// group's own minimum, which is what keeps the S3 gap under it the
+		// gap and not the rest of the column.
 		gtx.Constraints.Min = image.Point{}
-		return typeset.Layout(gtx, shaper, lbl, f, unit.Sp(style.Size), s, material)
+		return typeset.Text(gtx, shaper, s, style, foreground, 1)
 	}
 }
 

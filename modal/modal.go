@@ -790,17 +790,10 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 				// drives the header row height via Middle alignment.
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, 0)}
 			}
-			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: vgcolor.Flatten(tok.color.Label, tok.color.WindowBackground)}.Add(gtx.Ops)
-			material := mColor.Stop()
-			// Shape with the TitleMedium role's typeface, weight, size and
-			// line height. The legacy Render path synthesizes a size-only
-			// style; its zero weight falls back to SemiBold so the title
-			// keeps its pre-Typography emphasis against the body.
-			style := tok.title
-			f := typeset.Font(style, font.SemiBold)
-			wl := typeset.Label(style, 1)
-			return typeset.Layout(gtx, shaper, wl, f, unit.Sp(style.Size), props.Title, material)
+			fg := vgcolor.Flatten(tok.color.Label, tok.color.WindowBackground)
+			// SemiBold is the fallback so a size-only style still draws the
+			// title's emphasis against the body.
+			return typeset.TextWeight(gtx, shaper, props.Title, tok.title, fg, 1, font.SemiBold)
 		})
 		if closeWidget == nil {
 			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, titleFlex)

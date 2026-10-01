@@ -19,7 +19,6 @@ import (
 	"image"
 	"image/color"
 
-	"gioui.org/font"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
@@ -351,17 +350,9 @@ func tabCell(
 				titleGtx.Constraints.Max.X = 0
 			}
 
-			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.SidebarMaterial)}.Add(gtx.Ops)
-			textMaterial := mColor.Stop()
-
-			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. Zero fields (the legacy Render path synthesizes
-			// a size-only style) fall back to the shaper's defaults.
-			f := typeset.Font(style, font.Normal)
-			wl := typeset.Label(style, 1)
+			fg := vgcolor.Flatten(colors.Label, colors.SidebarMaterial)
 			mTitle := op.Record(gtx.Ops)
-			titleDims := typeset.Layout(titleGtx, shaper, wl, f, unit.Sp(style.Size), title, textMaterial)
+			titleDims := typeset.Text(titleGtx, shaper, title, style, fg, 1)
 			titleCall := mTitle.Stop()
 
 			cellW := titleDims.Size.X + 2*padH

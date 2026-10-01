@@ -319,11 +319,8 @@ func quoteBodyWidget(shaper *text.Shaper, quote string, tok resolvedTokens) layo
 		if quote == "" {
 			return layout.Dimensions{}
 		}
-		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: vgcolor.Flatten(tok.color.Label, tok.color.CardFill)}.Add(gtx.Ops)
-		material := mColor.Stop()
-		wl := typeset.Label(tok.quote, 4)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(tok.quote, font.Normal), unit.Sp(tok.quote.Size), quote, material)
+		fg := vgcolor.Flatten(tok.color.Label, tok.color.CardFill)
+		return typeset.Text(gtx, shaper, quote, tok.quote, fg, 4)
 	}
 }
 
@@ -391,6 +388,8 @@ func drawPlaceholder(gtx layout.Context, shaper *text.Shaper, name string, size 
 	paint.ColorOp{Color: vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.CardFill)}.Add(gtx.Ops)
 	material := mColor.Stop()
 	mLetter := op.Record(gtx.Ops)
+	// The explicit form, not typeset.Text: the letter stands centred in the
+	// avatar's square, which is widget.Label's Alignment.
 	wl := typeset.Label(tok.body, 1)
 	wl.Alignment = text.Middle
 	letterDims := typeset.Layout(letterGtx, shaper, wl, typeset.Font(tok.body, font.SemiBold), unit.Sp(tok.body.Size), letter, material)
@@ -411,10 +410,6 @@ func textWidget(shaper *text.Shaper, txt string, fg color.NRGBA, style tokens.Te
 		if txt == "" {
 			return layout.Dimensions{}
 		}
-		mColor := op.Record(gtx.Ops)
-		paint.ColorOp{Color: fg}.Add(gtx.Ops)
-		material := mColor.Stop()
-		wl := typeset.Label(style, 1)
-		return typeset.Layout(gtx, shaper, wl, typeset.Font(style, fallbackWeight), unit.Sp(style.Size), txt, material)
+		return typeset.TextWeight(gtx, shaper, txt, style, fg, 1, fallbackWeight)
 	}
 }

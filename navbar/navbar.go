@@ -39,7 +39,6 @@ import (
 	"image"
 	"image/color"
 
-	"gioui.org/font"
 	"gioui.org/io/pointer"
 	"gioui.org/io/semantic"
 	"gioui.org/layout"
@@ -362,18 +361,9 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 				titleGtx.Constraints.Max.X = 0
 			}
 
-			mColor := op.Record(gtx.Ops)
-			paint.ColorOp{Color: vgcolor.Flatten(colors.Label, colors.SidebarMaterial)}.Add(gtx.Ops)
-			textMaterial := mColor.Stop()
-
-			// Shape with the LabelLarge role's typeface, weight, size and
-			// line height. Zero fields (a caller may pass a size-only
-			// style, as Render's static path does) fall back to the
-			// shaper's defaults.
-			f := typeset.Font(style, font.Normal)
-			wl := typeset.Label(style, 1)
+			fg := vgcolor.Flatten(colors.Label, colors.SidebarMaterial)
 			mTitle := op.Record(gtx.Ops)
-			titleDims := typeset.Layout(titleGtx, shaper, wl, f, unit.Sp(style.Size), l.Title, textMaterial)
+			titleDims := typeset.Text(titleGtx, shaper, l.Title, style, fg, 1)
 			titleCall := mTitle.Stop()
 
 			cellW := titleDims.Size.X + 2*padH
