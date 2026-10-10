@@ -1,4 +1,4 @@
-package modal
+package dialog
 
 import (
 	"context"
@@ -21,16 +21,16 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// TestTabCyclesFocusAmongModalTags asserts that Tab cycles focus within the
-// modal by checking that at least two distinct modal focus tags are visited
+// TestTabCyclesFocusAmongDialogTags asserts that Tab cycles focus within the
+// dialog by checking that at least two distinct dialog focus tags are visited
 // across a sequence of Tab presses. The companion external trap tests cover
 // the "does not escape" clause; this in-package test covers the "cycles"
 // clause by reading the unexported focus-tag slice.
-func TestTabCyclesFocusAmongModalTags(t *testing.T) {
+func TestTabCyclesFocusAmongDialogTags(t *testing.T) {
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 
 	// Two components/button actions, each keyed to its own caller-owned clickable.
-	// Those clickables are the action focus tags; the modal owns
+	// Those clickables are the action focus tags; the dialog owns
 	// none on their behalf, so they must register the tags themselves — which the live
 	// button does — to be focusable.
 	var clkA, clkB widget.Clickable
@@ -65,7 +65,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 	// target (the focus trap is keyed to it), mirroring the production path.
 	closeW := liveCloseWidget(t, st, shaper)
 	w := func(gtx layout.Context) layout.Dimensions {
-		return drawModal(gtx, shaper, props, tok, st, true, closeW)
+		return drawDialog(gtx, shaper, props, tok, st, true, closeW)
 	}
 
 	r := new(gioinput.Router)
@@ -104,7 +104,7 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 
 	initial := focusedIdx()
 	if initial < 0 {
-		t.Fatal("no modal tag focused after initial setup")
+		t.Fatal("no dialog tag focused after initial setup")
 	}
 	visited := map[int]bool{initial: true}
 	for i := 0; i < 6; i++ {
@@ -112,20 +112,20 @@ func TestTabCyclesFocusAmongModalTags(t *testing.T) {
 		drive()
 		idx := focusedIdx()
 		if idx < 0 {
-			t.Fatalf("Tab press #%d: no modal tag focused", i+1)
+			t.Fatalf("Tab press #%d: no dialog tag focused", i+1)
 		}
 		visited[idx] = true
 	}
 
 	if len(visited) < 2 {
-		t.Errorf("Tab did not cycle focus among modal tags: visited %v (n=%d), want ≥ 2 distinct tags", visited, len(visited))
+		t.Errorf("Tab did not cycle focus among dialog tags: visited %v (n=%d), want ≥ 2 distinct tags", visited, len(visited))
 	}
 }
 
 // liveCloseWidget subscribes to a button.Button keyed to &st.closeClick and
-// returns its latest emitted layout.Widget, so a direct drawModal call gets the same
-// interactive close affordance the production Modal pipeline threads in.
-func liveCloseWidget(t *testing.T, st *modalState, shaper *text.Shaper) layout.Widget {
+// returns its latest emitted layout.Widget, so a direct drawDialog call gets the same
+// interactive close affordance the production Dialog pipeline threads in.
+func liveCloseWidget(t *testing.T, st *dialogState, shaper *text.Shaper) layout.Widget {
 	t.Helper()
 	obs := button.Button(rx.Of(theme.Default()), button.Props{
 		Icon:      crossIcon,

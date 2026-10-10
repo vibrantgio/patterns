@@ -1,4 +1,4 @@
-package modal
+package dialog
 
 import (
 	"image"
@@ -98,7 +98,7 @@ func TestAWiderTitleWidensItsOwnButtonAlone(t *testing.T) {
 	}
 }
 
-// TestADialogOpensOnItsBodysFirstFocusable is the Modal entry's rule: the
+// TestADialogOpensOnItsBodysFirstFocusable is the Dialog entry's rule: the
 // first field holds the keyboard when a dialog opens, as the platform's
 // sheet shows. The body declares which control that is; the header's close
 // affordance and the footer's answers wait their turn in the Tab cycle.
@@ -164,9 +164,9 @@ func TestADialogWithNothingToFocusInItsBodyOpensOnTheCycle(t *testing.T) {
 	}
 }
 
-// focusedTagAfterOpen opens the modal, drives the two frames a live focus
+// focusedTagAfterOpen opens the dialog, drives the two frames a live focus
 // command needs — one to register the tags, one for the router to act on the
-// command — and reports which of the modal's tags holds the keyboard.
+// command — and reports which of the dialog's tags holds the keyboard.
 func focusedTagAfterOpen(t *testing.T, shaper *text.Shaper, props Props) event.Tag {
 	t.Helper()
 	st := newState(props)
@@ -186,7 +186,7 @@ func focusedTagAfterOpen(t *testing.T, shaper *text.Shaper, props Props) event.T
 	var ops op.Ops
 	drive := func() {
 		ops.Reset()
-		drawModal(layout.Context{
+		drawDialog(layout.Context{
 			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
 			Constraints: layout.Exact(image.Pt(320, 240)),
 			Ops:         &ops,

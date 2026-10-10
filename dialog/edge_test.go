@@ -1,11 +1,11 @@
-package modal_test
+package dialog_test
 
 import (
 	"image/color"
 	"testing"
 
 	"github.com/vibrantgio/components/golden"
-	"github.com/vibrantgio/patterns/modal"
+	"github.com/vibrantgio/patterns/dialog"
 	"github.com/vibrantgio/theme/tokens"
 )
 
@@ -34,9 +34,9 @@ func TestTheDialogWearsNoRimAgainstTheWindowBehindIt(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			shaper := defaultShaper(t)
-			props := modal.Props{Title: decisionTitle, Body: fillRect(tc.colors.ControlAccent, 40), Shaper: shaper}
+			props := dialog.Props{Title: decisionTitle, Body: fillRect(tc.colors.ControlAccent, 40), Shaper: shaper}
 			img := golden.Capture(t, frameSize, scene(
-				modal.Render(shaper, props, true, tc.colors,
+				dialog.Render(shaper, props, true, tc.colors,
 					tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable),
 				tc.colors.WindowBackground))
 

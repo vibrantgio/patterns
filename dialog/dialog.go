@@ -1,6 +1,6 @@
-// Package modal provides the Patterns Modal pattern: a centered floating
-// surface dialog over a full-window scrim backdrop, with a header (title +
-// close affordance), padded body, and optional footer action row.
+// Package dialog provides the Patterns Dialog pattern: a centered floating
+// surface over a full-window scrim backdrop, with a header (title + close
+// affordance), padded body, and optional footer action row.
 //
 // The dialog's plane is the platform's window background — what every
 // floating surface on this platform is filled with — under the platform's
@@ -37,7 +37,7 @@
 // decision to answer it has no footer either. Nothing else in this surface
 // is ruled: header and body stand on one plane.
 //
-// Modal is a callable Go function consuming a components theme observable,
+// Dialog is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and
 // free of opaque configuration — copy it into your own app and modify as
 // needed.
@@ -88,9 +88,9 @@
 //
 // # Arrival is not this package's business
 //
-// The modal owns dismissal. It does not own how you arrived, and it has no
+// The dialog owns dismissal. It does not own how you arrived, and it has no
 // notion of an accelerator: the ⌘,/Ctrl-, that opens a settings pane has to
-// be live when no modal exists, which is precisely the state a modal is not
+// be live when no dialog exists, which is precisely the state a dialog is not
 // in. Bind it in app chrome, with Gio's own key.ModShortcut (Cmd on darwin,
 // Ctrl elsewhere) rather than a GOOS test of your own, and land a message
 // that flips the flag [Props.Open] reads.
@@ -100,22 +100,22 @@
 // Props.DynamicFocusTags; see [initialFocus]. A body with nothing to focus
 // leaves the opening focus to the first tag in the Tab cycle.
 //
-// Tab and Shift+Tab cycle keyboard focus within the modal's focusable items
-// and do not escape to background content. Only the topmost modal in the
-// [Arbiter] receives input; modals underneath remain painted but inert. The
+// Tab and Shift+Tab cycle keyboard focus within the dialog's focusable items
+// and do not escape to background content. Only the topmost dialog in the
+// [Arbiter] receives input; dialogs underneath remain painted but inert. The
 // stack is frame state — a plain slice written and read during layout, on the
 // goroutine Gio runs a frame on; see arbitration.go.
 //
 // Focus ownership: the close affordance and each footer action own their own
 // focus tag and focus ring (the close button is a components/button; actions
 // likewise register the tags they own, e.g. a components/button's caller-owned
-// *widget.Clickable). The modal does not wrap an action or draw a ring around
+// *widget.Clickable). The dialog does not wrap an action or draw a ring around
 // it — it only adds the caller-declared Props.ActionFocusTags to its Tab
 // cycle, so a focused action shows exactly one ring: its own.
 //
 // Open/close is instantaneous in this package; entrance/exit transitions
 // are deferred to a later Effects-integration goal.
-package modal
+package dialog
 
 import (
 	"fmt"
@@ -146,7 +146,7 @@ import (
 	"github.com/vibrantgio/theme/typeset"
 )
 
-// `Purpose` names what a modal is for. Desktop dialogs serve two, and
+// `Purpose` names what a dialog is for. Desktop dialogs serve two, and
 // their affordances travel together rather than varying
 // independently:
 //
@@ -196,8 +196,8 @@ func (i Purpose) String() string {
 	return fmt.Sprintf("purpose(%d)", int(i))
 }
 
-// Decision turns a modal into a decision dialog. Set it on [Props.Decision]
-// and the modal drops its close X, stops dismissing on a backdrop click, and
+// Decision turns a dialog into a decision dialog. Set it on [Props.Decision]
+// and the dialog drops its close X, stops dismissing on a backdrop click, and
 // binds the two keys desktop conventions reserve for a dialog: Escape to
 // Cancel and Return to the default action.
 //
@@ -209,7 +209,7 @@ func (i Purpose) String() string {
 // right-aligned, the way both platforms order them.
 //
 // A decision dialog needs at least one focusable action in ActionFocusTags.
-// The modal's key bindings are registered against the tags it holds focus
+// The dialog's key bindings are registered against the tags it holds focus
 // with, so a decision that declares none is a dialog no key reaches.
 //
 // # The default action, and why it is derived
@@ -247,7 +247,7 @@ type Decision struct {
 // Cancel when Confirm is destructive.
 //
 // It returns nil when the destructive case has no Cancel to fall back to.
-// Nil means Return does nothing — the modal still CLAIMS the key, so it
+// Nil means Return does nothing — the dialog still CLAIMS the key, so it
 // cannot fall through to a focused destructive button. A dead Return is the
 // safe end of that trade.
 func (d Decision) DefaultAction() func(gtx layout.Context) {
@@ -257,12 +257,12 @@ func (d Decision) DefaultAction() func(gtx layout.Context) {
 	return d.Confirm
 }
 
-// Props configures a Modal. Body and OnClose may both be nil; Actions may
+// Props configures a Dialog. Body and OnClose may both be nil; Actions may
 // contain nil entries (skipped). Title may be empty (the header still
 // renders the close affordance).
 type Props struct {
-	// Open emits true to show the modal and false to hide it. A nil Open
-	// is treated as a constant false (modal never opens).
+	// Open emits true to show the dialog and false to hide it. A nil Open
+	// is treated as a constant false (dialog never opens).
 	Open rx.Observable[bool]
 
 	Title   string
@@ -282,11 +282,11 @@ type Props struct {
 	// for the two purposes and [Decision] for the destructive-default rule.
 	Decision *Decision
 
-	// Arbiter is the stack this modal joins while it is open: the modal in
+	// Arbiter is the stack this dialog joins while it is open: the dialog in
 	// front of that stack takes keyboard and pointer input and the ones
 	// beneath it stay painted and inert. The value is the scope, so a window
-	// gets one of its own (see [Arbiter]). A nil Arbiter gets this modal a
-	// stack of its own, so it is always the modal in front of it: sharing is
+	// gets one of its own (see [Arbiter]). A nil Arbiter gets this dialog a
+	// stack of its own, so it is always the dialog in front of it: sharing is
 	// the explicit act.
 	Arbiter *Arbiter
 
@@ -299,7 +299,7 @@ type Props struct {
 	// requested. HideClose is therefore only ever additive — it can hide a
 	// pane's X, and it can never show a decision's.
 	//
-	// Deprecated: a modal that hides its X because its footer answers for it
+	// Deprecated: a dialog that hides its X because its footer answers for it
 	// is describing a decision dialog. Say so with Decision and get the inert
 	// backdrop and the key bindings that belong with it; the X goes away on
 	// its own. HideClose keeps working for panes that genuinely want no X.
@@ -321,9 +321,9 @@ type Props struct {
 	DynamicFocusTags func() []event.Tag
 
 	// ActionFocusTags lists the focus tags of the focusable Actions, in the
-	// order they should join the modal's Tab cycle (after the close button).
+	// order they should join the dialog's Tab cycle (after the close button).
 	//
-	// Footer actions own their own focus tags and focus ring — the modal does
+	// Footer actions own their own focus tags and focus ring — the dialog does
 	// not wrap an action or draw a ring around it. A components/button action, for
 	// example, is built with a caller-owned *widget.Clickable; passing that
 	// &clickable here adds it to the Tab cycle (and the Escape trap) with no
@@ -334,7 +334,7 @@ type Props struct {
 	ActionFocusTags []event.Tag
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
-	// it nil in normal use: the modal then shapes its title with the theme's
+	// it nil in normal use: the dialog then shapes its title with the theme's
 	// shaper (Typography.Shaper()), which is built once for the process and
 	// shared by every component reading that typography — the cache lives
 	// behind the Typography value, so it survives the copy this component's
@@ -392,12 +392,12 @@ type resolvedTokens struct {
 	elevation tokens.ElevationScale
 }
 
-// Modal returns an rx.Observable[layout.Widget] that emits a new one
+// Dialog returns an rx.Observable[layout.Widget] that emits a new one
 // whenever the theme or Open state changes. It renders a scrim and
 // centered surface when open, or no pixels at all when closed. State (the
 // arbitration set and stack hold, focus tags, the close-button clickable)
 // persists across emissions in the rx.Defer scope.
-func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
+func Dialog(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	open := props.Open
 	if open == nil {
 		open = rx.Of(false)
@@ -427,7 +427,7 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 		st := newState(props)
 
 		// The close affordance is a GHOST components/button icon-only variant — a
-		// pane's X is present without being the subject. The modal owns its
+		// pane's X is present without being the subject. The dialog owns its
 		// clickable (&st.closeClick) so the
 		// focus trap stays keyed to a single tag and no doubled focus ring is
 		// drawn; OnClose is routed through the button's OnClick. Build once
@@ -470,15 +470,15 @@ func Modal(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 				if !openNow {
 					return layout.Dimensions{Size: gtx.Constraints.Max}
 				}
-				return drawModal(gtx, shaper, props, tok, st, live, closeW)
+				return drawDialog(gtx, shaper, props, tok, st, live, closeW)
 			}
 		})
 	})
 }
 
-// Render produces a layout.Widget for a modal with pre-resolved tokens and
+// Render produces a layout.Widget for a dialog with pre-resolved tokens and
 // an explicit open flag. Intended for golden-image testing and static
-// demonstrations; production code should use Modal, which reads both of the
+// demonstrations; production code should use Dialog, which reads both of the
 // parameters below off the theme. The returned layout.Widget performs no input
 // handling: pass open=true to render the scrim and surface, open=false to
 // render nothing (it consumes the constraints but paints no pixels).
@@ -516,18 +516,18 @@ func Render(
 		if !open {
 			return layout.Dimensions{Size: gtx.Constraints.Max}
 		}
-		return drawModal(gtx, shaper, props, tok, st, false, closeW)
+		return drawDialog(gtx, shaper, props, tok, st, false, closeW)
 	}
 }
 
-// modalState holds this modal's arbitration set and stack hold, its
+// dialogState holds this dialog's arbitration set and stack hold, its
 // per-subscription stable tags, and the open-flag tracker. One instance is
-// owned by each Modal subscription (and by static Render invocations, where
+// owned by each Dialog subscription (and by static Render invocations, where
 // focus, input handling and arbitration are all inert). Its address is also
-// the modal's identity inside the Arbiter.
-type modalState struct {
+// the dialog's identity inside the Arbiter.
+type dialogState struct {
 	arb *Arbiter
-	// pushed says this modal is currently on arb's stack. It is the edge
+	// pushed says this dialog is currently on arb's stack. It is the edge
 	// over Open: one opening buys one push, and the matching pop is exact
 	// because of it.
 	pushed           bool
@@ -536,22 +536,22 @@ type modalState struct {
 	// Stable tags so the router can route events across frames. The close
 	// button's clickable doubles as its focus tag (driven by components/button).
 	// Footer actions own their own focus tags (Props.ActionFocusTags); the
-	// modal holds none on their behalf.
+	// dialog holds none on their behalf.
 	scrimTag   int
 	surfaceTag int
 	closeClick widget.Clickable
 }
 
-func newState(props Props) *modalState {
+func newState(props Props) *dialogState {
 	arb := props.Arbiter
 	if arb == nil {
 		arb = NewArbiter()
 	}
-	return &modalState{arb: arb}
+	return &dialogState{arb: arb}
 }
 
 // track advances st's membership of the stack for this frame and reports
-// whether st takes input: only when it is open AND in front. Modals behind it
+// whether st takes input: only when it is open AND in front. Dialogs behind it
 // keep painting and get false, which is the whole of "painted but inert" —
 // live gates event.Op registration and key draining, never drawing.
 //
@@ -559,13 +559,13 @@ func newState(props Props) *modalState {
 // draw the result, rather than where the Open observable emitted on another
 // one. The emitted layout.Widget is re-invoked every frame until the next emission
 // replaces it, so both transitions are guarded by st.pushed — the edge over
-// Open — and run exactly once. Two consequences a reader has to know: a modal
+// Open — and run exactly once. Two consequences a reader has to know: a dialog
 // that is open but never laid out neither joins the stack nor covers
 // anything, and symmetrically one whose Open goes false while it is off the
-// tree keeps its place until it is laid out again. Compose the modal into the
+// tree keeps its place until it is laid out again. Compose the dialog into the
 // tree unconditionally — the closed layout.Widget paints nothing — and neither can
 // arise; every application in this organization already does.
-func (st *modalState) track(open bool) bool {
+func (st *dialogState) track(open bool) bool {
 	switch {
 	case open && !st.pushed:
 		st.pushed = true
@@ -593,14 +593,14 @@ func focusCount(props Props) int {
 	return n
 }
 
-// drawModal paints the scrim, centered surface, header (title + close),
+// drawDialog paints the scrim, centered surface, header (title + close),
 // body, and footer actions, then processes input when live is true.
-func drawModal(
+func drawDialog(
 	gtx layout.Context,
 	shaper *text.Shaper,
 	props Props,
 	tok resolvedTokens,
-	st *modalState,
+	st *dialogState,
 	live bool,
 	closeWidget layout.Widget,
 ) layout.Dimensions {
@@ -619,14 +619,14 @@ func drawModal(
 		processDefaultAction(gtx, props, st)
 	}
 
-	// Everything the modal paints goes into one macro handed to op.Defer, so
+	// Everything the dialog paints goes into one macro handed to op.Defer, so
 	// the scrim and the surface land on the floating level: above every
 	// operation the window's content recorded, the deferred ones included —
 	// a bordered toolbar control's drop shadow, a focused control's ring —
 	// and above nothing of its own. Ruling of 2026-09-18, the Level entry:
-	// the floating level stands above everything in the window, and a modal
+	// the floating level stands above everything in the window, and a dialog
 	// is on it, so it defers as the popover, the tooltip and the menu do.
-	// Deferred ops run in the order they were deferred and the modal is laid
+	// Deferred ops run in the order they were deferred and the dialog is laid
 	// out after the page it interrupts, so it lands above them.
 	//
 	// Only the painting moves. The content is laid out into its own macro
@@ -708,7 +708,7 @@ func drawModal(
 	surfPos := image.Pt((frame.X-surfW)/2, (frame.Y-surfH)/2)
 
 	// Surface — rounded rectangle, registered as a pointer absorber so
-	// presses on its area do not reach the scrim and dismiss the modal.
+	// presses on its area do not reach the scrim and dismiss the dialog.
 	// It floats, so it wears the window background under the platform's
 	// shadow and no hairline: the sheet's boundary in the reference is one
 	// step from the dimmed window to the fill, on every side and in both
@@ -758,7 +758,7 @@ func drawModal(
 
 // drawSurfaceContents lays out the header row and the body vertically inside
 // the already-inset surface gtx. The decision footer is not among them: it is
-// a band of the SHEET and not of the inset column, drawn by drawModal at the
+// a band of the SHEET and not of the inset column, drawn by drawDialog at the
 // surface's own width under the hairline that parts it from the body.
 func drawSurfaceContents(
 	gtx layout.Context,
@@ -848,12 +848,12 @@ const footerAirDp = 21
 
 // footerWidget renders a right-aligned row of action components. Each action is
 // laid out bare inside a box [dialogButtonWDp] wide: it owns its own focus
-// tag and focus ring (the modal neither wraps it nor decorates it), and joins
+// tag and focus ring (the dialog neither wraps it nor decorates it), and joins
 // the Tab cycle via Props.ActionFocusTags. Returns nil when there are no
 // non-nil actions.
 //
 // The ROW draws nothing of its own. The hairline above it and the band it
-// stands in are the SURFACE's, drawn by drawModal at the sheet's own width:
+// stands in are the SURFACE's, drawn by drawDialog at the sheet's own width:
 // the line runs edge to edge and the row does not, so neither can be the
 // row's. See [footerAirDp] for the band, and the package doc for the line.
 func footerWidget(props Props, tok resolvedTokens) layout.Widget {
@@ -914,8 +914,8 @@ func actionBox(a layout.Widget, wPx int) layout.Widget {
 
 // processInput drains the scrim, surface, close-button, escape, and tab
 // events generated this frame and dispatches them: scrim/close/escape →
-// OnClose, tab/shift-tab → cycle focus among the registered modal tags.
-func processInput(gtx layout.Context, props Props, st *modalState) {
+// OnClose, tab/shift-tab → cycle focus among the registered dialog tags.
+func processInput(gtx layout.Context, props Props, st *dialogState) {
 	// Drain FocusFilter events for each focus tag so the router retains focus
 	// when set, mirroring components/layout.FocusGroup.Update.
 	tags, bodyFirst := focusTags(props, st)
@@ -964,14 +964,14 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 	}
 
 	// The close button is a components/button instance: it drains its own
-	// Clicked() and invokes props.OnClose via Props.OnClick. The modal must
+	// Clicked() and invokes props.OnClose via Props.OnClick. The dialog must
 	// NOT also check st.closeClick.Clicked here — the button has already
 	// consumed the event, so this check would always be false.
 
 	// Escape → OnClose on a pane, Decision.Cancel on a decision dialog
 	// (falling back to OnClose when the decision names no Cancel, so Escape
-	// always leaves). Register the filter against every modal focus tag so
-	// the event fires whenever any modal element has focus.
+	// always leaves). Register the filter against every dialog focus tag so
+	// the event fires whenever any dialog element has focus.
 	escape := props.onEscape()
 	for _, tag := range tags {
 		for {
@@ -985,7 +985,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 		}
 	}
 
-	// Tab / Shift+Tab focus cycling among modal tags. Registering the
+	// Tab / Shift+Tab focus cycling among dialog tags. Registering the
 	// filter with Focus: tag traps Tab before the router's default
 	// MoveFocus advances focus to background content.
 	curIdx := currentFocusIdx(gtx, tags)
@@ -1026,7 +1026,7 @@ func processInput(gtx layout.Context, props Props, st *modalState) {
 // whichever footer button has focus, and on a "Discard changes?" dialog that
 // is precisely the destruction Apple's rule forbids Return to reach. A dead
 // Return is the safe end of the trade.
-func processDefaultAction(gtx layout.Context, props Props, st *modalState) {
+func processDefaultAction(gtx layout.Context, props Props, st *dialogState) {
 	if props.Decision == nil {
 		return
 	}
@@ -1048,16 +1048,16 @@ func processDefaultAction(gtx layout.Context, props Props, st *modalState) {
 	}
 }
 
-// focusTags returns the ordered slice of focus tags belonging to this modal:
+// focusTags returns the ordered slice of focus tags belonging to this dialog:
 // the close button first, then the body's own (Props.DynamicFocusTags), then
 // the caller-declared action focus tags. Every one of them is owned by the
-// component that draws it; the modal only sequences them for Tab cycling and
+// component that draws it; the dialog only sequences them for Tab cycling and
 // the Escape trap.
 //
 // bodyFirst is the index of the body's first focusable within tags, or -1
 // when the body declares none. That is the control the dialog opens with the
 // keyboard on — see [initialFocus].
-func focusTags(props Props, st *modalState) (tags []event.Tag, bodyFirst int) {
+func focusTags(props Props, st *dialogState) (tags []event.Tag, bodyFirst int) {
 	tags = make([]event.Tag, 0, focusCount(props))
 	bodyFirst = -1
 	if props.showsClose() {
@@ -1110,8 +1110,8 @@ func initialFocus(tags []event.Tag, bodyFirst int) event.Tag {
 	return tags[0]
 }
 
-// currentFocusIdx returns the index of the currently-focused modal tag,
-// or -1 if no modal element holds focus.
+// currentFocusIdx returns the index of the currently-focused dialog tag,
+// or -1 if no dialog element holds focus.
 func currentFocusIdx(gtx layout.Context, tags []event.Tag) int {
 	for i, tag := range tags {
 		if gtx.Focused(tag) {
@@ -1166,7 +1166,7 @@ const crossPadDp = 4
 const dialogCornerDp = 27
 
 // crossIcon paints an "×" shape — two diagonal strokes — into a
-// sizePx×sizePx box at the current origin in colour col. It is the modal
+// sizePx×sizePx box at the current origin in colour col. It is the dialog
 // close button's symbol, satisfying the button.Props.Icon painter contract
 // (clip.Path / clip.Stroke only — no font or SVG rasterisation) so goldens
 // stay deterministic across GPU contexts.

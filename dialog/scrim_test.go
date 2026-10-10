@@ -1,4 +1,4 @@
-package modal_test
+package dialog_test
 
 import (
 	"image"
@@ -10,7 +10,7 @@ import (
 	"gioui.org/op/paint"
 
 	"github.com/vibrantgio/components/golden"
-	"github.com/vibrantgio/patterns/modal"
+	"github.com/vibrantgio/patterns/dialog"
 	"github.com/vibrantgio/theme/tokens"
 )
 
@@ -52,14 +52,14 @@ func TestScrimLandsThePlatformsByteOverAPage(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			shaper := defaultShaper(t)
-			props := modal.Props{Title: decisionTitle, Body: fillRect(tc.colors.ControlAccent, 40), Shaper: shaper}
+			props := dialog.Props{Title: decisionTitle, Body: fillRect(tc.colors.ControlAccent, 40), Shaper: shaper}
 			img := golden.Capture(t, frameSize, func(gtx layout.Context) layout.Dimensions {
 				half := frameW / 2
 				paint.FillShape(gtx.Ops, color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 					clip.Rect(image.Rect(0, 0, half, frameH)).Op())
 				paint.FillShape(gtx.Ops, color.NRGBA{R: 0x00, G: 0x7a, B: 0xff, A: 0xff},
 					clip.Rect(image.Rect(half, 0, frameW, frameH)).Op())
-				return modal.Render(shaper, props, true, tc.colors,
+				return dialog.Render(shaper, props, true, tc.colors,
 					tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)(gtx)
 			})
 			// Well clear of the dialog, which is centred and three quarters

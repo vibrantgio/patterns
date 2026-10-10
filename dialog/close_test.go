@@ -1,4 +1,4 @@
-package modal_test
+package dialog_test
 
 import (
 	"image"
@@ -13,7 +13,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
-	"github.com/vibrantgio/patterns/modal"
+	"github.com/vibrantgio/patterns/dialog"
 	themecolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -47,8 +47,8 @@ var closeTargetDp = int(tokens.Comfortable.ControlHeight)
 // there is nothing else at its edge to stop at.
 var cornerInset = int(tokens.Radius.Lg) + 1
 
-func markOnly() modal.Props {
-	return modal.Props{Title: "", Body: nil}
+func markOnly() dialog.Props {
+	return dialog.Props{Title: "", Body: nil}
 }
 
 // surfaceAndMark locates, in a captured frame, the dialog surface and the
@@ -121,7 +121,7 @@ func capturePane(t *testing.T, c tokens.PlatformColors, bg color.NRGBA) (*image.
 	// measurement and not a stored image, and the live pipeline the pointer
 	// half of these tests drives rounds its corners, so measuring the same
 	// shape keeps the two halves talking about one dialog.
-	w := modal.Render(shaper, markOnly(), true, c, tokens.Spacing, tokens.Radius,
+	w := dialog.Render(shaper, markOnly(), true, c, tokens.Spacing, tokens.Radius,
 		tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	return golden.Capture(t, frameSize, scene(w, bg)), c.WindowBackground
 }
@@ -202,13 +202,13 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	cy := (mark.Min.Y + mark.Max.Y) / 2
 
 	var closed int
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		OnClose: func(_ layout.Context) { closed++ },
 	})
 	r := new(gioinput.Router)
 	ops := new(op.Ops)
-	// Frame 1 registers the areas, frame 2 settles the focus the modal takes
+	// Frame 1 registers the areas, frame 2 settles the focus the dialog takes
 	// on opening. Presses land from frame 3 on.
 	driveFrame(w, ops, r, frameSize)
 	driveFrame(w, ops, r, frameSize)

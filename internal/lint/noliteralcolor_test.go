@@ -21,7 +21,7 @@ type exception struct {
 }
 
 // exceptions lists the deliberate literal-colour sites in this repo. There
-// are none: the modal's scrim was the last, and it is the platform's
+// are none: the dialog's scrim was the last, and it is the platform's
 // measured dim now.
 var exceptions []exception
 

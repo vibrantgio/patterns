@@ -1,8 +1,8 @@
-// Command gallery shows the Patterns Modal in action, as a DECISION dialog —
+// Command gallery shows the Patterns Dialog in action, as a DECISION dialog —
 // the archetype a "Confirm action" question belongs to. Props.Decision is what
 // says so, and everything else follows from it: no close X, an inert backdrop,
 // Escape bound to Cancel, Return to the default action. The footer Cancel/OK
-// actions are components/button instances that own their own focus ring; the modal
+// actions are components/button instances that own their own focus ring; the dialog
 // sequences them into one Tab cycle (Cancel → OK → Cancel) via
 // Props.ActionFocusTags.
 //
@@ -18,7 +18,7 @@
 //
 // Run it from the root of the patterns repository:
 //
-//	go run ./modal/gallery
+//	go run ./dialog/gallery
 package main
 
 import (
@@ -42,7 +42,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/mvu/stream"
-	"github.com/vibrantgio/patterns/modal"
+	"github.com/vibrantgio/patterns/dialog"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -52,7 +52,7 @@ func main() {
 	go func() {
 		w := new(app.Window)
 		w.Option(
-			app.Title("Patterns — Modal (decision dialog)"),
+			app.Title("Patterns — Dialog (decision)"),
 			app.Size(unit.Dp(560), unit.Dp(440)),
 		)
 		if err := run(w); err != nil {
@@ -71,17 +71,17 @@ type demo struct {
 	openBtn      layout.Widget
 
 	// Footer action clickables — caller-owned so they double as the actions'
-	// focus tags (passed to the modal via Props.ActionFocusTags).
+	// focus tags (passed to the dialog via Props.ActionFocusTags).
 	cancelClk widget.Clickable
 	okClk     widget.Clickable
 
-	mu          sync.Mutex
-	modalWidget layout.Widget
-	closes      int
+	mu           sync.Mutex
+	dialogWidget layout.Widget
+	closes       int
 }
 
 func run(w *app.Window) error {
-	// The theme's cached Roboto shaper — the same one the modal
+	// The theme's cached Roboto shaper — the same one the dialog
 	// and buttons default to when Props.Shaper is nil.
 	shaper := tokens.DefaultTypography.Shaper()
 	d := &demo{win: w, shaper: shaper}
@@ -92,13 +92,13 @@ func run(w *app.Window) error {
 	// Open is a current value several consumers may watch, carried by
 	// mvu/stream.Value rather than a bus. The seed is the part that matters
 	// here — a subscriber sees `false` the moment it subscribes, so the
-	// modal's CombineLatest fires on the first frame instead of waiting for
+	// dialog's CombineLatest fires on the first frame instead of waiting for
 	// an emission.
 	var openObs rx.Observable[bool]
 	d.openObserver, openObs = stream.Value(false)
 
 	// The trigger is itself a components/button — dogfooding the same component the
-	// modal's footer actions use.
+	// dialog's footer actions use.
 	var err error
 	d.openBtn, err = button.Button(th, button.Props{
 		Title:   "Open dialog",
@@ -110,7 +110,7 @@ func run(w *app.Window) error {
 	}
 
 	// Dismiss the dialog: bump a visible counter and drive Open false so the
-	// modal actually hides. Shared by every route out — Escape and Return
+	// dialog actually hides. Shared by every route out — Escape and Return
 	// (Decision.Cancel and Decision.Confirm) and the footer actions' own
 	// OnClick.
 	closeDialog := func() {
@@ -123,7 +123,7 @@ func run(w *app.Window) error {
 
 	// Footer actions are components/buttons keyed to caller-owned clickables. Each
 	// draws its own focus ring; passing &clickable in ActionFocusTags adds it
-	// to the modal's Tab cycle with no doubled outer ring.
+	// to the dialog's Tab cycle with no doubled outer ring.
 	cancelBtn, err := button.Button(th, button.Props{
 		Title:     "Cancel",
 		Emphasis:  button.Tonal,
@@ -144,26 +144,26 @@ func run(w *app.Window) error {
 		return err
 	}
 
-	// Live modal, declared as a decision dialog. Confirm is not destructive,
+	// Live dialog, declared as a decision dialog. Confirm is not destructive,
 	// so it is what Return reaches; mark it Destructive and the default would
 	// move to Cancel without another line changing.
-	modalObs := modal.Modal(th, modal.Props{
+	dialogObs := dialog.Dialog(th, dialog.Props{
 		Open:            openObs,
 		Title:           "Confirm action",
 		Body:            d.body,
 		Actions:         []layout.Widget{cancelBtn, okBtn},
 		ActionFocusTags: []event.Tag{&d.cancelClk, &d.okClk},
-		Decision: &modal.Decision{
+		Decision: &dialog.Decision{
 			Confirm: func(_ layout.Context) { closeDialog() },
 			Cancel:  func(_ layout.Context) { closeDialog() },
 		},
 		Shaper:  shaper,
 		OnClose: func(_ layout.Context) { closeDialog() },
 	})
-	sub := modalObs.Subscribe(rx.GoroutineContext(), func(mw layout.Widget, _ error, done bool) {
+	sub := dialogObs.Subscribe(rx.GoroutineContext(), func(mw layout.Widget, _ error, done bool) {
 		if !done && mw != nil {
 			d.mu.Lock()
-			d.modalWidget = mw
+			d.dialogWidget = mw
 			d.mu.Unlock()
 			w.Invalidate()
 		}
@@ -186,7 +186,7 @@ func run(w *app.Window) error {
 	}
 }
 
-// body is the modal's content: a short instructional paragraph.
+// body is the dialog's content: a short instructional paragraph.
 func (d *demo) body(gtx layout.Context) layout.Dimensions {
 	m := op.Record(gtx.Ops)
 	paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.SecondaryLabel, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
@@ -204,7 +204,7 @@ func (d *demo) frame(gtx layout.Context) layout.Dimensions {
 	paint.FillShape(gtx.Ops, tokens.PlatformLight.WindowBackground, clip.Rect{Max: gtx.Constraints.Max}.Op())
 
 	// Trigger button + dismissal counter, near the top. Visible whenever the
-	// modal is closed; when open, the scrim is painted over them and absorbs
+	// dialog is closed; when open, the scrim is painted over them and absorbs
 	// the clicks — and on this decision dialog it answers none of them.
 	layout.Inset{Top: unit.Dp(28), Left: unit.Dp(28), Right: unit.Dp(28)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -229,9 +229,9 @@ func (d *demo) frame(gtx layout.Context) layout.Dimensions {
 		)
 	})
 
-	// Live modal on top: paints scrim + surface when open, nothing when closed.
+	// Live dialog on top: paints scrim + surface when open, nothing when closed.
 	d.mu.Lock()
-	mw := d.modalWidget
+	mw := d.dialogWidget
 	d.mu.Unlock()
 	if mw != nil {
 		mw(gtx)

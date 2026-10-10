@@ -1,4 +1,4 @@
-package modal_test
+package dialog_test
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/components/golden"
-	"github.com/vibrantgio/patterns/modal"
+	"github.com/vibrantgio/patterns/dialog"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -98,14 +98,14 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 const (
 	paneTitle     = "Preferences"
 	decisionTitle = "Discard changes?"
-	// modalTitle is the interaction tests' title; those tests are mostly
+	// dialogTitle is the interaction tests' title; those tests are mostly
 	// decisions, and none of them looks at pixels.
-	modalTitle = decisionTitle
+	dialogTitle = decisionTitle
 )
 
 // ---- Golden tests ----
 
-// TestModalGolden records or diffs the stored goldens, one fixture per
+// TestDialogGolden records or diffs the stored goldens, one fixture per
 // purpose:
 //
 //   - light-open / dark-open / light-closed are PANES — a title and an
@@ -116,7 +116,7 @@ const (
 //
 // The cross, scrim, surface, and action rectangles are deterministic clip
 // shapes; the title carries the TitleMedium role.
-func TestModalGolden(t *testing.T) {
+func TestDialogGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	cancel := actionRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 28)
@@ -129,7 +129,7 @@ func TestModalGolden(t *testing.T) {
 		name     string
 		open     bool
 		title    string
-		decision *modal.Decision
+		decision *dialog.Decision
 		actions  []layout.Widget
 		colors   tokens.PlatformColors
 		bg       color.NRGBA
@@ -141,39 +141,39 @@ func TestModalGolden(t *testing.T) {
 		// not Discard. Nothing about that is visible here — the fixture states
 		// it because a fixture is also documentation of the intended call.
 		{"light-with-actions", true, decisionTitle,
-			&modal.Decision{Destructive: true}, []layout.Widget{cancel, discard},
+			&dialog.Decision{Destructive: true}, []layout.Widget{cancel, discard},
 			tokens.PlatformLight, lightBG},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			props := modal.Props{
+			props := dialog.Props{
 				Title:    tc.title,
 				Body:     body,
 				Actions:  tc.actions,
 				Decision: tc.decision,
 				Shaper:   shaper,
 			}
-			w := modal.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+			w := dialog.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
 }
 
-// TestModalOpenAndClosedDiffer confirms that flipping the open flag
+// TestDialogOpenAndClosedDiffer confirms that flipping the open flag
 // changes the rendered output. Catches regressions where the open
 // branch silently no-ops.
-func TestModalOpenAndClosedDiffer(t *testing.T) {
+func TestDialogOpenAndClosedDiffer(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
-	open := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-	closed := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper}, false, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	open := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper}, true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	closed := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper}, false, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
 	imgOpen := golden.Capture(t, frameSize, scene(open, bg))
 	imgClosed := golden.Capture(t, frameSize, scene(closed, bg))
 	if n := golden.PixelDiff(imgOpen, imgClosed); n == 0 {
-		t.Error("open and closed modal render identically; expected scrim + surface in open")
+		t.Error("open and closed dialog render identically; expected scrim + surface in open")
 	}
 }
 
@@ -186,16 +186,16 @@ func densityTheme(d tokens.Density) theme.Theme {
 	return th
 }
 
-// TestModalCompactGolden records or diffs the compact-density golden
-// through the LIVE pipeline. The modal itself is a surface — its inset
+// TestDialogCompactGolden records or diffs the compact-density golden
+// through the LIVE pipeline. The dialog itself is a surface — its inset
 // and gaps stay on the spacing scale — but its close
 // affordance is a live components/button, which densifies to a 28 dp square
 // through its own theme subscription; that shrinking button is what this
 // golden pins down.
-func TestModalCompactGolden(t *testing.T) {
+func TestDialogCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
-	obs := modal.Modal(rx.Of(densityTheme(tokens.Compact)), modal.Props{
+	obs := dialog.Dialog(rx.Of(densityTheme(tokens.Compact)), dialog.Props{
 		Open:   rx.Of(true),
 		Title:  paneTitle,
 		Body:   body,
@@ -207,43 +207,43 @@ func TestModalCompactGolden(t *testing.T) {
 			w = next
 		}
 	}).Wait(); err != nil {
-		t.Fatalf("Modal subscribe: %v", err)
+		t.Fatalf("Dialog subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Modal did not emit an initial layout.Widget")
+		t.Fatal("Dialog did not emit an initial layout.Widget")
 	}
 	golden.Render(t, "light-compact-open", frameSize, scene(w, lightBG))
 }
 
 // ---- Interaction tests ----
 
-// liveModal subscribes to the Modal observable, drains the trampoline
+// liveDialog subscribes to the Dialog observable, drains the trampoline
 // scheduler with Wait(), and returns the latest emitted layout.Widget.
 // State referenced by the layout.Widget closure remains valid for the test's
 // lifetime because it is captured by the rx.Defer scope.
-func liveModal(t *testing.T, props modal.Props) layout.Widget {
+func liveDialog(t *testing.T, props dialog.Props) layout.Widget {
 	t.Helper()
 	if props.Shaper == nil {
 		props.Shaper = defaultShaper(t)
 	}
-	obs := modal.Modal(rx.Of(theme.Default()), props)
+	obs := dialog.Dialog(rx.Of(theme.Default()), props)
 	var w layout.Widget
 	if err := obs.Subscribe(context.Background(), func(next layout.Widget, _ error, done bool) {
 		if !done && next != nil {
 			w = next
 		}
 	}).Wait(); err != nil {
-		t.Fatalf("Modal subscribe: %v", err)
+		t.Fatalf("Dialog subscribe: %v", err)
 	}
 	if w == nil {
-		t.Fatal("Modal did not emit an initial layout.Widget")
+		t.Fatal("Dialog did not emit an initial layout.Widget")
 	}
 	return w
 }
 
 // liveButtonAction subscribes to a titled components/button keyed to a caller-owned
 // clickable and returns its latest emitted layout.Widget. The caller passes &clk in
-// Props.ActionFocusTags so the button joins the modal's Tab cycle while owning
+// Props.ActionFocusTags so the button joins the dialog's Tab cycle while owning
 // its own focus tag and ring.
 func liveButtonAction(t *testing.T, title string, clk *widget.Clickable) layout.Widget {
 	t.Helper()
@@ -283,10 +283,10 @@ func driveFrame(w layout.Widget, ops *op.Ops, r *gioinput.Router, size image.Poi
 }
 
 // TestEscapeInvokesOnClose verifies that pressing Escape while
-// the modal holds focus invokes the OnClose callback.
+// the dialog holds focus invokes the OnClose callback.
 func TestEscapeInvokesOnClose(t *testing.T) {
 	var closed int
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		OnClose: func(_ layout.Context) { closed++ },
@@ -311,11 +311,11 @@ func TestEscapeInvokesOnClose(t *testing.T) {
 // TestCloseButtonActivatesOnClose verifies the close affordance — now a
 // components/button keyed to &st.closeClick — invokes OnClose when activated by
 // keyboard while focused. The button drains its own Clicked() and routes
-// through Props.OnClick; the modal no longer checks Clicked itself, so this
+// through Props.OnClick; the dialog no longer checks Clicked itself, so this
 // is the only guard against the close button silently doing nothing.
 func TestCloseButtonActivatesOnClose(t *testing.T) {
 	var closed int
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		OnClose: func(_ layout.Context) { closed++ },
@@ -343,14 +343,14 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 }
 
 // TestBackdropClickInvokesOnClose verifies that pressing inside
-// the scrim region but outside the modal surface invokes OnClose. A press
+// the scrim region but outside the dialog surface invokes OnClose. A press
 // inside the surface must NOT invoke OnClose.
 //
 // This is the PANE half of the purpose contract; TestBackdropClickOnDecisionIsInert
 // is the other half.
 func TestBackdropClickInvokesOnClose(t *testing.T) {
 	var closed int
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		OnClose: func(_ layout.Context) { closed++ },
@@ -387,13 +387,13 @@ func TestBackdropClickInvokesOnClose(t *testing.T) {
 	}
 }
 
-// TestTabTrapsFocusWithinModal verifies that Tab cycles among
-// modal focus tags and does not advance focus to a background-registered
+// TestTabTrapsFocusWithinDialog verifies that Tab cycles among
+// dialog focus tags and does not advance focus to a background-registered
 // focusable, no matter how many times Tab is pressed.
-func TestTabTrapsFocusWithinModal(t *testing.T) {
+func TestTabTrapsFocusWithinDialog(t *testing.T) {
 	// Two components/button footer actions plus the implicit close button → three
-	// modal tags. The actions own their clickables; those are the action focus
-	// tags, so the modal cycles among all three without wrapping.
+	// dialog tags. The actions own their clickables; those are the action focus
+	// tags, so the dialog cycles among all three without wrapping.
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	var clk1, clk2 widget.Clickable
 	action1 := liveButtonAction(t, "A", &clk1)
@@ -402,7 +402,7 @@ func TestTabTrapsFocusWithinModal(t *testing.T) {
 	// A background focusable that the test will assert focus never reaches.
 	backgroundTag := new(int)
 
-	mw := liveModal(t, modal.Props{
+	mw := liveDialog(t, dialog.Props{
 		Open:            rx.Of(true),
 		Body:            body,
 		Actions:         []layout.Widget{action1, action2},
@@ -410,9 +410,9 @@ func TestTabTrapsFocusWithinModal(t *testing.T) {
 		OnClose:         func(_ layout.Context) {},
 	})
 
-	// Compose the modal over a background that also registers a focusable
+	// Compose the dialog over a background that also registers a focusable
 	// tag. This is the harder version of the test: it proves Tab cannot
-	// escape the modal even when the router has another focus target to
+	// escape the dialog even when the router has another focus target to
 	// advance to.
 	composed := func(gtx layout.Context) layout.Dimensions {
 		// Background focusable: a 1×1 region with a FocusFilter.
@@ -435,8 +435,8 @@ func TestTabTrapsFocusWithinModal(t *testing.T) {
 	driveFrame(composed, ops, r, frameSize)
 	driveFrame(composed, ops, r, frameSize) // initial focus is applied.
 
-	// At this point the modal's close button holds focus. Press Tab N+1
-	// times — far more than the number of focus stops in the modal — and
+	// At this point the dialog's close button holds focus. Press Tab N+1
+	// times — far more than the number of focus stops in the dialog — and
 	// assert focus is still NOT on the background tag.
 	for i := 0; i < 12; i++ {
 		r.Queue(key.Event{Name: key.NameTab, State: key.Press})
@@ -450,15 +450,15 @@ func TestTabTrapsFocusWithinModal(t *testing.T) {
 		Source:      r.Source(),
 	}
 	if gtx.Focused(backgroundTag) {
-		t.Fatal("Tab cycle escaped the modal: background tag has focus")
+		t.Fatal("Tab cycle escaped the dialog: background tag has focus")
 	}
 }
 
-// TestShiftTabTrapsFocusWithinModal mirrors TestTabTrapsFocusWithinModal
+// TestShiftTabTrapsFocusWithinDialog mirrors TestTabTrapsFocusWithinDialog
 // for the reverse direction. With Shift+Tab the router would otherwise
 // MoveFocus(FocusBackward), so this is a distinct code path on Gio's
 // side.
-func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
+func TestShiftTabTrapsFocusWithinDialog(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	var clk1, clk2 widget.Clickable
 	action1 := liveButtonAction(t, "A", &clk1)
@@ -466,7 +466,7 @@ func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
 
 	backgroundTag := new(int)
 
-	mw := liveModal(t, modal.Props{
+	mw := liveDialog(t, dialog.Props{
 		Open:            rx.Of(true),
 		Body:            body,
 		Actions:         []layout.Widget{action1, action2},
@@ -504,7 +504,7 @@ func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
 		Source:      r.Source(),
 	}
 	if gtx.Focused(backgroundTag) {
-		t.Fatal("Shift+Tab cycle escaped the modal: background tag has focus")
+		t.Fatal("Shift+Tab cycle escaped the dialog: background tag has focus")
 	}
 }
 
@@ -512,12 +512,12 @@ func TestShiftTabTrapsFocusWithinModal(t *testing.T) {
 
 // TestActionOwnsFocusTag confirms that a components/button action joins the
 // Tab cycle via its own caller-owned clickable. After tabbing off the close
-// button, the action's &clickable — not a modal-interposed tag — holds focus,
+// button, the action's &clickable — not a dialog-interposed tag — holds focus,
 // which is what makes the button draw its own (single) focus ring.
 func TestActionOwnsFocusTag(t *testing.T) {
 	var clk widget.Clickable
 	action := liveButtonAction(t, "OK", &clk)
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:            rx.Of(true),
 		Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Actions:         []layout.Widget{action},
@@ -540,14 +540,14 @@ func TestActionOwnsFocusTag(t *testing.T) {
 		Source:      r.Source(),
 	}
 	if !gtx.Focused(&clk) {
-		t.Error("after Tab from the close button, the components/button action's own clickable must hold focus (route (a)); the modal must not interpose its own action tag")
+		t.Error("after Tab from the close button, the components/button action's own clickable must hold focus (route (a)); the dialog must not interpose its own action tag")
 	}
 }
 
-// TestActionFocusRingNotDoubled confirms the modal draws no focus ring around a
+// TestActionFocusRingNotDoubled confirms the dialog draws no focus ring around a
 // focused action — so a components/button action shows only its own ring, never a
 // doubled outer one. Two blank actions reserve space and register a focus tag
-// but paint nothing. If the modal drew a ring around the focused action it would
+// but paint nothing. If the dialog drew a ring around the focused action it would
 // land at the first action's x when that one is focused and at the second's x
 // otherwise, so the two captures would differ; drawing nothing leaves the
 // surface pixel-identical. Both captures keep the close button unfocused (focus
@@ -562,7 +562,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 			return layout.Dimensions{Size: sz}
 		}
 	}
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:            rx.Of(true),
 		Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Actions:         []layout.Widget{blank(tag0), blank(tag1)},
@@ -633,7 +633,7 @@ func TestActionFocusRingNotDoubled(t *testing.T) {
 	imgB := shoot()
 
 	if n := golden.PixelDiff(imgA, imgB); n != 0 {
-		t.Errorf("focusing different footer actions changed %d pixel(s); the modal must draw no focus ring around actions (doubled/outer-ring regression)", n)
+		t.Errorf("focusing different footer actions changed %d pixel(s); the dialog must draw no focus ring around actions (doubled/outer-ring regression)", n)
 	}
 }
 
@@ -653,7 +653,7 @@ func scrimPress(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 // pressReturn queues a Return press-and-release and drives one frame. Both
 // halves go in one frame because a focused widget.Clickable registers its
 // activation on the release that follows a matching press — so a test that
-// only queued the press would prove nothing about whether the modal took the
+// only queued the press would prove nothing about whether the dialog took the
 // key away from the button.
 func pressReturn(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 	r.Queue(
@@ -663,7 +663,7 @@ func pressReturn(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 	driveFrame(w, ops, r, frameSize)
 }
 
-// openFrames drives the two frames an opening modal needs: the first
+// openFrames drives the two frames an opening dialog needs: the first
 // registers the tags and requests initial focus, the second applies it.
 func openFrames(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 	driveFrame(w, ops, r, frameSize)
@@ -676,13 +676,13 @@ func openFrames(w layout.Widget, ops *op.Ops, r *gioinput.Router) {
 func TestBackdropClickOnDecisionIsInert(t *testing.T) {
 	var closed, cancelled int
 	var clk widget.Clickable
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:            rx.Of(true),
-		Title:           modalTitle,
+		Title:           dialogTitle,
 		Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Actions:         []layout.Widget{liveButtonAction(t, "Cancel", &clk)},
 		ActionFocusTags: []event.Tag{&clk},
-		Decision:        &modal.Decision{Cancel: func(_ layout.Context) { cancelled++ }},
+		Decision:        &dialog.Decision{Cancel: func(_ layout.Context) { cancelled++ }},
 		OnClose:         func(_ layout.Context) { closed++ },
 	})
 
@@ -703,9 +703,9 @@ func TestBackdropClickOnDecisionIsInert(t *testing.T) {
 // unnoticed.
 func TestBackdropClickOnPaneCloses(t *testing.T) {
 	var closed int
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
-		Title:   modalTitle,
+		Title:   dialogTitle,
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		OnClose: func(_ layout.Context) { closed++ },
 	})
@@ -727,9 +727,9 @@ func TestBackdropClickOnPaneCloses(t *testing.T) {
 func TestEscapeWorksOnBothPurposes(t *testing.T) {
 	t.Run("pane", func(t *testing.T) {
 		var closed int
-		w := liveModal(t, modal.Props{
+		w := liveDialog(t, dialog.Props{
 			Open:    rx.Of(true),
-			Title:   modalTitle,
+			Title:   dialogTitle,
 			Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 			OnClose: func(_ layout.Context) { closed++ },
 		})
@@ -746,13 +746,13 @@ func TestEscapeWorksOnBothPurposes(t *testing.T) {
 	t.Run("decision", func(t *testing.T) {
 		var closed, cancelled, confirmed int
 		var clk widget.Clickable
-		w := liveModal(t, modal.Props{
+		w := liveDialog(t, dialog.Props{
 			Open:            rx.Of(true),
-			Title:           modalTitle,
+			Title:           dialogTitle,
 			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 			Actions:         []layout.Widget{liveButtonAction(t, "Cancel", &clk)},
 			ActionFocusTags: []event.Tag{&clk},
-			Decision: &modal.Decision{
+			Decision: &dialog.Decision{
 				Confirm: func(_ layout.Context) { confirmed++ },
 				Cancel:  func(_ layout.Context) { cancelled++ },
 			},
@@ -777,13 +777,13 @@ func TestEscapeWorksOnBothPurposes(t *testing.T) {
 	t.Run("decision without a Cancel still leaves", func(t *testing.T) {
 		var closed int
 		var clk widget.Clickable
-		w := liveModal(t, modal.Props{
+		w := liveDialog(t, dialog.Props{
 			Open:            rx.Of(true),
-			Title:           modalTitle,
+			Title:           dialogTitle,
 			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 			Actions:         []layout.Widget{liveButtonAction(t, "OK", &clk)},
 			ActionFocusTags: []event.Tag{&clk},
-			Decision:        &modal.Decision{Confirm: func(_ layout.Context) {}},
+			Decision:        &dialog.Decision{Confirm: func(_ layout.Context) {}},
 			OnClose:         func(_ layout.Context) { closed++ },
 		})
 		r := new(gioinput.Router)
@@ -815,13 +815,13 @@ func TestReturnActivatesTheDefaultAction(t *testing.T) {
 		t.Fatalf("action button: %v", err)
 	}
 
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:            rx.Of(true),
-		Title:           modalTitle,
+		Title:           dialogTitle,
 		Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Actions:         []layout.Widget{action},
 		ActionFocusTags: []event.Tag{&clk},
-		Decision: &modal.Decision{
+		Decision: &dialog.Decision{
 			Confirm: func(_ layout.Context) { confirmed++ },
 			Cancel:  func(_ layout.Context) { cancelled++ },
 		},
@@ -839,7 +839,7 @@ func TestReturnActivatesTheDefaultAction(t *testing.T) {
 		t.Errorf("Return invoked Cancel %d times; Confirm is not destructive, so it is the default", cancelled)
 	}
 	if buttonClicked != 0 {
-		t.Errorf("Return also activated the focused footer button %d times; the modal must claim "+
+		t.Errorf("Return also activated the focused footer button %d times; the dialog must claim "+
 			"Return before the footer lays out, leaving Space to the focused control", buttonClicked)
 	}
 }
@@ -851,13 +851,13 @@ func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
 	t.Run("Cancel takes the default", func(t *testing.T) {
 		var discarded, cancelled int
 		var clk widget.Clickable
-		w := liveModal(t, modal.Props{
+		w := liveDialog(t, dialog.Props{
 			Open:            rx.Of(true),
-			Title:           modalTitle,
+			Title:           dialogTitle,
 			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 			Actions:         []layout.Widget{liveButtonAction(t, "Discard", &clk)},
 			ActionFocusTags: []event.Tag{&clk},
-			Decision: &modal.Decision{
+			Decision: &dialog.Decision{
 				Confirm:     func(_ layout.Context) { discarded++ },
 				Destructive: true,
 				Cancel:      func(_ layout.Context) { cancelled++ },
@@ -888,13 +888,13 @@ func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
 		if err != nil {
 			t.Fatalf("action button: %v", err)
 		}
-		w := liveModal(t, modal.Props{
+		w := liveDialog(t, dialog.Props{
 			Open:            rx.Of(true),
-			Title:           modalTitle,
+			Title:           dialogTitle,
 			Body:            fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 			Actions:         []layout.Widget{action},
 			ActionFocusTags: []event.Tag{&clk},
-			Decision: &modal.Decision{
+			Decision: &dialog.Decision{
 				Confirm:     func(_ layout.Context) { discarded++ },
 				Destructive: true,
 			},
@@ -906,7 +906,7 @@ func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
 
 		if discarded != 0 || buttonClicked != 0 {
 			t.Errorf("Return fell through on a destructive decision with no Cancel: Confirm=%d, focused button=%d; "+
-				"the modal must claim the key and do nothing rather than let it reach the destruction",
+				"the dialog must claim the key and do nothing rather than let it reach the destruction",
 				discarded, buttonClicked)
 		}
 	})
@@ -917,9 +917,9 @@ func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
 // holds focus — which on an opening pane is its close button.
 func TestPaneLeavesReturnToTheFocusedControl(t *testing.T) {
 	var closed int
-	w := liveModal(t, modal.Props{
+	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
-		Title:   modalTitle,
+		Title:   dialogTitle,
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		OnClose: func(_ layout.Context) { closed++ },
 	})
@@ -943,15 +943,15 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
-	render := func(p modal.Props) layout.Widget {
-		p.Title, p.Body, p.Shaper = modalTitle, body, shaper
-		return modal.Render(shaper, p, true, tokens.PlatformLight, tokens.Spacing, sharpRadius,
+	render := func(p dialog.Props) layout.Widget {
+		p.Title, p.Body, p.Shaper = dialogTitle, body, shaper
+		return dialog.Render(shaper, p, true, tokens.PlatformLight, tokens.Spacing, sharpRadius,
 			tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	}
 
-	pane := golden.Capture(t, frameSize, scene(render(modal.Props{}), bg))
-	decision := golden.Capture(t, frameSize, scene(render(modal.Props{Decision: &modal.Decision{}}), bg))
-	hidden := golden.Capture(t, frameSize, scene(render(modal.Props{HideClose: true}), bg))
+	pane := golden.Capture(t, frameSize, scene(render(dialog.Props{}), bg))
+	decision := golden.Capture(t, frameSize, scene(render(dialog.Props{Decision: &dialog.Decision{}}), bg))
+	hidden := golden.Capture(t, frameSize, scene(render(dialog.Props{HideClose: true}), bg))
 
 	if n := golden.PixelDiff(pane, decision); n == 0 {
 		t.Error("a decision dialog renders identically to a pane; it must drop the close X")
@@ -970,9 +970,9 @@ func TestHideCloseStillWorksOnAPane(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
-	with := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper},
+	with := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper},
 		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-	without := modal.Render(shaper, modal.Props{Title: modalTitle, Body: body, Shaper: shaper, HideClose: true},
+	without := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper, HideClose: true},
 		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
 	if n := golden.PixelDiff(golden.Capture(t, frameSize, scene(with, bg)), golden.Capture(t, frameSize, scene(without, bg))); n == 0 {
@@ -999,13 +999,13 @@ func TestDefaultActionDerivation(t *testing.T) {
 
 	cases := []struct {
 		name string
-		d    modal.Decision
+		d    dialog.Decision
 		want string
 	}{
-		{"a plain confirmation defaults to Confirm", modal.Decision{Confirm: confirm, Cancel: cancel}, "Confirm"},
-		{"a destructive primary hands the default to Cancel", modal.Decision{Confirm: confirm, Destructive: true, Cancel: cancel}, "Cancel"},
-		{"a destructive primary with no Cancel has no default at all", modal.Decision{Confirm: confirm, Destructive: true}, "nil"},
-		{"an empty decision has no default", modal.Decision{}, "nil"},
+		{"a plain confirmation defaults to Confirm", dialog.Decision{Confirm: confirm, Cancel: cancel}, "Confirm"},
+		{"a destructive primary hands the default to Cancel", dialog.Decision{Confirm: confirm, Destructive: true, Cancel: cancel}, "Cancel"},
+		{"a destructive primary with no Cancel has no default at all", dialog.Decision{Confirm: confirm, Destructive: true}, "nil"},
+		{"an empty decision has no default", dialog.Decision{}, "nil"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1019,23 +1019,23 @@ func TestDefaultActionDerivation(t *testing.T) {
 // TestPurposeIsDerivedFromDecision pins the single source of truth: there is no
 // purpose field to fall out of step with the callbacks.
 func TestPurposeIsDerivedFromDecision(t *testing.T) {
-	if got := (modal.Props{}).Purpose(); got != modal.PurposePane {
-		t.Errorf("zero Props derive %v, want %v", got, modal.PurposePane)
+	if got := (dialog.Props{}).Purpose(); got != dialog.PurposePane {
+		t.Errorf("zero Props derive %v, want %v", got, dialog.PurposePane)
 	}
-	if got := (modal.Props{HideClose: true}).Purpose(); got != modal.PurposePane {
-		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, modal.PurposePane)
+	if got := (dialog.Props{HideClose: true}).Purpose(); got != dialog.PurposePane {
+		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, dialog.PurposePane)
 	}
-	if got := (modal.Props{Decision: &modal.Decision{}}).Purpose(); got != modal.PurposeDecision {
-		t.Errorf("Props with a Decision derive %v, want %v", got, modal.PurposeDecision)
+	if got := (dialog.Props{Decision: &dialog.Decision{}}).Purpose(); got != dialog.PurposeDecision {
+		t.Errorf("Props with a Decision derive %v, want %v", got, dialog.PurposeDecision)
 	}
-	if got, want := modal.PurposePane.String()+"/"+modal.PurposeDecision.String(), "pane/decision"; got != want {
+	if got, want := dialog.PurposePane.String()+"/"+dialog.PurposeDecision.String(), "pane/decision"; got != want {
 		t.Errorf("the purpose names pair = %q, want %q", got, want)
 	}
 }
 
-// ---- The modal stack ----
+// ---- The dialog stack ----
 
-// TestACoveredModalIsInertEvenWhileFocused drives the modal stack through the
+// TestACoveredDialogIsInertEvenWhileFocused drives the dialog stack through the
 // whole live pipeline. Two panes are open at once in one Arbiter, and the
 // one behind answers neither a key nor a press — even though a control of its
 // own still holds keyboard focus, which is the case where being covered is
@@ -1047,22 +1047,22 @@ func TestPurposeIsDerivedFromDecision(t *testing.T) {
 // With a focusable front pane the router would move focus forward and the
 // covered pane could not answer a key whether the stack existed or not.
 //
-// The modal in front is the one laid out LAST, which is also the one painted
+// The dialog in front is the one laid out LAST, which is also the one painted
 // last and therefore on top. Push order is layout order, so the stack and the
 // paint agree by construction.
-func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
+func TestACoveredDialogIsInertEvenWhileFocused(t *testing.T) {
 	var backClosed, frontClosed int
-	arb := modal.NewArbiter()
+	arb := dialog.NewArbiter()
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 
-	back := liveModal(t, modal.Props{
+	back := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		Title:   paneTitle,
 		Body:    body,
 		Arbiter: arb,
 		OnClose: func(_ layout.Context) { backClosed++ },
 	})
-	front := liveModal(t, modal.Props{
+	front := liveDialog(t, dialog.Props{
 		Open:      rx.Of(true),
 		Title:     paneTitle,
 		Body:      body,
@@ -1091,7 +1091,7 @@ func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
 	r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
 	driveFrame(both, ops, r, frameSize)
 	if backClosed != 0 {
-		t.Errorf("Escape reached a covered modal that still held focus: backClosed = %d, want 0", backClosed)
+		t.Errorf("Escape reached a covered dialog that still held focus: backClosed = %d, want 0", backClosed)
 	}
 
 	// And the pane in front does answer: a corner press is guaranteed
@@ -1103,28 +1103,28 @@ func TestACoveredModalIsInertEvenWhileFocused(t *testing.T) {
 	)
 	driveFrame(both, ops, r, frameSize)
 	if frontClosed != 1 {
-		t.Errorf("the backdrop press did not reach the modal in front: frontClosed = %d, want 1", frontClosed)
+		t.Errorf("the backdrop press did not reach the dialog in front: frontClosed = %d, want 1", frontClosed)
 	}
 	if backClosed != 0 {
-		t.Errorf("the backdrop press reached the covered modal too: backClosed = %d, want 0", backClosed)
+		t.Errorf("the backdrop press reached the covered dialog too: backClosed = %d, want 0", backClosed)
 	}
 }
 
-// TestACoveredModalIsStillPainted is the other half of "painted but inert":
-// losing the front costs a modal its input, never its pixels. live gates
+// TestACoveredDialogIsStillPainted is the other half of "painted but inert":
+// losing the front costs a dialog its input, never its pixels. live gates
 // event.Op registration and key draining and nothing else, which is also why
 // no golden in this package could move when the stack changed mechanism.
-func TestACoveredModalIsStillPainted(t *testing.T) {
-	arb := modal.NewArbiter()
+func TestACoveredDialogIsStillPainted(t *testing.T) {
+	arb := dialog.NewArbiter()
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
-	back := liveModal(t, modal.Props{
+	back := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		Title:   paneTitle,
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Arbiter: arb,
 	})
-	front := liveModal(t, modal.Props{
+	front := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
 		Title:   paneTitle,
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
@@ -1141,7 +1141,7 @@ func TestACoveredModalIsStillPainted(t *testing.T) {
 	imgFront := golden.Capture(t, frameSize, scene(front, bg))
 
 	if n := golden.PixelDiff(imgBoth, imgFront); n == 0 {
-		t.Fatal("the covered modal painted nothing; it must stay visible and only go inert")
+		t.Fatal("the covered dialog painted nothing; it must stay visible and only go inert")
 	}
 	// A corner is scrim in both images: one scrim over the background in the
 	// second, two in the first, so the covered pane's dimming is measurable
@@ -1149,7 +1149,7 @@ func TestACoveredModalIsStillPainted(t *testing.T) {
 	bothCorner := imgBoth.RGBAAt(4, 4)
 	frontCorner := imgFront.RGBAAt(4, 4)
 	if bothCorner.R >= frontCorner.R {
-		t.Errorf("the covered modal's scrim did not darken the corner: two scrims R = %d, one scrim R = %d",
+		t.Errorf("the covered dialog's scrim did not darken the corner: two scrims R = %d, one scrim R = %d",
 			bothCorner.R, frontCorner.R)
 	}
 }
