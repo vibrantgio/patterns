@@ -42,7 +42,7 @@ Every package has the same two entry points, and the split is deliberate:
   streams in the live form. Drive patterns through their live entry points
   unless you are rendering a static frame.
 
-  Two rules fix the tail of every static signature, both settled in v0.3.0.
+  Two rules fix the tail of every static signature.
   A pattern that draws one type role takes that role's whole
   `tokens.TextStyle` — typeface, weight, size and line height, exactly what
   the live path reads off the theme — while one that spends several (`hero`,
@@ -52,8 +52,7 @@ Every package has the same two entry points, and the split is deliberate:
   `table`, `shell`, `hero`, `pricing` and `dialog` take one;
   `accordion`, `group`, `notifications`,
   `feature`, `testimonial` and `table.RenderTextCell` do not, because
-  nothing in them has a control height. Until v0.3.0 these signatures took a
-  `tokens.TypeScale` and rendered at a hardcoded `tokens.Comfortable`.
+  nothing in them has a control height.
 
 Typography is theme-owned: in the live form every pattern that draws text
 shapes with the theme's `Typography.Shaper()` and the type roles it carries,
@@ -102,7 +101,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | Package | |
 | --- | --- |
 | `table` | The sortable, virtualised data table, built on `components/list`: only the visible rows lay out, whatever the row count. Sort and filter are external — the `Items` observable emits already-sorted, already-filtered slices and the header surfaces the click's purpose through `OnSort`. Row heights follow the theme's density. |
-| `card` | The one thing that must stand apart: a rounded surface raised one step above the surface it is in, with optional Header / Body / Footer slots. The raise is the whole of how it singles something out — no hairline of its own, never outlined, never wearing a role, and what the developer wants to say about it is a badge in its header. Where the scheme has no lighter step left the raise is told by the seam at the card's edge, which is the elevation's rule for every raise. A card is raised, not floating, so it casts no shadow (ADR-005). |
+| `card` | The one thing that must stand apart: a rounded surface raised one step above the surface it is in, with optional Header / Body / Footer slots. The raise is the whole of how it singles something out — no hairline of its own, never outlined, never wearing a role, and what the developer wants to say about it is a badge in its header. Where the scheme has no lighter step left the raise is told by the seam at the card's edge, which is the elevation's rule for every raise. A card is raised, not floating, so it casts no shadow: a shadow marks what floats and can leave. |
 | `group` | The page dividing itself: a hairline around related components, drawn on the surface the group is in and taking that surface's own fill, with an optional title top-leading inside it. It paints nothing inside and raises nothing, so what it holds stands on the surface the group is in. The hairline is the seam of two regions sharing one fill — the platform's `Separator` flattened over that fill — the understated line the platform draws — not the 3:1 mark a graphic carrying meaning owes. A group may hold a card; it never holds another group, and it wears no role. |
 | `accordion` | A vertical stack of collapsible sections with a rotating chevron. `SingleOpen` makes activating a closed section first toggle every open peer, so a parent's flip-the-bool handler converges on single-open with no extra bookkeeping. |
 
@@ -112,7 +111,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `dialog` | A centred dialog over a full-window scrim, its surface the platform's window background under the measured floating shadow and no hairline: header, padded body, footer actions. It comes in the desktop field's two archetypes, and `Props.Decision` is the whole of the choice: a **pane** carries a ghost close ×, and Escape and a backdrop click both close it; a **decision dialog** carries no ×, its backdrop is inert, Escape invokes Cancel, and Return invokes the default action — never a destructive one, which is why the default is derived rather than nominated. Tab and Shift+Tab cycle inside either and cannot escape to the background, and only the dialog at the front of the stack receives input — the ones it covers stay painted and go inert. That stack is frame state rather than a bus: `Props.Arbiter` names the set a dialog stacks within — one per window — and unlike popover's single arbiter it is ordered, because a dialog opened over another one covers it and closing the inner one hands the front back. A nil `Arbiter` gets the dialog a stack of its own, so sharing one is the explicit act. Footer actions own their own focus tags, so a focused action shows exactly one ring, and the footer owns their width — the platform's measured dialog button width, which a title too wide for it widens by its own measure. A dialog opens with the keyboard on its body's first focusable, as the platform's sheet shows. |
 | `popover` | An anchored floating surface with a triangular tail pointing at a caller-supplied anchor. Outside-click dismissal and popover-vs-popover arbitration are frame state, not a bus: `Props.Arbiter` names the set a popover arbitrates within — one per window — and opening a second popover in that set dismisses the first, in the same frame, from inside the claimant's own layout pass. A nil `Arbiter` gets the popover one of its own, so sharing one is the explicit act. `Props.Open` carries open-ness on a stream; `Props.OpenNow` reads it during layout, for a caller that owns it as frame state. |
-| `notifications` | The position-anchored column that receives the application's notifications, places them, stacks them against each other, times them, and presents each one as a [`components/toast`](https://github.com/vibrantgio/components). The pattern owns the queue, the placement and the timing, not the presentation: the toast's fill and its status-coloured leading edge are the component's, and what the column adds under each is the platform's floating shadow through `effects/depth`, because only the placement knows where the surface landed — and a shadow is what says it floats and can leave, which is exactly what ADR-005 reserves shadows for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `notifications.Queue` in the model, `Props.Notifications` carries that queue back to the `Column`, and `Expire` brings the removal back as `Expired` at the end of the notification's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
+| `notifications` | The position-anchored column that receives the application's notifications, places them, stacks them against each other, times them, and presents each one as a [`components/toast`](https://github.com/vibrantgio/components). The pattern owns the queue, the placement and the timing, not the presentation: the toast's fill and its status-coloured leading edge are the component's, and what the column adds under each is the platform's floating shadow through `effects/depth`, because only the placement knows where the surface landed — and a shadow is what says it floats and can leave, which is the whole of what a shadow is for. The queue is the application's, not the package's: `Notify(gtx, …)` lands a `Requested` message, the reducer adds it to a `notifications.Queue` in the model, `Props.Notifications` carries that queue back to the `Column`, and `Expire` brings the removal back as `Expired` at the end of the notification's `Lifetime` (`DefaultLifetime`, 4 s). Only the fade is the frame's: it tweens through `effects/tween` across the theme's `DurSlow` stop. |
 
 **Marketing** — the landing-page sections, for the app's own front door.
 
@@ -120,7 +119,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 | --- | --- |
 | `hero` | The landing block: optional eyebrow kicker (pure typography — a small understated line, not a component), display title, subtitle, optional visual slot, and a primary/secondary CTA pair. With no visual it is one centred column; with one it splits into two equal columns. |
 | `feature` | An icon–title–body grid laid out `Columns × N`. The icon slot is opaque — any `layout.Widget`. |
-| `pricing` | A row of tier groups — name, price and cadence, a checkmarked feature list, a CTA — with one tier optionally `Recommended`, which draws that tier as a card raised on the content and puts a "Popular" badge on its name row. A row of tiers divides the page; the tier that must stand apart from it is the one card. |
+| `pricing` | A row of tier groups — name, price and billing period, a checkmarked feature list, a CTA — with one tier optionally `Recommended`, which draws that tier as a card raised on the content and puts a "Popular" badge on its name row. A row of tiers divides the page; the tier that must stand apart from it is the one card. |
 | `testimonial` | Quote cards with an author block and an avatar (or an initial in a circular placeholder), as a single centred card or a row of them. |
 
 `dialog/gallery` is a `main` inside this module, not a seventeenth pattern: it
@@ -258,11 +257,6 @@ case notifications.Expired:
 	model.notes = model.notes.Remove(m.ID)
 ```
 
-Until v0.4.1 the entry point was a package-scoped `Notify(level, text)`
-publishing to a process-global subject that every column subscribed. That is
-gone: a message needs the frame's `*op.Ops` and the old signature had no way to
-reach one, so there is no shim — every call site takes a `gtx` now.
-
 ## For coding assistants
 
 Read the org guide before you write code against this module: the plan
@@ -277,18 +271,6 @@ replaced by `./...`.
 
 Honest about what does not work yet:
 
-- **v0.3.0 is a breaking release.** Every static `Render` is re-cut off the
-  `tokens.TypeScale` spectrum dropped in its own v0.3.0, onto a
-  `tokens.TextStyle` or a `tokens.Typography` plus, where a control is
-  sized, a `tokens.Density` — see "Two forms" above for which shape each
-  pattern takes. Old call: `…, tokens.Spacing, tokens.DefaultTypeScale)`.
-  New call: `…, tokens.Spacing, tokens.DefaultTypography.LabelLarge,
-  tokens.Comfortable)`. The live entry points are unchanged.
-- **`hero`'s outlined Secondary CTA was 8 dp too tall until v0.3.0.** It
-  hardcoded 44 dp to line up with the filled CTA, which was
-  prism/button's height until E1.3 re-cut that to the density's
-  `ControlHeight` (36 dp Comfortable). Both CTAs now follow the density and
-  line up again.
 - **`table` has no per-header slot of its own.** Headers are drawn internally from
   `Column.Header` strings, so anything else on a header — a tooltip, a filter
   affordance — has to be positioned by arithmetic over the column widths from
