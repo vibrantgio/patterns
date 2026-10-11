@@ -327,8 +327,8 @@ const (
 // DisclosureInset 10: the rail has ONE trailing column — CountInset, 17 in
 // from the pane's trailing edge, which every count in the same capture is
 // drawn to — and the heading's control stands in it. components/icons draws
-// the disclosure at 8 of the mark box's 24 units, centred
-// (marks/disclosure.svg: the drawing runs x 8 to 16 of the 24-unit box), so
+// the right-pointing chevron at 8 of the mark box's 24 units, centred
+// (marks/chevron-right.svg: the drawing runs x 8 to 16 of the 24-unit box), so
 // at a 20 dp box the figure covers 6.7 and stands 6.7 inside each edge, and
 // a box 10 in lands the closed mark's own trailing column on CountInset to
 // within one: 6.7 of clear space cannot be landed on a whole column by an
@@ -916,8 +916,8 @@ func DisclosureForeground(colors tokens.PlatformColors) color.NRGBA {
 
 // PaintDisclosure draws a collapsing section's control at the trailing end of
 // a heading block of the given size at the current offset: the icon set's
-// disclosure in a [DisclosureBox] square whose trailing edge stands
-// [DisclosureInset] in from the block's trailing edge, in fg.
+// right-pointing chevron in a [DisclosureBox] square whose trailing edge
+// stands [DisclosureInset] in from the block's trailing edge, in fg.
 //
 // The square is centred on the HEADING'S OWN LINE and not on the block: the
 // block carries 22 dp of air above the heading's cap and 12 below its baseline,
@@ -925,7 +925,7 @@ func DisclosureForeground(colors tokens.PlatformColors) color.NRGBA {
 // belongs to. The line is the middle of [SectionCapTop] and
 // [SectionBaseline], which is where the heading's own cap band centres.
 //
-// There is one drawing and not two. The set draws the mark as the section
+// There is one drawing and not two. The chevron is drawn as the section
 // stands CLOSED — pointing at the rows it would open — and an open section
 // turns it a quarter about the square's own centre, which is what the
 // platform does and what keeps the figure recognisable through the turn.
@@ -942,7 +942,7 @@ func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.N
 	if box <= 0 {
 		return layout.Dimensions{Size: image.Pt(0, size.Y)}
 	}
-	mark := icons.Mark(icons.Disclosure)
+	mark := icons.Mark(icons.ChevronRight)
 	if mark == nil {
 		return layout.Dimensions{Size: image.Pt(box+gtx.Dp(DisclosureInset), size.Y)}
 	}
