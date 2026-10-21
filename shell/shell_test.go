@@ -9,7 +9,6 @@ import (
 	"gioui.org/f32"
 	"gioui.org/io/event"
 	gioinput "gioui.org/io/input"
-	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -17,21 +16,17 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
-	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
-	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/shell"
-	"github.com/vibrantgio/patterns/sidebar"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
 
 const (
-	shmW, shmH       = 480, 256 // sidebar-header-main frame
 	splitW, splitH   = 480, 128 // split-pane frame
 	vsplitW, vsplitH = 128, 480 // vertical-axis split-pane frame
 	dragFrameW       = 200
@@ -41,7 +36,6 @@ const (
 )
 
 var (
-	shmSize    = image.Pt(shmW, shmH)
 	splitSize  = image.Pt(splitW, splitH)
 	vsplitSize = image.Pt(vsplitW, vsplitH)
 	dragSize   = image.Pt(dragFrameW, dragFrameH)
@@ -59,14 +53,11 @@ func defaultShaper(t *testing.T) *text.Shaper {
 }
 
 // Shell draws no text of its own: everything legible in these goldens comes
-// through the composed navbar and sidebar. These titles are what make the
-// slot boundaries legible. Titles must stay ASCII — Latin text in Roboto
+// through the composed navbar. These titles are what make the slot
+// boundaries legible. Titles must stay ASCII — Latin text in Roboto
 // rasterises identically on every machine via DeterministicShaper, but a
 // symbol may not.
-var (
-	navLinkTitles     = []string{"Docs", "Components"}
-	sidebarItemTitles = []string{"Overview", "Tokens"}
-)
+var navLinkTitles = []string{"Docs", "Components"}
 
 // shellNavbar returns the navbar props every shell golden composes.
 func shellNavbar(shaper *text.Shaper) navbar.Props {
@@ -75,27 +66,6 @@ func shellNavbar(shaper *text.Shaper) navbar.Props {
 		links[i] = navbar.Link{Title: l}
 	}
 	return navbar.Props{Links: links, Shaper: shaper}
-}
-
-// shellSidebar returns the sidebar props every shell golden composes.
-func shellSidebar(shaper *text.Shaper) sidebar.Props {
-	items := make([]sidebar.Item, len(sidebarItemTitles))
-	for i, l := range sidebarItemTitles {
-		items[i] = sidebar.Item{Icon: testIcon(), Title: l, OnClick: func(_ layout.Context) {}}
-	}
-	return sidebar.Props{Items: items, Shaper: shaper}
-}
-
-// testIcon mirrors sidebar_test.go's: a 16x16 square in a fixed mid-blue,
-// centred in the box the row hands it. It spends the colour the row hands it
-// on nothing, so a shell golden reads the same square whatever fill the row
-// carries.
-func testIcon() icons.Painter {
-	return func(gtx layout.Context, box int, _ color.NRGBA) {
-		defer op.Offset(image.Pt((box-16)/2, (box-16)/2)).Push(gtx.Ops).Pop()
-		paint.FillShape(gtx.Ops, color.NRGBA{R: 0x3b, G: 0x82, B: 0xf6, A: 0xff},
-			clip.Rect{Max: image.Pt(16, 16)}.Op())
-	}
 }
 
 // fillRect is a solid-coloured filler used as Main / Left / Right slots
@@ -115,24 +85,12 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 	}
 }
 
-// TestShellGolden records or diffs the four Measurable goldens.
+// TestShellGolden records or diffs the split-pane goldens.
 func TestShellGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	darkBG := color.NRGBA{R: 20, G: 20, B: 20, A: 255}
 	leftFill := color.NRGBA{R: 0x22, G: 0x55, B: 0x88, A: 0xff}
 	rightFill := color.NRGBA{R: 0x88, G: 0x55, B: 0x22, A: 0xff}
-	mainFill := color.NRGBA{R: 0x33, G: 0x99, B: 0x66, A: 0xff}
-
-	shmSidebarProps := shellSidebar(shaper)
-
-	shmProps := func() shell.Props {
-		return shell.Props{
-			Layout: shell.SidebarHeaderMain,
-			Navbar: shellNavbar(shaper),
-			Main:   fillRect(mainFill),
-		}
-	}
 
 	splitProps := func(axis layout.Axis) shell.Props {
 		return shell.Props{
@@ -144,62 +102,23 @@ func TestShellGolden(t *testing.T) {
 	}
 
 	cases := []struct {
-		name         string
-		props        shell.Props
-		sidebarProps *sidebar.Props
-		colors       tokens.PlatformColors
-		bg           color.NRGBA
-		size         image.Point
-		ratio        float32
+		name   string
+		props  shell.Props
+		colors tokens.PlatformColors
+		bg     color.NRGBA
+		size   image.Point
+		ratio  float32
 	}{
-		{"light-sidebar-header-main", shmProps(), &shmSidebarProps, tokens.PlatformLight, lightBG, shmSize, 0},
-		{"dark-sidebar-header-main", shmProps(), &shmSidebarProps, tokens.PlatformDark, darkBG, shmSize, 0},
-		{"light-split-pane-50-50", splitProps(layout.Horizontal), nil, tokens.PlatformLight, lightBG, splitSize, 0.5},
-		{"light-split-pane-30-70", splitProps(layout.Horizontal), nil, tokens.PlatformLight, lightBG, splitSize, 0.3},
-		{"light-split-pane-vertical-30-70", splitProps(layout.Vertical), nil, tokens.PlatformLight, lightBG, vsplitSize, 0.3},
+		{"light-split-pane-50-50", splitProps(layout.Horizontal), tokens.PlatformLight, lightBG, splitSize, 0.5},
+		{"light-split-pane-30-70", splitProps(layout.Horizontal), tokens.PlatformLight, lightBG, splitSize, 0.3},
+		{"light-split-pane-vertical-30-70", splitProps(layout.Vertical), tokens.PlatformLight, lightBG, vsplitSize, 0.3},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			var sidebarW layout.Widget
-			if tc.sidebarProps != nil {
-				sidebarW = sidebar.Render(shaper, *tc.sidebarProps, false, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
-			}
-			w := shell.Render(shaper, tc.props, sidebarW, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable, tc.ratio)
+			w := shell.Render(shaper, tc.props, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable, tc.ratio)
 			golden.Render(t, tc.name, tc.size, scene(w, tc.bg))
 		})
 	}
-}
-
-// densityTheme returns a theme whose density is d, with sharp corners
-// for golden determinism, mirroring components' density tests.
-func densityTheme(d tokens.Density) theme.Theme {
-	th := theme.Default()
-	th.Density = rx.Of(d)
-	th.Radius = rx.Of(tokens.RadiusScale{})
-	return th
-}
-
-// TestShellCompactGolden records or diffs the compact-density golden
-// through the LIVE pipeline (the static Render path is frozen at
-// tokens.Comfortable): the band keeps the platform's measured depth, which
-// no density moves, while the composed sidebar's item pitch drops to 28 dp
-// through its own density subscription — so the picture shows exactly what
-// density does settle and what it does not.
-func TestShellCompactGolden(t *testing.T) {
-	shaper := defaultShaper(t)
-	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	mainFill := color.NRGBA{R: 0x33, G: 0x99, B: 0x66, A: 0xff}
-	th := densityTheme(tokens.Compact)
-
-	sbProps := shellSidebar(shaper)
-	props := shell.Props{
-		Layout:  shell.SidebarHeaderMain,
-		Sidebar: sidebar.Sidebar(rx.Of(th), sbProps),
-		Navbar:  shellNavbar(shaper),
-		Main:    fillRect(mainFill),
-	}
-	w := liveWidget(t, shell.Shell(rx.Of(th), props))
-	golden.Render(t, "light-compact-sidebar-header-main", shmSize, scene(w, lightBG))
 }
 
 // ---- Interaction tests ----
@@ -339,7 +258,7 @@ func TestShellSplitPaneSeamIsAHairline(t *testing.T) {
 		Left:   fillRect(color.NRGBA{R: 0x22, G: 0x55, B: 0x88, A: 0xff}),
 		Right:  fillRect(color.NRGBA{R: 0x88, G: 0x55, B: 0x22, A: 0xff}),
 	}
-	w := shell.Render(shaper, props, nil, colors, tokens.Spacing,
+	w := shell.Render(shaper, props, colors, tokens.Spacing,
 		tokens.DefaultTypography.LabelLarge, tokens.Comfortable, 0.5)
 	img := golden.Capture(t, splitSize, w)
 
@@ -440,283 +359,4 @@ func TestShellSplitPaneGrabBandReachesIntoPanes(t *testing.T) {
 	if panePresses != 0 {
 		t.Errorf("the trailing pane saw %d press(es) on the grab band; want 0 — the band takes the hit", panePresses)
 	}
-}
-
-// TestShellSidebarHeaderMainTabTraversal verifies that Tab focus
-// traverses the shell in document order sidebar → navbar → main. Three
-// regions each contribute a focusable; the navbar gets an *external*
-// handle (a Brand clickable owned by the test) and the main slot gets
-// another. The sidebar item is owned by the sidebar package and is
-// only externally observable as "neither brand nor main focused". With
-// a seed clickable anchoring focus before the shell, the expected
-// sequence is:
-//
-//	Tab #1 → sidebar item       (seed=false, brand=false, main=false)
-//	Tab #2 → navbar brand       (brand=true)
-//	Tab #3 → navbar link        (brand=false, main=false)
-//	Tab #4 → main               (main=true)
-//
-// Any other ordering of regions would move brand and/or main to
-// different positions in the sequence.
-func TestShellSidebarHeaderMainTabTraversal(t *testing.T) {
-	shaper := defaultShaper(t)
-	var mainClick widget.Clickable
-	var brandClick widget.Clickable
-	var seedClick widget.Clickable
-
-	mainWidget := func(gtx layout.Context) layout.Dimensions {
-		return mainClick.Layout(gtx, fillRect(color.NRGBA{R: 0, G: 200, B: 0, A: 255}))
-	}
-	brandWidget := func(gtx layout.Context) layout.Dimensions {
-		return brandClick.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			size := image.Pt(40, 20)
-			paint.FillShape(gtx.Ops, color.NRGBA{R: 80, G: 80, B: 200, A: 255}, clip.Rect{Max: size}.Op())
-			return layout.Dimensions{Size: size}
-		})
-	}
-
-	props := shell.Props{
-		Layout: shell.SidebarHeaderMain,
-		Sidebar: sidebar.Sidebar(rx.Of(theme.Default()), sidebar.Props{
-			Items: []sidebar.Item{
-				{Icon: testIcon(), Title: sidebarItemTitles[0], OnClick: func(_ layout.Context) {}},
-			},
-			Collapsed: rx.Of(false),
-			Shaper:    shaper,
-		}),
-		Navbar: navbar.Props{
-			Brand: brandWidget,
-			Links: []navbar.Link{
-				{Title: navLinkTitles[0], OnClick: func(_ layout.Context) {}},
-			},
-			Shaper: shaper,
-		},
-		Main: mainWidget,
-	}
-	body := shell.Shell(rx.Of(theme.Default()), props)
-	bodyW := liveWidget(t, body)
-
-	// Compose: a seed clickable (zero-size visual) then the shell. The
-	// seed is a focus anchor whose position in the op-stream is before
-	// the shell, so MoveFocus(Forward) from the seed enters the shell
-	// at its first focusable.
-	composed := func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return seedClick.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return layout.Dimensions{Size: image.Pt(1, 1)}
-				})
-			}),
-			layout.Flexed(1, bodyW),
-		)
-	}
-
-	r := new(gioinput.Router)
-	ops := new(op.Ops)
-
-	// Two warm-up frames for stable hit-test data.
-	driveFrame(composed, ops, r, tabSize)
-	driveFrame(composed, ops, r, tabSize)
-
-	// Drain any synthetic focus events on the seed so the router retains
-	// focus when explicitly set, matching the FocusGroup idiom used in
-	// the navbar test.
-	drainFocus := func() {
-		gtx := layout.Context{
-			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(tabSize),
-			Ops:         ops,
-			Source:      r.Source(),
-		}
-		for _, tag := range []any{&seedClick, &brandClick, &mainClick} {
-			for {
-				if _, ok := gtx.Event(key.FocusFilter{Target: tag}); !ok {
-					break
-				}
-			}
-		}
-	}
-	drainFocus()
-
-	// Anchor focus at the seed.
-	gtx := layout.Context{
-		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(tabSize),
-		Ops:         ops,
-		Source:      r.Source(),
-	}
-	gtx.Execute(key.FocusCmd{Tag: &seedClick})
-	driveFrame(composed, ops, r, tabSize)
-
-	check := func(stage string, wantSeed, wantBrand, wantMain bool) {
-		t.Helper()
-		gtx := layout.Context{
-			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(tabSize),
-			Ops:         ops,
-			Source:      r.Source(),
-		}
-		gotSeed := gtx.Focused(&seedClick)
-		gotBrand := gtx.Focused(&brandClick)
-		gotMain := gtx.Focused(&mainClick)
-		if gotSeed != wantSeed || gotBrand != wantBrand || gotMain != wantMain {
-			t.Errorf("%s: focused(seed)=%v brand=%v main=%v; want seed=%v brand=%v main=%v",
-				stage, gotSeed, gotBrand, gotMain, wantSeed, wantBrand, wantMain)
-		}
-	}
-
-	check("after Focus(seed)", true, false, false)
-
-	// Tab #1 → into the sidebar's first item.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #1 (→ sidebar item)", false, false, false)
-
-	// Tab #2 → into the navbar's brand (externally observable). If the
-	// shell composed navbar before sidebar, this stop would already
-	// have been Tab #1.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #2 (→ navbar brand)", false, true, false)
-
-	// Tab #3 → into the navbar's first link.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #3 (→ navbar link)", false, false, false)
-
-	// Tab #4 → into main.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #4 (→ main)", false, false, true)
-}
-
-// TestShellCustomSidebarWidget confirms that a caller-supplied
-// rx.Observable[layout.Widget] (not sidebar.Sidebar) works as the Sidebar
-// slot and that the op-stream order is sidebar → navbar → main, preserving
-// Tab focus traversal. Structure mirrors TestShellSidebarHeaderMainTabTraversal;
-// the only delta is Props.Sidebar being a plain rx.Of layout.Widget instead of
-// sidebar.Sidebar.
-func TestShellCustomSidebarWidget(t *testing.T) {
-	shaper := defaultShaper(t)
-	var mainClick widget.Clickable
-	var brandClick widget.Clickable
-	var seedClick widget.Clickable
-	var customSBClick widget.Clickable
-
-	customSBWidget := func(gtx layout.Context) layout.Dimensions {
-		return customSBClick.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			size := image.Pt(40, 256)
-			paint.FillShape(gtx.Ops, color.NRGBA{R: 60, G: 60, B: 60, A: 255}, clip.Rect{Max: size}.Op())
-			return layout.Dimensions{Size: size}
-		})
-	}
-
-	mainWidget := func(gtx layout.Context) layout.Dimensions {
-		return mainClick.Layout(gtx, fillRect(color.NRGBA{R: 0, G: 200, B: 0, A: 255}))
-	}
-	brandWidget := func(gtx layout.Context) layout.Dimensions {
-		return brandClick.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			size := image.Pt(40, 20)
-			paint.FillShape(gtx.Ops, color.NRGBA{R: 80, G: 80, B: 200, A: 255}, clip.Rect{Max: size}.Op())
-			return layout.Dimensions{Size: size}
-		})
-	}
-
-	props := shell.Props{
-		Layout:  shell.SidebarHeaderMain,
-		Sidebar: rx.Of[layout.Widget](customSBWidget),
-		Navbar: navbar.Props{
-			Brand: brandWidget,
-			Links: []navbar.Link{
-				{Title: navLinkTitles[0], OnClick: func(_ layout.Context) {}},
-			},
-			Shaper: shaper,
-		},
-		Main: mainWidget,
-	}
-	body := shell.Shell(rx.Of(theme.Default()), props)
-	bodyW := liveWidget(t, body)
-
-	composed := func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return seedClick.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return layout.Dimensions{Size: image.Pt(1, 1)}
-				})
-			}),
-			layout.Flexed(1, bodyW),
-		)
-	}
-
-	r := new(gioinput.Router)
-	ops := new(op.Ops)
-
-	driveFrame(composed, ops, r, tabSize)
-	driveFrame(composed, ops, r, tabSize)
-
-	drainFocus := func() {
-		gtx := layout.Context{
-			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(tabSize),
-			Ops:         ops,
-			Source:      r.Source(),
-		}
-		for _, tag := range []any{&seedClick, &customSBClick, &brandClick, &mainClick} {
-			for {
-				if _, ok := gtx.Event(key.FocusFilter{Target: tag}); !ok {
-					break
-				}
-			}
-		}
-	}
-	drainFocus()
-
-	gtx := layout.Context{
-		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-		Constraints: layout.Exact(tabSize),
-		Ops:         ops,
-		Source:      r.Source(),
-	}
-	gtx.Execute(key.FocusCmd{Tag: &seedClick})
-	driveFrame(composed, ops, r, tabSize)
-
-	check := func(stage string, wantSeed, wantCustomSB, wantBrand, wantMain bool) {
-		t.Helper()
-		gtx := layout.Context{
-			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
-			Constraints: layout.Exact(tabSize),
-			Ops:         ops,
-			Source:      r.Source(),
-		}
-		gotSeed := gtx.Focused(&seedClick)
-		gotCustomSB := gtx.Focused(&customSBClick)
-		gotBrand := gtx.Focused(&brandClick)
-		gotMain := gtx.Focused(&mainClick)
-		if gotSeed != wantSeed || gotCustomSB != wantCustomSB || gotBrand != wantBrand || gotMain != wantMain {
-			t.Errorf("%s: seed=%v customSB=%v brand=%v main=%v; want seed=%v customSB=%v brand=%v main=%v",
-				stage, gotSeed, gotCustomSB, gotBrand, gotMain, wantSeed, wantCustomSB, wantBrand, wantMain)
-		}
-	}
-
-	check("after Focus(seed)", true, false, false, false)
-
-	// Tab #1 → custom sidebar layout.Widget (rendered first in Flex op-stream).
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #1 (→ custom sidebar)", false, true, false, false)
-
-	// Tab #2 → navbar brand.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #2 (→ navbar brand)", false, false, true, false)
-
-	// Tab #3 → navbar link.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #3 (→ navbar link)", false, false, false, false)
-
-	// Tab #4 → main.
-	r.MoveFocus(key.FocusForward)
-	driveFrame(composed, ops, r, tabSize)
-	check("Tab #4 (→ main)", false, false, false, true)
 }

@@ -38,8 +38,8 @@ Every package has the same two entry points, and the split is deliberate:
   radius, <type>[, density])` — takes resolved tokens and the state as plain
   values and draws one frame with no event handling. That is what the
   golden-image tests drive, and what to use for static rendering. `shell` adds
-  `RenderThreeColumn` and `RenderStackedPage` for the layouts whose slots are
-  streams in the live form. Drive patterns through their live entry points
+  `RenderStackedPage` for the layout whose slots are streams in the live
+  form. Drive patterns through their live entry points
   unless you are rendering a static frame.
 
   Two rules fix the tail of every static signature.
@@ -91,7 +91,7 @@ github.com/reactivego/rx v0.3.0 and Go 1.25.1.
 
 | Package | |
 | --- | --- |
-| `shell` | The top-level layout, in four variants: `SidebarHeaderMain` (the sidebar set into the window as a pane, a band across the content column beside it — the composition is `PaneFrame`), `SplitPane` (draggable splitter on either axis), `ThreeColumn` (navbar, sidebar, main, resizable aside, footer strip) and `StackedPage` (pinned navbar over a shell-owned scroll of page sections). |
+| `shell` | The top-level layout. `TwoColumn` is the two-column arrangement the platform's own sidebar windows stand in: the pane down the leading edge, the toolbar across the content column beside it, an optional inspector down the trailing edge, a footer under each column and a splitter on each boundary; `PaneFrame` is the part of it a window arranging its own columns composes from. `Props.Layout` selects between `SplitPane` (draggable splitter on either axis) and `StackedPage` (pinned navbar over a shell-owned scroll of page sections). |
 | `navbar` | A horizontal chrome bar with three slots — leading brand, centred links, trailing actions. The active link carries an underline in the platform's selection colour. |
 | `sidebar` | A collapsible vertical chrome column that swaps between an expanded width (icon + title) and a collapsed width (icon only). The active item is drawn as the platform draws a selected row. |
 | `tabs` | A tab strip with an underline in the platform's selection colour on the selection, plus the content pane below it. Click, Arrow-Left/Right (wrapping), Home and End all change the selection. |

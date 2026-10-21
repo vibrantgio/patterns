@@ -1,17 +1,5 @@
 // Package shell provides the Patterns Shell pattern: a top-level
-// application layout. Four variants are offered via Props.Layout —
-// SidebarHeaderMain composes a leading sidebar set into the window as a
-// PANE, a band across the content column's top and a main content slot
-// under it; SplitPane composes two slots abutting a draggable
-// hairline seam on either axis; ThreeColumn composes a full-width
-// top navbar, a leading sidebar, a main column, an optional resizable
-// trailing aside, and an optional footer strip; StackedPage composes a
-// pinned full-width navbar over a shell-owned vertical scroll of page
-// sections — the marketing-page shell.
-//
-// Shell is a callable Go function consuming a components theme
-// observable, returning a stream of layout.Widget. Source is
-// intentionally short — copy it into your own app and modify as needed.
+// application layout.
 //
 // [TwoColumn] is the application shell the platform's own sidebar windows
 // stand in, and the one a window with a pane composes itself from: the pane
@@ -23,11 +11,15 @@
 // It reports a [PaneLayout] — the arrangement in window coordinates — and
 // keeps the widths and the shown state through an [ArrangementMemory].
 //
-// The Sidebar slot accepts any rx.Observable[layout.Widget], so callers
-// can supply a patterns/sidebar instance, a patterns/accordion-based
-// column, or any other pre-built layout.Widget stream. The static Render path
-// accepts a pre-built layout.Widget for the sidebar slot; Props.Sidebar
-// is not consulted by Render.
+// [Shell] and [Render] build the two compositions [Props].Layout selects
+// between: SplitPane composes two slots abutting a draggable hairline seam
+// on either axis, and StackedPage composes a pinned full-width navbar over
+// a shell-owned vertical scroll of page sections — the marketing-page
+// shell.
+//
+// Shell is a callable Go function consuming a components theme
+// observable, returning a stream of layout.Widget. Source is
+// intentionally short — copy it into your own app and modify as needed.
 package shell
 
 import (
@@ -53,29 +45,12 @@ import (
 type Layout int
 
 const (
-	// SidebarHeaderMain renders the sidebar as a PANE down the leading
-	// edge — an inset rounded pane with the platform's rim and the shadow
-	// it casts, the window's own surface showing around it — a navbar band
-	// across the top of the content column beside it, and a main content
-	// slot below that band. The composition is [PaneFrame]'s.
-	SidebarHeaderMain Layout = iota
 	// SplitPane renders Left and Right slots abutting a draggable
 	// vertical hairline seam whose position is governed by SplitRatio.
 	// The seam is a patterns/splitter: it runs the window's whole height,
 	// so it is painted one hairline wide and taken by a band several
 	// times that.
-	SplitPane
-	// ThreeColumn renders a navbar across the full width of the top
-	// edge (unlike SidebarHeaderMain, where the sidebar's pane claims
-	// the full height and the band starts beside it), then a leading
-	// sidebar standing flush against the window's edge, a
-	// flexed main column, and a trailing aside column separated from
-	// main by a draggable vertical splitter, with an optional full-width
-	// footer strip along the bottom. A nil Aside omits the trailing
-	// column and its splitter, degenerating into a header-first sidebar
-	// layout; a nil Footer omits the bottom strip. Each column scrolls
-	// (or not) on its own — the shell hands every slot its full height.
-	ThreeColumn
+	SplitPane Layout = iota
 	// StackedPage renders a navbar pinned across the full top edge and
 	// the Sections slots stacked in a shell-owned vertical scroll
 	// region below it, with Footer appended after the last section so
@@ -87,32 +62,9 @@ const (
 
 // Props configures a Shell. Fields not used by the chosen Layout are
 // ignored (e.g., Left/Right/SplitRatio are unused when Layout is
-// SidebarHeaderMain).
+// StackedPage).
 type Props struct {
 	Layout Layout
-
-	// SidebarHeaderMain slots.
-	//
-	// Sidebar is the pre-built sidebar layout.Widget stream. Any
-	// rx.Observable[layout.Widget] is accepted — pass sidebar.Sidebar(th,
-	// sidebarProps) for the default patterns/sidebar, or any other layout.Widget
-	// stream. A nil Sidebar renders an empty leading column.
-	Sidebar rx.Observable[layout.Widget]
-	Navbar  navbar.Props
-	Main    layout.Widget
-
-	// SidebarWidth is the pane's own width, rim to rim, under
-	// SidebarHeaderMain. Zero means [PaneWidthDp]. It is ignored by every
-	// other Layout, whose sidebar column stands flush against the window's
-	// edge and takes the width the slot itself reports.
-	SidebarWidth unit.Dp
-
-	// SidebarHidden sends the pane out of the window under
-	// SidebarHeaderMain: it takes no width at all and the content column
-	// reflows from the window's own leading edge. The control that brings
-	// it back stands in the band, since a control travelling with the
-	// pane cannot be the one that recalls it.
-	SidebarHidden bool
 
 	// SplitPane slots. Left is the leading pane and Right the trailing
 	// pane; when SplitAxis is layout.Vertical, Left is the top pane and
@@ -134,47 +86,26 @@ type Props struct {
 	// value is the new ratio in [0, 1]. May be nil.
 	OnSplitChange func(gtx layout.Context, ratio float32)
 
-	// ThreeColumn slots. Sidebar, Navbar and Main are shared with
-	// SidebarHeaderMain (see above).
+	// StackedPage slots.
 	//
-	// Aside is the trailing column layout.Widget stream — a comments pane, an
-	// inspector, or any other contextual surface. A nil Aside omits the
-	// column and its splitter entirely.
-	Aside rx.Observable[layout.Widget]
+	// Navbar is the band pinned across the page's top edge.
+	Navbar navbar.Props
 
-	// Footer is an optional full-width strip below the columns (a
-	// status or transport bar). It is laid out at a fixed footerHDp
-	// height; a nil Footer omits the strip.
+	// Footer is an optional strip appended after the last section. It
+	// scrolls with the content at its natural height instead of pinning
+	// to the viewport; a nil Footer omits the strip.
 	Footer layout.Widget
 
-	// AsideWidth drives the width of the aside column as an absolute dp
-	// value. Unlike SplitRatio, a window resize keeps the aside at its
-	// width and lets the main column absorb the change — the right
-	// behaviour for annotation and inspector panes. Values are clamped
-	// to [minAsideDp, maxAsideDp]. A nil AsideWidth is treated as a
-	// constant defaultAsideDp. External updates win only while the user
-	// is not dragging the splitter.
-	AsideWidth rx.Observable[unit.Dp]
-
-	// OnAsideResize is invoked when the user drags the aside splitter.
-	// The value is the new clamped width in dp. May be nil.
-	OnAsideResize func(gtx layout.Context, width unit.Dp)
-
-	// StackedPage slots. Navbar is shared with SidebarHeaderMain and
-	// ThreeColumn; Footer is shared with ThreeColumn, but here it
-	// scrolls with the content at its natural height instead of
-	// pinning to the viewport at a fixed height.
-	//
 	// Sections are stacked top to bottom in a scroll region owned by
-	// the shell. Each entry is a layout.Widget stream, matching the Sidebar
-	// and Aside slots, so sections re-render on theme change without a
-	// layer-boundary adapter; the shell combines them and re-emits
-	// whenever any section emits. Nil entries render empty. Each
-	// section spans the full page width (less the ContentMaxWidth
-	// clamp, when set) and receives an unbounded height, so it must
-	// return its natural height. The static Render path takes
-	// pre-built section layout.Widget values via RenderStackedPage instead
-	// (Props.Sections is not consulted there).
+	// the shell. Each entry is a layout.Widget stream, so sections
+	// re-render on theme change without a layer-boundary adapter; the
+	// shell combines them and re-emits whenever any section emits. Nil
+	// entries render empty. Each section spans the full page width
+	// (less the ContentMaxWidth clamp, when set) and receives an
+	// unbounded height, so it must return its natural height. The
+	// static Render path takes pre-built section layout.Widget values
+	// via RenderStackedPage instead (Props.Sections is not consulted
+	// there).
 	Sections []rx.Observable[layout.Widget]
 
 	// ContentMaxWidth, when positive, clamps every section (and the
@@ -188,30 +119,14 @@ type Props struct {
 	ContentMaxWidth unit.Dp
 }
 
-// Layout-affecting constants. The footer slot has a fixed height and the
-// navbar slot the platform's measured band (see NavbarHeight), so the main
-// area is deterministic. The aside column tracks an absolute dp width clamped
-// to [minAsideDp, maxAsideDp]. The footer is a status strip — a surface,
-// not a control — so its height deliberately does not follow density.
+// minRatio and maxRatio bound the SplitPane's boundary: neither pane is
+// ever dragged away entirely, so each keeps a twentieth of the length
+// whatever the other does. The seam between them — its width, its colour,
+// the band it is taken by — is patterns/splitter's, and it runs the whole
+// cross axis, top edge to bottom edge.
 const (
-	footerHDp = 48
-
-	// asideSplitterDp is the ThreeColumn aside splitter, which paints at
-	// its full width and grabs the same rectangle. It is bounded above
-	// by the full-width navbar and below by the footer, so it separates
-	// two columns of chrome without ever reaching the window's edge.
-	asideSplitterDp = 6
-
-	// minRatio and maxRatio bound the SplitPane's boundary: neither pane
-	// is ever dragged away entirely, so each keeps a twentieth of the
-	// length whatever the other does. The seam between them — its width,
-	// its colour, the band it is taken by — is patterns/splitter's, and it
-	// runs the whole cross axis, top edge to bottom edge.
-	minRatio       = 0.05
-	maxRatio       = 0.95
-	minAsideDp     = 160
-	maxAsideDp     = 640
-	defaultAsideDp = 320
+	minRatio = 0.05
+	maxRatio = 0.95
 )
 
 // NavbarHeight returns the pinned depth of the navbar band the shell draws:
@@ -233,31 +148,24 @@ func NavbarHeight() unit.Dp {
 
 // Shell returns an rx.Observable[layout.Widget] that emits a new one
 // whenever a consumed theme token, the SplitRatio observable,
-// or a composed sub-stream changes. Sidebar and navbar event handling
-// is delegated to the respective packages; Shell only owns the
-// SplitPane splitter's drag handler.
+// or a composed sub-stream changes. Navbar event handling is delegated
+// to patterns/navbar; Shell only owns the SplitPane splitter's drag
+// handler.
 func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	switch props.Layout {
-	case SplitPane:
-		return splitPaneObservable(th, props)
-	case ThreeColumn:
-		return threeColumnObservable(th, props)
 	case StackedPage:
 		return stackedPageObservable(th, props)
 	default:
-		return sidebarHeaderMainObservable(th, props)
+		return splitPaneObservable(th, props)
 	}
 }
 
 // Render produces a layout.Widget for a shell with pre-resolved tokens
 // and no event processing. Intended for golden-image testing and
 // static demonstrations; production code should use Shell. splitRatio
-// is honoured by SplitPane; SidebarHeaderMain uses the supplied sidebarW
-// directly (Props.Sidebar is not consulted). Pass nil sidebarW to render
-// an empty sidebar column. A ThreeColumn Props renders without an aside
-// column — use RenderThreeColumn to supply a pre-built aside layout.Widget; a
-// StackedPage Props renders only the navbar and footer — use
-// RenderStackedPage to supply pre-built section layout.Widget values.
+// is honoured by SplitPane; a StackedPage Props renders only the navbar
+// and footer — use RenderStackedPage to supply pre-built section
+// layout.Widget values.
 //
 // title is the LabelLarge role's whole text style, which the shell
 // spends on its navbar, and d is the density the navbar's own insets
@@ -267,7 +175,6 @@ func Shell(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 func Render(
 	shaper *text.Shaper,
 	props Props,
-	sidebarW layout.Widget,
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	title tokens.TextStyle,
@@ -275,80 +182,10 @@ func Render(
 	splitRatio float32,
 ) layout.Widget {
 	switch props.Layout {
-	case SplitPane:
-		return staticSplitPane(props.Left, props.Right, splitRatio, colors, props.SplitAxis)
-	case ThreeColumn:
-		return RenderThreeColumn(shaper, props, sidebarW, nil, colors, sp, title, d, defaultAsideDp)
 	case StackedPage:
 		return RenderStackedPage(shaper, props, nil, colors, sp, title, d)
 	default:
-		return staticSidebarHeaderMain(sidebarW, shaper, props, colors, sp, title, d)
-	}
-}
-
-// ---- SidebarHeaderMain ---------------------------------------------------
-
-func sidebarHeaderMainObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
-	sb := props.Sidebar
-	if sb == nil {
-		sb = rx.Of[layout.Widget](emptyWidget)
-	}
-	nb := navbar.Navbar(th, props.Navbar)
-	colorObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[tokens.PlatformColors] {
-		return t.Platform
-	})
-	combined := rx.CombineLatest3(sb, nb, colorObs)
-	return rx.Map(combined, func(next rx.Tuple3[layout.Widget, layout.Widget, tokens.PlatformColors]) layout.Widget {
-		sbW, nbW, colors := next.First, next.Second, next.Third
-		return composeSidebarHeaderMain(sbW, nbW, props, colors)
-	})
-}
-
-func staticSidebarHeaderMain(
-	sidebarW layout.Widget,
-	shaper *text.Shaper,
-	props Props,
-	colors tokens.PlatformColors,
-	sp tokens.SpacingScale,
-	title tokens.TextStyle,
-	d tokens.Density,
-) layout.Widget {
-	if sidebarW == nil {
-		sidebarW = emptyWidget
-	}
-	nbW := navbar.Render(shaper, props.Navbar, colors, sp, title, d)
-	return composeSidebarHeaderMain(sidebarW, nbW, props, colors)
-}
-
-// composeSidebarHeaderMain hands the three slots to [PaneFrame], which is
-// the composition: the window's own surface under everything, the sidebar's
-// pane set one margin inside the window's leading, top and bottom edges,
-// the navbar band across the content column at the platform's measured
-// depth, the main content under it and the pane's shadow cast last.
-//
-// The frame lays its slots out in reading order — pane, band, main — which
-// is the order Gio's focus group walks, so Tab traversal follows it.
-//
-// The window's surface is the platform's WindowBackground and the content
-// column stands on its ControlBackground: a pane is read through its rim and
-// the surface showing around it, so both fills are the platform's own names
-// and neither boundary is a step of fill the caller chooses.
-func composeSidebarHeaderMain(sb, nb layout.Widget, props Props, colors tokens.PlatformColors) layout.Widget {
-	main := props.Main
-	if main == nil {
-		main = emptyWidget
-	}
-	f := PaneFrame{
-		Width:       props.SidebarWidth,
-		Hidden:      props.SidebarHidden,
-		Surface:     colors.WindowBackground,
-		ContentFill: colors.ControlBackground,
-		Sidebar:     sb,
-		Band:        nb,
-		Main:        main,
-	}
-	return func(gtx layout.Context) layout.Dimensions {
-		return f.Layout(gtx, colors)
+		return staticSplitPane(props.Left, props.Right, splitRatio, colors, props.SplitAxis)
 	}
 }
 
