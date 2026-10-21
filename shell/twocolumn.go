@@ -35,7 +35,7 @@ import (
 //
 // The strip is RESERVED by the column's arrangement and DRAWN afterwards,
 // which is a statement about the keyboard and not about paint. Focus
-// follows the order the ops are written in, and a pane reads head, rows,
+// follows the order the ops are written in, and a pane reads header, rows,
 // then the strip's marks: a reader who tabs out of the pane's own field
 // means to reach what they just filtered for, and the pane's marks come
 // after everything the pane is for.
@@ -46,13 +46,13 @@ type PaneColumn struct {
 	// there: it is not one of these.
 	Marks []layout.Widget
 
-	// Head is the slot under the strip — a field, a chooser — taking the
-	// depth it reports. Nil takes none.
-	Head layout.Widget
+	// Header is the row under the strip holding what names the column — a
+	// field, a chooser — taking the depth it reports. Nil takes none.
+	Header layout.Widget
 
 	// Rows is the collection the pane shows. It is the one slot that
-	// stretches, so it runs from under Head to the footer or to the pane's
-	// own foot.
+	// stretches, so it runs from under the header to the footer or to the
+	// pane's own foot.
 	Rows layout.Widget
 
 	// Footer is the slot under the rows: a hairline the pane's own width
@@ -68,7 +68,7 @@ type PaneColumn struct {
 // PaneColumnLayout is what one frame arranged inside the pane, in WINDOW
 // coordinates.
 type PaneColumnLayout struct {
-	Strip, Head, Rows, Footer image.Rectangle
+	Strip, Header, Rows, Footer image.Rectangle
 }
 
 // PaneLayout is the arrangement one frame laid out, in WINDOW coordinates
@@ -478,7 +478,7 @@ func (f TwoColumn) paneColumn(gtx layout.Context, c tokens.PlatformColors, origi
 	}
 	lead := desktop.BandLeadFrom(f.buttonsEnd(), pane.ButtonGapDp, f.Toolbar.ButtonFallback)
 	dims, cl := f.Pane.Layout(gtx, c, lead, t)
-	for _, r := range []*image.Rectangle{&cl.Strip, &cl.Head, &cl.Rows, &cl.Footer} {
+	for _, r := range []*image.Rectangle{&cl.Strip, &cl.Header, &cl.Rows, &cl.Footer} {
 		if !r.Empty() {
 			*r = r.Add(origin)
 		}
@@ -510,10 +510,10 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 			return layout.Dimensions{Size: image.Pt(size.X, stripH)}
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if p.Head == nil {
+			if p.Header == nil {
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
 			}
-			dims := p.Head(gtx)
+			dims := p.Header(gtx)
 			headH = dims.Size.Y
 			return dims
 		}),
@@ -549,7 +549,7 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 		Rows:  image.Rect(0, rowsTop, size.X, rowsBot),
 	}
 	if headH > 0 {
-		cl.Head = image.Rect(0, headTop, size.X, rowsTop)
+		cl.Header = image.Rect(0, headTop, size.X, rowsTop)
 	}
 	if footH > 0 {
 		cl.Footer = image.Rect(0, max(size.Y-footH, 0), size.X, size.Y)

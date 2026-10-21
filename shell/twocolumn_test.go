@@ -514,8 +514,8 @@ func TestTwoColumnGolden(t *testing.T) {
 				ContentFill:   c.TextBackground,
 				InspectorFill: pane.Surface(c),
 				Pane: shell.PaneColumn{
-					Head: probe(c.SystemBlue, 184, 24),
-					Rows: fillRect(pane.Surface(c)),
+					Header: probe(c.SystemBlue, 184, 24),
+					Rows:   fillRect(pane.Surface(c)),
 				},
 				Toolbar: shell.Toolbar{
 					Lead:     24,

@@ -31,17 +31,23 @@ const arrangementFile = "layout.json"
 const arrangementDelay = 500 * time.Millisecond
 
 // Arrangement is what a window keeps of its own arrangement across
-// launches: how wide the pane stands, how wide the inspector beside the
-// content column stands, and whether the pane stands at all.
+// launches: how wide the pane stands, how wide the list column beside it
+// stands, how wide the inspector beside the content column stands, and
+// whether the pane stands at all.
 //
 // The shown state is kept because a reader who sends the pane away and
 // finds it back on the next launch is reading a defect.
 //
 // Widths are device-independent, which is what makes a kept width the same
 // physical measure on a screen of a different pixel density.
+//
+// A width of zero is a column the window does not have, and it writes no
+// key at all: a two-column window's file says nothing about a list and a
+// window with no inspector says nothing about one.
 type Arrangement struct {
 	PaneWidth      unit.Dp `json:"pane"`
-	InspectorWidth unit.Dp `json:"inspector"`
+	ListWidth      unit.Dp `json:"list,omitempty"`
+	InspectorWidth unit.Dp `json:"inspector,omitempty"`
 	PaneShown      bool    `json:"paneShown"`
 }
 
@@ -50,16 +56,17 @@ type Arrangement struct {
 // column beside the document but a second one competing with it.
 type Clamp struct{ Min, Max unit.Dp }
 
-// clamp answers the nearest width inside c, and w untouched where c states
-// no room at all.
+// clamp answers the nearest width inside c. A zero maximum states no
+// CEILING rather than no clamp: the list column's reading of the platform
+// is a minimum with nothing over it, the column growing until the content
+// beside it reaches its floor, and a clamp that went inert on a missing
+// ceiling would drop the minimum with it. A clamp stating neither leaves
+// w where it is.
 func (c Clamp) clamp(w unit.Dp) unit.Dp {
-	if c.Max <= 0 {
-		return w
-	}
 	if w < c.Min {
 		return c.Min
 	}
-	if w > c.Max {
+	if c.Max > 0 && w > c.Max {
 		return c.Max
 	}
 	return w
@@ -69,11 +76,12 @@ func (c Clamp) clamp(w unit.Dp) unit.Dp {
 // for it. What comes out of the file is a number a text editor can put
 // there, and a window the reader cannot use is not worth obeying a file
 // for, so everything arriving from outside passes through them.
-type Limits struct{ Pane, Inspector Clamp }
+type Limits struct{ Pane, List, Inspector Clamp }
 
 // clamped answers the nearest arrangement these limits allow.
 func (l Limits) clamped(a Arrangement) Arrangement {
 	a.PaneWidth = l.Pane.clamp(a.PaneWidth)
+	a.ListWidth = l.List.clamp(a.ListWidth)
 	a.InspectorWidth = l.Inspector.clamp(a.InspectorWidth)
 	return a
 }
@@ -82,7 +90,7 @@ func (l Limits) clamped(a Arrangement) Arrangement {
 // every comparison a clamp makes and would come out of one untouched, so it
 // is caught before the clamp rather than inside it.
 func (a Arrangement) plausible() bool {
-	for _, v := range []unit.Dp{a.PaneWidth, a.InspectorWidth} {
+	for _, v := range []unit.Dp{a.PaneWidth, a.ListWidth, a.InspectorWidth} {
 		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
 			return false
 		}
