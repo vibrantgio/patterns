@@ -472,6 +472,35 @@ func (f TwoColumn) toolbarLead(c tokens.PlatformColors) []layout.Widget {
 // what it arranged in window coordinates, origin being the pane's own
 // top-leading corner.
 func (f TwoColumn) paneColumn(gtx layout.Context, c tokens.PlatformColors, origin image.Point) (layout.Dimensions, PaneColumnLayout) {
+	t := f.Toggle
+	if f.PaneHidden {
+		t = nil
+	}
+	lead := desktop.BandLeadFrom(f.buttonsEnd(), pane.ButtonGapDp, f.Toolbar.ButtonFallback)
+	dims, cl := f.Pane.Layout(gtx, c, lead, t)
+	for _, r := range []*image.Rectangle{&cl.Strip, &cl.Head, &cl.Rows, &cl.Footer} {
+		if !r.Empty() {
+			*r = r.Add(origin)
+		}
+	}
+	return dims, cl
+}
+
+// Layout draws the column at the size it is given and reports what it
+// arranged, in the column's OWN coordinates — [TwoColumn] carries the
+// result into the window's by the pane's origin.
+//
+// lead is where the strip's content may start, in from the window's leading
+// edge: what [ToolbarLead] answers for the toolbar beside it, so the two
+// halves of a window's Toggle Sidebar button stand in one window column.
+// toggle is that button, drawn bare last of the strip's marks; nil is a
+// pane that cannot be sent away, and the arrangement passes nil while the
+// pane is already away.
+//
+// It is exported because the pane's column is a composition in its own
+// right: a window renders a picture of its own pane alone, and a test
+// drives one without a window around it.
+func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead unit.Dp, toggle *ToggleSidebar) (layout.Dimensions, PaneColumnLayout) {
 	size := gtx.Constraints.Max
 	stripH := min(gtx.Dp(unit.Dp(pane.StripDp)), size.Y)
 
@@ -481,25 +510,25 @@ func (f TwoColumn) paneColumn(gtx layout.Context, c tokens.PlatformColors, origi
 			return layout.Dimensions{Size: image.Pt(size.X, stripH)}
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if f.Pane.Head == nil {
+			if p.Head == nil {
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
 			}
-			dims := f.Pane.Head(gtx)
+			dims := p.Head(gtx)
 			headH = dims.Size.Y
 			return dims
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			if f.Pane.Rows == nil {
+			if p.Rows == nil {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			dims := f.Pane.Rows(gtx)
+			dims := p.Rows(gtx)
 			rowsH = dims.Size.Y
 			return dims
 		}),
 	}
-	if f.Pane.Footer != nil {
+	if p.Footer != nil {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims := f.paneFooter(gtx, c)
+			dims := p.footer(gtx, c)
 			footH = dims.Size.Y
 			return dims
 		}))
@@ -510,7 +539,7 @@ func (f TwoColumn) paneColumn(gtx layout.Context, c tokens.PlatformColors, origi
 	// a statement about focus order and not about paint.
 	sgtx := gtx
 	sgtx.Constraints = layout.Exact(image.Pt(size.X, stripH))
-	f.strip(sgtx, c)
+	p.strip(sgtx, c, lead, toggle)
 
 	headTop := stripH
 	rowsTop := min(headTop+headH, size.Y)
@@ -525,11 +554,6 @@ func (f TwoColumn) paneColumn(gtx layout.Context, c tokens.PlatformColors, origi
 	if footH > 0 {
 		cl.Footer = image.Rect(0, max(size.Y-footH, 0), size.X, size.Y)
 	}
-	for _, r := range []*image.Rectangle{&cl.Strip, &cl.Head, &cl.Rows, &cl.Footer} {
-		if !r.Empty() {
-			*r = r.Add(origin)
-		}
-	}
 	return layout.Dimensions{Size: size}, cl
 }
 
@@ -541,9 +565,9 @@ func (f TwoColumn) paneColumn(gtx layout.Context, c tokens.PlatformColors, origi
 // The pane's own marks come first and the button last, because a pane's own
 // Toggle Sidebar button is the pane talking about itself and nothing the
 // pane is for may stand behind it.
-func (f TwoColumn) strip(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
-	marks := f.Pane.Marks
-	if t := f.Toggle; t != nil && t.Click != nil && !f.PaneHidden {
+func (p PaneColumn) strip(gtx layout.Context, c tokens.PlatformColors, lead unit.Dp, toggle *ToggleSidebar) layout.Dimensions {
+	marks := p.Marks
+	if t := toggle; t != nil && t.Click != nil {
 		marks = append(append([]layout.Widget{}, marks...), func(gtx layout.Context) layout.Dimensions {
 			return PaneMark(gtx, c, t.Click, t.Mark, t.PaneTitle)
 		})
@@ -555,22 +579,22 @@ func (f TwoColumn) strip(gtx layout.Context, c tokens.PlatformColors) layout.Dim
 		}
 		controls = append(controls, w)
 	}
-	return pane.Strip(gtx, desktop.BandLeadFrom(f.buttonsEnd(), pane.ButtonGapDp, f.Toolbar.ButtonFallback), controls...)
+	return pane.Strip(gtx, lead, controls...)
 }
 
-// paneFooter draws the pane's own footer: a hairline the pane's width,
-// drawn inside its outline and running only the pane's width, and the slot
-// under it.
-func (f TwoColumn) paneFooter(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
+// footer draws the pane's own footer: a hairline the pane's width, drawn
+// inside its outline and running only the pane's width, and the slot under
+// it.
+func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return FooterSeam(gtx, c, pane.Surface(c))
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if d := f.Pane.FooterDepth; d > 0 {
+			if d := p.FooterDepth; d > 0 {
 				gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, gtx.Dp(d)))
 			}
-			return f.Pane.Footer(gtx)
+			return p.Footer(gtx)
 		}),
 	)
 }
