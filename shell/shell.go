@@ -13,6 +13,16 @@
 // observable, returning a stream of layout.Widget. Source is
 // intentionally short — copy it into your own app and modify as needed.
 //
+// [TwoColumn] is the application shell the platform's own sidebar windows
+// stand in, and the one a window with a pane composes itself from: the pane
+// down the leading edge with its own column and its bare marks, the content
+// column beside it carrying one [Toolbar] across its top, an optional
+// inspector down the trailing edge, a footer under each column, a splitter
+// on each boundary, and the one [ToggleSidebar] button that stands bare on
+// the pane while it is there and bordered in the toolbar once it is away.
+// It reports a [PaneLayout] — the arrangement in window coordinates — and
+// keeps the widths and the shown state through an [ArrangementMemory].
+//
 // The Sidebar slot accepts any rx.Observable[layout.Widget], so callers
 // can supply a patterns/sidebar instance, a patterns/accordion-based
 // column, or any other pre-built layout.Widget stream. The static Render path
