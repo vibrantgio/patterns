@@ -389,18 +389,14 @@ func EdgeSpan(gtx layout.Context, bounds image.Rectangle) (top, bottom int) {
 	return top, bottom
 }
 
-// SeamTop answers the first row a line between two FLUSH regions is drawn
-// on: the toolbar band's lower edge, which is [BandDp] down from the top of
-// the rectangle it is asked about. The band is one across the window's
-// columns and no line crosses it, so such a seam starts under it. A column
-// shorter than the band has no row left to draw on and this answers its
-// foot.
+// SeamTop answers the toolbar band's lower edge: [BandDp] down from the
+// top of the rectangle it is asked about, or that rectangle's foot where
+// it is shallower than the band.
 //
-// The pane itself parts from nothing with a line — its rim and the surface
-// around it are the boundary — so this is for the window's other
-// boundaries, and it is exported so that a splitter riding one of them draws
-// over the same rows the seam does rather than beside it or through the
-// band.
+// It does NOT say where a seam starts. A seam between two columns runs the
+// window's full height, the toolbar included, as the platform's own
+// three-column windows draw it; the band's foot is a row a caller may want
+// for its own reasons and this is the reading of it.
 func SeamTop(gtx layout.Context, bounds image.Rectangle) int {
 	top := bounds.Min.Y + gtx.Dp(unit.Dp(BandDp))
 	return min(top, bounds.Max.Y)

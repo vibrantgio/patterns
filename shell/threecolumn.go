@@ -81,26 +81,16 @@ func (m ListMetrics) resolve() ListMetrics {
 	return m
 }
 
-// ListColumn is what stands inside the list column: the header across its
-// top, the rows under it, and the footer under those.
+// ListColumn is what stands inside the list column: the rows, and the
+// footer under them.
 //
-// Mail fills none of the three but Rows: its mailbox name and its filter
-// stand in the toolbar's share over this column, not in a header of its
-// own, which is why the header is a slot and not a row the arrangement
-// draws. A window whose list names itself inside the column — a filter
-// field it wants under the toolbar rather than in it — fills Header.
+// It holds no header. MEASURED off Mail: the list column has no header row
+// at all — what names the collection stands in the toolbar's share over
+// the column, which is where a window puts it.
 type ListColumn struct {
-	// Header is the row at the top of the column holding what names it.
-	// Nil takes no height at all.
-	Header layout.Widget
-
-	// HeaderDepth is how deep that row lays out. Zero with a Header set
-	// takes the depth the slot reports.
-	HeaderDepth unit.Dp
-
 	// Rows is the collection the column shows. It is the one slot that
-	// stretches, so it runs from under the header to the footer or to the
-	// column's own foot.
+	// stretches, so it runs from the column's own top to the footer or to
+	// its foot.
 	Rows layout.Widget
 
 	// Footer is the slot under the rows: a hairline the column's own width
@@ -116,7 +106,7 @@ type ListColumn struct {
 // ListColumnLayout is what one frame arranged inside the list column, in
 // WINDOW coordinates. An empty rectangle is a slot nothing stands in.
 type ListColumnLayout struct {
-	Header, Rows, Footer image.Rectangle
+	Rows, Footer image.Rectangle
 }
 
 // ThreeColumnLayout is the arrangement one frame laid out, in WINDOW
@@ -537,8 +527,8 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 		st := op.Offset(g.List.Min).Push(gtx.Ops)
 		lgtx := gtx
 		lgtx.Constraints = layout.Exact(g.List.Size())
-		_, cl := f.List.Layout(lgtx, c, f.listFill())
-		for _, r := range []*image.Rectangle{&cl.Header, &cl.Rows, &cl.Footer} {
+		_, cl := f.List.Layout(lgtx, c)
+		for _, r := range []*image.Rectangle{&cl.Rows, &cl.Footer} {
 			if !r.Empty() {
 				*r = r.Add(g.List.Min)
 			}
@@ -625,28 +615,13 @@ func (f ThreeColumn) toolbarLead(c tokens.PlatformColors) []layout.Widget {
 // arranged, in the column's OWN coordinates — [ThreeColumn] carries the
 // result into the window's.
 //
-// standsOn is the opaque fill the column is drawn over, which its footer's
-// own hairline is flattened onto. The zero value — no colour — is the
-// platform's content fill.
-//
 // It is exported for [PaneColumn.Layout]'s reason: the column is a
 // composition in its own right, and a test drives one without a window
 // around it.
-func (l ListColumn) Layout(gtx layout.Context, c tokens.PlatformColors, standsOn color.NRGBA) (layout.Dimensions, ListColumnLayout) {
+func (l ListColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.Dimensions, ListColumnLayout) {
 	size := gtx.Constraints.Max
-	var headH, rowsH, footH int
+	var rowsH, footH int
 	children := []layout.FlexChild{
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if l.Header == nil {
-				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
-			}
-			if d := l.HeaderDepth; d > 0 {
-				gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, gtx.Dp(d)))
-			}
-			dims := l.Header(gtx)
-			headH = dims.Size.Y
-			return dims
-		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			if l.Rows == nil {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
@@ -658,18 +633,14 @@ func (l ListColumn) Layout(gtx layout.Context, c tokens.PlatformColors, standsOn
 	}
 	if l.Footer != nil {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims := l.footer(gtx, c, standsOn)
+			dims := l.footer(gtx, c)
 			footH = dims.Size.Y
 			return dims
 		}))
 	}
 	layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
 
-	rowsTop := min(headH, size.Y)
-	cl := ListColumnLayout{Rows: image.Rect(0, rowsTop, size.X, min(rowsTop+rowsH, size.Y))}
-	if headH > 0 {
-		cl.Header = image.Rect(0, 0, size.X, rowsTop)
-	}
+	cl := ListColumnLayout{Rows: image.Rect(0, 0, size.X, min(rowsH, size.Y))}
 	if footH > 0 {
 		cl.Footer = image.Rect(0, max(size.Y-footH, 0), size.X, size.Y)
 	}
@@ -679,13 +650,10 @@ func (l ListColumn) Layout(gtx layout.Context, c tokens.PlatformColors, standsOn
 // footer draws the list column's footer: a hairline the column's width and
 // the slot under it, which is the pane's footer's own composition — one
 // window states one footer and the two must read alike.
-func (l ListColumn) footer(gtx layout.Context, c tokens.PlatformColors, standsOn color.NRGBA) layout.Dimensions {
-	if standsOn.A == 0 {
-		standsOn = c.TextBackground
-	}
+func (l ListColumn) footer(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return FooterSeam(gtx, c, standsOn)
+			return FooterSeam(gtx, c)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if d := l.FooterDepth; d > 0 {
@@ -718,7 +686,6 @@ func (f ThreeColumn) paneProps(gtx layout.Context, c tokens.PlatformColors, size
 		Max:      float32(marginPx + hi - seamPx),
 		Colors:   c,
 		Rest:     pane.RimColor(c),
-		Surface:  pane.Surface(c),
 		OnChange: func(at float32) {
 			r.moved(Clamp{Min: r.Min, Max: r.Max}.clamp(unit.Dp((at + float32(seamPx-marginPx)) / scale)))
 		},
@@ -764,7 +731,6 @@ func (f ThreeColumn) listProps(gtx layout.Context, c tokens.PlatformColors, size
 		Min:      float32(g.ListX + lo),
 		Max:      float32(g.ListX + hi),
 		Colors:   c,
-		Surface:  f.listFill(),
 		HitSpan:  splitter.Span{Min: g.RowTop, Max: size.Y},
 		OnChange: func(at float32) {
 			r.moved(unit.Dp((at - float32(g.ListX)) / scale))
@@ -772,11 +738,10 @@ func (f ThreeColumn) listProps(gtx layout.Context, c tokens.PlatformColors, size
 	}
 }
 
-// layoutListSplitter draws the seam the window's full height. The
-// inspector's seam stops at the toolbar's foot because nothing parts the
-// toolbar over it; this one does not, because MEASURED off Mail it runs
-// from the window's top edge to its foot and the toolbar's two shares are
-// what it parts up there.
+// layoutListSplitter draws the seam the window's full height, as the
+// inspector's is drawn: MEASURED off Mail it runs from the window's top
+// edge to its foot, and up there the toolbar's two shares are what it
+// parts.
 func (f ThreeColumn) layoutListSplitter(gtx layout.Context, c tokens.PlatformColors, size image.Point, g ThreeColumnLayout) {
 	sgtx := gtx
 	sgtx.Constraints = layout.Exact(size)

@@ -174,34 +174,25 @@ func TestThreeColumnPaneAwayReflows(t *testing.T) {
 	}
 }
 
-// TestListColumnSlots reads the column's three slots: a header taking the
-// depth it reports, the rows stretching between it and the footer, and a
-// footer that takes no height at all when nothing fills it.
+// TestListColumnSlots reads the column's two slots: the rows starting at
+// the column's own top, since the column has no header row for them to
+// start under, and a footer that takes no height at all when nothing
+// fills it.
 func TestListColumnSlots(t *testing.T) {
 	gtx := measureCtx(threeColSize)
 	f := shell.ThreeColumn{
 		PaneWidth: 240,
 		ListWidth: 320,
-		List: shell.ListColumn{
-			Header:      fillNothing,
-			HeaderDepth: 28,
-			Rows:        fillNothing,
-		},
-		Main: fillNothing,
+		List:      shell.ListColumn{Rows: fillNothing},
+		Main:      fillNothing,
 	}
 	var g shell.ThreeColumnLayout
 	f.Report = func(l shell.ThreeColumnLayout) { g = l }
 	gtx.Ops = new(op.Ops)
 	f.Layout(gtx, tokens.PlatformLight)
 
-	if got, want := g.ListColumn.Header.Dy(), 28; got != want {
-		t.Errorf("the list's header is %d deep, want the depth it was given, %d", got, want)
-	}
-	if got, want := g.ListColumn.Header.Min, image.Pt(g.ListX, g.RowTop); got != want {
-		t.Errorf("the list's header starts at %v, want the column's own top-leading corner in window coordinates, %v", got, want)
-	}
-	if got, want := g.ListColumn.Rows.Min.Y, g.RowTop+28; got != want {
-		t.Errorf("the list's rows start at y=%d, want the row under the header, %d", got, want)
+	if got, want := g.ListColumn.Rows.Min, image.Pt(g.ListX, g.RowTop); got != want {
+		t.Errorf("the list's rows start at %v, want the column's own top-leading corner in window coordinates, %v", got, want)
 	}
 	if !g.ListColumn.Footer.Empty() {
 		t.Errorf("an unfilled footer measures %v, want no height at all", g.ListColumn.Footer)
@@ -253,10 +244,10 @@ func TestListResizeReportsTheWidthItWasDraggedTo(t *testing.T) {
 }
 
 // TestListSeamRunsTheWindowsFullHeight reads the seam off a rendered
-// window, which is where it differs from the inspector's: MEASURED off
-// Mail at x=779 the seam carries the platform's separator at every row
-// from the window's top edge to its foot, the toolbar included, and the
-// toolbar's two shares are what it parts up there.
+// window: MEASURED off Mail at x=779 the seam carries the platform's
+// measured seam colour at every row from the window's top edge to its
+// foot, the toolbar included, and the toolbar's two shares are what it
+// parts up there.
 func TestListSeamRunsTheWindowsFullHeight(t *testing.T) {
 	size := image.Pt(900, 400)
 	c := tokens.PlatformLight
@@ -276,12 +267,12 @@ func TestListSeamRunsTheWindowsFullHeight(t *testing.T) {
 		return dims
 	})
 
-	seam := splitter.SeamColor(c, c.TextBackground)
+	seam := splitter.SeamColor(c)
 	x := g.ContentX - 1
 	for _, y := range []int{0, int(shell.ToolbarDepth) / 2, int(shell.ToolbarDepth), size.Y / 2, size.Y - 1} {
 		got := img.RGBAAt(x, y)
 		if got.R != seam.R || got.G != seam.G || got.B != seam.B {
-			t.Errorf("the seam at row %d reads %v, want the platform's separator %v — it runs the window's whole height", y, got, seam)
+			t.Errorf("the seam at row %d reads %v, want the platform's measured seam %v — it runs the window's whole height", y, got, seam)
 		}
 	}
 	// And it is one pixel: the columns on either side of it are the
@@ -382,8 +373,6 @@ func TestThreeColumnGolden(t *testing.T) {
 					Rows:   fillRect(pane.Surface(c)),
 				},
 				List: shell.ListColumn{
-					Header:      probe(c.SystemYellow, 220, 20),
-					HeaderDepth: 28,
 					Rows:        fillRect(c.TextBackground),
 					Footer:      probe(c.SystemOrange, 100, 12),
 					FooterDepth: 22,

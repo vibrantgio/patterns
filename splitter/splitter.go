@@ -36,7 +36,6 @@ import (
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/components/pointershape"
-	"github.com/vibrantgio/patterns/internal/surface"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -80,20 +79,21 @@ func HitWidth(gtx layout.Context) int {
 	return max(gtx.Dp(unit.Dp(HitDp)), SeamWidth(gtx))
 }
 
-// SeamColor is the colour of the resting line: the platform's separator,
-// black or white at a tenth, flattened onto the surface the line is drawn
-// over. A zero surface is the platform's content fill, which is what a
-// boundary between two regions of a window usually crosses.
-func SeamColor(c tokens.PlatformColors, standsOn color.NRGBA) color.NRGBA {
-	return vgcolor.Flatten(c.Separator, surface.Or(standsOn, c.ControlBackground))
+// SeamColor is the colour of the resting line: the platform's measured
+// seam, [tokens.PlatformColors.Seam], which is a value per scheme and not
+// a coverage over what the line crosses. Nothing is computed here — every
+// seam the library draws reads this one function, so two lines of the one
+// kind cannot disagree.
+func SeamColor(c tokens.PlatformColors) color.NRGBA {
+	return c.Seam
 }
 
 // GrabbedColor is the colour of the line while a hand is on it: the same
 // line with the platform's hover overlay laid into it, which is what the
 // platform lays over a control the pointer is on. The line firms rather
 // than changing to a colour of its own.
-func GrabbedColor(c tokens.PlatformColors, standsOn color.NRGBA) color.NRGBA {
-	return vgcolor.Flatten(c.HoverOverlay, SeamColor(c, standsOn))
+func GrabbedColor(c tokens.PlatformColors) color.NRGBA {
+	return vgcolor.Flatten(c.HoverOverlay, SeamColor(c))
 }
 
 // Span is a range along the cross axis, in pixels from the origin of the
@@ -123,14 +123,8 @@ type Props struct {
 	// Colors resolves the line's two colours.
 	Colors tokens.PlatformColors
 
-	// Surface is the opaque fill the line is drawn over. The platform's
-	// separator is a coverage rather than a colour, so it is flattened onto
-	// this before it is painted. The zero value — no colour — is the
-	// platform's content fill.
-	Surface color.NRGBA
-
-	// Rest is the colour the resting line paints instead of the seam over
-	// Surface, for a boundary that is not a seam: a pane's trailing edge,
+	// Rest is the colour the resting line paints instead of the seam, for
+	// a boundary that is not a seam: a pane's trailing edge,
 	// where what parts the two regions is the pane's own rim and the
 	// splitter rides that pixel rather than laying a second line beside it.
 	// The zero value — no colour — is the seam.
@@ -255,12 +249,12 @@ func (s *State) Layout(gtx layout.Context, p Props) layout.Dimensions {
 
 	// The line at rest and the line under a hand are the same line: the
 	// thickening grows from the resting pixel rather than replacing it.
-	width, fill := seamPx, SeamColor(p.Colors, p.Surface)
+	width, fill := seamPx, SeamColor(p.Colors)
 	if p.Rest.A != 0 {
 		fill = p.Rest
 	}
 	if s.Grabbed() {
-		width, fill = max(gtx.Dp(unit.Dp(GrabbedDp)), seamPx), GrabbedColor(p.Colors, p.Surface)
+		width, fill = max(gtx.Dp(unit.Dp(GrabbedDp)), seamPx), GrabbedColor(p.Colors)
 	}
 	lineMin := at - (width-seamPx)/2
 	line := image.Rectangle{

@@ -21,7 +21,7 @@ import (
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/shell"
-	vgcolor "github.com/vibrantgio/theme/color"
+	"github.com/vibrantgio/patterns/splitter"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -263,9 +263,8 @@ func TestShellSplitPaneSeamIsAHairline(t *testing.T) {
 	img := golden.Capture(t, splitSize, w)
 
 	// runAt reports the seam's start column and width on one row, where
-	// "seam" is any run of pixels matching the platform's separator
-	// flattened onto the content the splitter crosses.
-	seam := vgcolor.Flatten(colors.Separator, colors.ControlBackground)
+	// "seam" is any run of pixels matching the platform's measured seam.
+	seam := splitter.SeamColor(colors)
 	runAt := func(y int) (start, width int) {
 		start = -1
 		for x := 0; x < splitW; x++ {

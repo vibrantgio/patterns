@@ -588,7 +588,7 @@ func (p PaneColumn) strip(gtx layout.Context, c tokens.PlatformColors, lead unit
 func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return FooterSeam(gtx, c, pane.Surface(c))
+			return FooterSeam(gtx, c)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if d := p.FooterDepth; d > 0 {
@@ -600,12 +600,12 @@ func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors) layout.D
 }
 
 // FooterSeam draws the one hairline a footer stands under: the seam's own
-// width in the seam's own colour, flattened onto the fill it is drawn over,
-// so neither footer in a window states which separator it is.
-func FooterSeam(gtx layout.Context, c tokens.PlatformColors, standsOn color.NRGBA) layout.Dimensions {
+// width in the seam's own colour, so neither footer in a window states
+// which line it is.
+func FooterSeam(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
 	h := splitter.SeamWidth(gtx)
 	w := gtx.Constraints.Max.X
-	paint.FillShape(gtx.Ops, splitter.SeamColor(c, standsOn), clip.Rect(image.Rect(0, 0, w, h)).Op())
+	paint.FillShape(gtx.Ops, splitter.SeamColor(c), clip.Rect(image.Rect(0, 0, w, h)).Op())
 	return layout.Dimensions{Size: image.Pt(w, h)}
 }
 
@@ -634,8 +634,7 @@ func (f TwoColumn) paneProps(gtx layout.Context, c tokens.PlatformColors, size i
 		Colors:   c,
 		// At rest the line IS the pane's rim, so it draws the rim's own
 		// colour; under a hand it firms as every other boundary does.
-		Rest:    pane.RimColor(c),
-		Surface: pane.Surface(c),
+		Rest: pane.RimColor(c),
 		OnChange: func(at float32) {
 			r.moved(Clamp{Min: r.Min, Max: r.Max}.clamp(unit.Dp((at + float32(seamPx-marginPx)) / scale)))
 		},
@@ -685,23 +684,20 @@ func (f TwoColumn) inspectorProps(gtx layout.Context, c tokens.PlatformColors, s
 	}
 }
 
-// layoutInspectorSplitter draws the trailing boundary from the toolbar's
-// lower edge to the window's foot. No line crosses a toolbar —
-// [pane.SeamTop] is the row it stops on — so the toolbar reads as one
-// across every column.
+// layoutInspectorSplitter draws the trailing boundary the window's WHOLE
+// height, the toolbar included: the inspector and the main column are two
+// regions floor to ceiling and the one toolbar lies across both of them,
+// so the line that says where one ends runs as far as the boundary does.
+// MEASURED off Mail, whose column seam reads one pixel at every row from
+// the window's top edge to its foot (reference/macos/controls.md). The
+// hand-hold is shorter than the line: the toolbar is the window's own
+// strip and carries the window's drag, so the hold is the document row
+// alone.
 func (f TwoColumn) layoutInspectorSplitter(gtx layout.Context, c tokens.PlatformColors, size image.Point, g PaneLayout) {
-	top := pane.SeamTop(gtx, image.Rectangle{Max: size})
-	h := size.Y - top
-	if h <= 0 {
+	if size.Y <= 0 {
 		return
 	}
-	props := f.inspectorProps(gtx, c, size, g)
-	// The hand-hold is stated in window rows and this splitter is laid out
-	// from the toolbar's foot, so the span moves with the origin.
-	props.HitSpan = splitter.Span{Min: g.RowTop - top, Max: g.RowTop + g.RowH - top}
-	st := op.Offset(image.Pt(0, top)).Push(gtx.Ops)
 	sgtx := gtx
-	sgtx.Constraints = layout.Exact(image.Pt(size.X, h))
-	f.InspectorResize.State.Layout(sgtx, props)
-	st.Pop()
+	sgtx.Constraints = layout.Exact(size)
+	f.InspectorResize.State.Layout(sgtx, f.inspectorProps(gtx, c, size, g))
 }
