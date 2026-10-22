@@ -59,7 +59,6 @@ func TestShellStackedPageGolden(t *testing.T) {
 
 	props := func(footer layout.Widget) shell.Props {
 		return shell.Props{
-			Layout: shell.StackedPage,
 			Navbar: shellNavbar(shaper),
 			Footer: footer,
 		}
@@ -115,7 +114,6 @@ func TestShellStackedPageContentMaxWidth(t *testing.T) {
 				return band(bandFill, 60)(gtx)
 			}
 			props := shell.Props{
-				Layout:          shell.StackedPage,
 				Navbar:          navbar.Props{Shaper: shaper},
 				ContentMaxWidth: tc.maxW,
 			}
@@ -166,7 +164,6 @@ func TestShellStackedPageScrolls(t *testing.T) {
 		})
 	}
 	props := shell.Props{
-		Layout:   shell.StackedPage,
 		Sections: sections,
 	}
 	w := liveWidget(t, shell.Shell(rx.Of(theme.Default()), props))
@@ -218,7 +215,6 @@ func TestShellStackedPageScrolls(t *testing.T) {
 func TestShellStackedPageSectionReEmission(t *testing.T) {
 	secIn, secObs := rx.Subject[layout.Widget](0, 1, 16)
 	props := shell.Props{
-		Layout:   shell.StackedPage,
 		Sections: []rx.Observable[layout.Widget]{secObs},
 	}
 	sh := shell.Shell(rx.Of(theme.Default()), props)
@@ -274,7 +270,6 @@ func TestShellStackedPageTabTraversal(t *testing.T) {
 	}
 
 	props := shell.Props{
-		Layout: shell.StackedPage,
 		Navbar: navbar.Props{
 			Brand: brandWidget,
 			Links: []navbar.Link{
