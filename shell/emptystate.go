@@ -10,6 +10,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/components/scrollbar"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
@@ -148,11 +149,31 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 // The lane is taken off the trailing edge only, so the frame's origin does
 // not move and the caller sets the result as its constraints' maximum.
 func EmptyStateFrame(gtx layout.Context, frame image.Point, bar scrollbar.Style) image.Point {
-	if bar.FadeDelay != 0 {
+	if !barStands(bar) {
 		return frame
 	}
 	frame.X = max(frame.X-gtx.Dp(bar.Width()), 0)
 	return frame
+}
+
+// BarAnchor returns the anchor a region's rows are laid out with under bar:
+// [list.Occupy] when the bar stands, so the bar takes a lane of its own and
+// the rows stop short of it, and [list.Overlay] when it fades, so the bar
+// lies over the rows' trailing edge and takes no lane. It reads the bar the
+// way [EmptyStateFrame] does, so the rows and a region's empty state stop
+// short of the same lane.
+func BarAnchor(bar scrollbar.Style) list.Anchor {
+	if barStands(bar) {
+		return list.Occupy
+	}
+	return list.Overlay
+}
+
+// barStands reports whether bar stands rather than fades: a style with no
+// fade delay is what an application's style is once the setting Always has
+// been applied to it.
+func barStands(bar scrollbar.Style) bool {
+	return bar.FadeDelay == 0
 }
 
 // emptyStateGroup draws the parts one under the other across the width gtx
