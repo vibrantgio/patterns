@@ -67,6 +67,11 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 // three leave the strip comfortably inside it.
 var tabTitles = []string{"Preview", "Code", "Notes"}
 
+// contentPlane is the fill every specimen here stands on: the platform's
+// content plane, which is what a tab pattern laid out in a document column
+// stands on. The strip has no fill of its own, so the caller states it.
+func contentPlane(c tokens.PlatformColors) color.NRGBA { return c.ControlBackground }
+
 // threeTabs returns a deterministic three-tab fixture. The per-tab content
 // colours are unrelated to the theme so the same fixture is reused for the
 // light and dark goldens; the titles carry the typography.
@@ -103,7 +108,7 @@ func TestTabsGolden(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			props := tabs.Props{Tabs: tc.tabs, Shaper: shaper}
+			props := tabs.Props{Tabs: tc.tabs, Shaper: shaper, Fill: contentPlane}
 			w := tabs.Render(shaper, props, tc.selected, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
@@ -118,7 +123,7 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
 	render := func(selected int) *image.RGBA {
-		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper}
+		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Fill: contentPlane}
 		w := tabs.Render(shaper, props, selected, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
 		return golden.Capture(t, frameSize, scene(w, bg))
 	}
@@ -130,49 +135,54 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 	}
 }
 
-// TestTheStripIsPartedFromThePane guards the pattern's two areas. The
-// pane is the platform's content fill; the strip is a band of chrome over
-// it, and in the light appearance the chrome material IS that white, so the
-// separator along the strip's foot is the whole of what parts the two
-// there. The claim is read off sampled pixels and never off token
-// arithmetic.
-func TestTheStripIsPartedFromThePane(t *testing.T) {
+// TestTheStripStandsOnTheFillItIsGiven reads the pattern's contract off
+// sampled pixels: the strip has no fill of its own, so its band is the fill
+// the caller handed it and its trim is the platform's separator flattened
+// onto that same fill. Two fills are handed per scheme — the content plane
+// and the chrome material, which differ in both — so a band that answered
+// with a constant would fail one of them.
+func TestTheStripStandsOnTheFillItIsGiven(t *testing.T) {
 	shaper := defaultShaper(t)
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 
-	// An out-of-range selection draws no content, so the whole pane below
-	// the strip is the pattern's own fill and nothing else.
+	// An out-of-range selection draws no content and no underline, so the
+	// strip's rows right of the last cell are bare band.
 	stripH := int(tokens.Comfortable.ControlHeight)
-	for _, tc := range []struct {
+	for _, sc := range []struct {
 		name   string
 		colors tokens.PlatformColors
 	}{
 		{"light", tokens.PlatformLight},
 		{"dark", tokens.PlatformDark},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			props := tabs.Props{Tabs: threeTabs(), Shaper: shaper}
-			w := tabs.Render(shaper, props, -1, tc.colors, tokens.Spacing,
-				tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
-			img := golden.Capture(t, frameSize, scene(w, bg))
-			at := func(x, y int) [3]uint8 {
-				off := img.PixOffset(x, y)
-				return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
-			}
-			// Right of the last tab cell the strip is bare band; the
-			// strip's last row is its seam; well below it the pane is
-			// bare plane.
-			strip := at(frameSize.X-1, stripH/2)
-			seam := at(frameSize.X-1, stripH-1)
-			pane := at(frameSize.X-1, stripH+8)
-			if strip == pane && (seam == strip || seam == pane) {
-				t.Errorf("strip and pane render the same fill %v and no seam parts them; the strip owes its pane a fill or a seam", strip)
-			}
-			want := vgcolor.Flatten(tc.colors.Separator, tc.colors.SidebarMaterial)
-			if seam != [3]uint8{want.R, want.G, want.B} {
-				t.Errorf("the strip's foot is %v, want the platform's separator over the chrome %v", seam, [3]uint8{want.R, want.G, want.B})
-			}
-		})
+		for _, f := range []struct {
+			name string
+			pick func(tokens.PlatformColors) color.NRGBA
+		}{
+			{"content", func(c tokens.PlatformColors) color.NRGBA { return c.ControlBackground }},
+			{"chrome", func(c tokens.PlatformColors) color.NRGBA { return c.SidebarMaterial }},
+		} {
+			t.Run(sc.name+"-"+f.name, func(t *testing.T) {
+				props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Fill: f.pick}
+				w := tabs.Render(shaper, props, -1, sc.colors, tokens.Spacing,
+					tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+				img := golden.Capture(t, frameSize, scene(w, bg))
+				at := func(x, y int) [3]uint8 {
+					off := img.PixOffset(x, y)
+					return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
+				}
+				rgb := func(c color.NRGBA) [3]uint8 { return [3]uint8{c.R, c.G, c.B} }
+
+				fill := f.pick(sc.colors)
+				if got, want := at(frameSize.X-1, stripH/2), rgb(fill); got != want {
+					t.Errorf("the strip's band is %v, want the fill it was given %v", got, want)
+				}
+				trim := vgcolor.Flatten(sc.colors.Separator, fill)
+				if got, want := at(frameSize.X-1, stripH-1), rgb(trim); got != want {
+					t.Errorf("the strip's foot is %v, want the separator flattened on that fill %v", got, want)
+				}
+			})
+		}
 	}
 }
 
@@ -309,7 +319,7 @@ func densityTheme(d tokens.Density) theme.Theme {
 // (ControlHeight) and the content pane grows by the difference.
 func TestTabsCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
-	props := tabs.Props{Tabs: threeTabs(), Selected: rx.Of(0), Shaper: defaultShaper(t)}
+	props := tabs.Props{Tabs: threeTabs(), Selected: rx.Of(0), Shaper: defaultShaper(t), Fill: contentPlane}
 	w := liveWidget(t, tabs.Tabs(rx.Of(densityTheme(tokens.Compact)), props))
 	golden.Render(t, "light-compact-three-tabs-first-selected", frameSize, scene(w, lightBG))
 }

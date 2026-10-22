@@ -4,10 +4,10 @@
 // content.
 //
 // The two are different kinds of area. The pane is content and wears the
-// platform's content fill; the strip is a row of handles on it and wears the
-// platform's chrome material, parted from the pane by a separator seam —
-// which is how the platform tells a band of chrome from the document it caps
-// in either appearance.
+// platform's content fill; the strip is a row of handles on it and has no
+// fill of its own — it stands on the fill of the column it is laid out in,
+// which its caller states — and its trim is a hairline: the separator
+// flattened onto that same fill, ruling the strip's foot.
 //
 // Tabs is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. Source is intentionally short and
@@ -60,6 +60,23 @@ type Props struct {
 	// the frontmost window.
 	Unemphasized bool
 
+	// Fill answers the fill the strip stands on, for the scheme being
+	// drawn: the fill of the column this pattern is laid out in, which the
+	// caller paints. A tab strip has no fill of its own — it stands on the
+	// fill it is in — so this is what its titles flatten their foreground
+	// onto and what the hairline along its foot is the separator flattened
+	// onto, exactly as a toolbar's shares take the fill of the column
+	// beneath them.
+	//
+	// It is a function of the colour set rather than a colour because a
+	// live strip outlives a change of scheme and the fill it stands on is a
+	// different colour on the other side of one; components/input's Surface
+	// is the same shape for the same reason.
+	//
+	// Nil takes the platform's content fill, which is what a pattern
+	// standing in a document's column stands on.
+	Fill func(tokens.PlatformColors) color.NRGBA
+
 	// OnSelect is invoked when the user changes the selection via click,
 	// Arrow-Left/Right (wrapping), Home, or End. May be nil.
 	OnSelect func(gtx layout.Context, idx int)
@@ -77,6 +94,15 @@ type Props struct {
 	// layout.Widget out on the one goroutine that runs the event loop,
 	// which is what makes sharing it correct. See theme/tokens.Typography.Shaper.
 	Shaper *text.Shaper
+}
+
+// fill answers the fill the strip stands on for the scheme being drawn: what
+// the caller stated, and the platform's content fill where it stated nothing.
+func (p Props) fill(c tokens.PlatformColors) color.NRGBA {
+	if p.Fill == nil {
+		return c.ControlBackground
+	}
+	return p.Fill(c)
 }
 
 // Strip dimensions. The strip height is exactly Density.ControlHeight and the
@@ -237,34 +263,33 @@ func drawTabs(
 	d tokens.Density,
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
-	// The pane's surface first — the platform's content fill — then the strip
-	// band over it in the chrome material.
+	fill := props.fill(colors)
+	// The pane's surface first — the platform's content fill, which is what
+	// the document below the strip is — then the strip's own rows in the
+	// fill the strip stands on, so the band reads as the column it is in
+	// however the column is painted.
 	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	// The strip is a band of chrome capping the pane, so it wears the
-	// platform's chrome material. In the light appearance that material is
-	// the content's white exactly, so the seam along the strip's foot is
-	// the whole of what parts the two there; it is drawn in either
-	// appearance, because one drawing serves both.
-	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
+	paint.FillShape(gtx.Ops, fill, clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
 	if stripH < size.Y {
-		// Two flush regions, so the one above draws the hairline that says
-		// where it ends — once, inside its own foot.
-		seamH := gtx.Dp(unit.Dp(1))
-		if seamH < 1 {
-			seamH = 1
+		// The strip's trim: a hairline inside its own foot, the separator
+		// flattened onto the fill the strip stands on, which is what parts
+		// the handles from the document they cap.
+		trimH := gtx.Dp(unit.Dp(1))
+		if trimH < 1 {
+			trimH = 1
 		}
-		paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, colors.SidebarMaterial),
-			clip.Rect(image.Rect(0, stripH-seamH, size.X, stripH)).Op())
+		paint.FillShape(gtx.Ops, vgcolor.Flatten(colors.Separator, fill),
+			clip.Rect(image.Rect(0, stripH-trimH, size.X, stripH)).Op())
 	}
 
 	stripGtx := gtx
 	stripGtx.Constraints = layout.Exact(image.Pt(size.X, stripH))
-	drawStrip(stripGtx, shaper, props, clicks, selected, colors, sp, style)
+	drawStrip(stripGtx, shaper, props, clicks, selected, colors, sp, style, fill)
 
 	if size.Y > stripH && selected >= 0 && selected < len(props.Tabs) && props.Tabs[selected].Content != nil {
 		paneSize := image.Pt(size.X, size.Y-stripH)
@@ -287,6 +312,7 @@ func drawStrip(
 	colors tokens.PlatformColors,
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
+	fill color.NRGBA,
 ) layout.Dimensions {
 	if len(props.Tabs) == 0 {
 		return layout.Dimensions{Size: gtx.Constraints.Max}
@@ -297,7 +323,7 @@ func drawStrip(
 		i := i
 		children = append(children, layout.Rigid(tabCell(
 			shaper, props.Tabs[i].Title, clickFor(clicks, i), i == selected,
-			colors, sp, style, mark,
+			colors, sp, style, mark, fill,
 		)))
 	}
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start}.Layout(gtx, children...)
@@ -336,6 +362,7 @@ func tabCell(
 	sp tokens.SpacingScale,
 	style tokens.TextStyle,
 	mark color.NRGBA,
+	fill color.NRGBA,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		stripH := gtx.Constraints.Max.Y
@@ -350,7 +377,7 @@ func tabCell(
 				titleGtx.Constraints.Max.X = 0
 			}
 
-			fg := vgcolor.Flatten(colors.Label, colors.SidebarMaterial)
+			fg := vgcolor.Flatten(colors.Label, fill)
 			mTitle := op.Record(gtx.Ops)
 			titleDims := typeset.Text(titleGtx, shaper, title, style, fg, 1)
 			titleCall := mTitle.Stop()
