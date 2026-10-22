@@ -259,7 +259,7 @@ case notifications.Expired:
 ## For coding assistants
 
 Read the org guide before you write code against this module: the plan
-root's [`AGENTS.md`](https://github.com/vibrantgio/.github/blob/master/AGENTS.md).
+root's [`AGENTS.md`](https://github.com/vibrantgio/organisation/blob/master/AGENTS.md).
 
 [`AGENTS.md`](./AGENTS.md) in this repository has the build, test and
 golden-image commands. The golden line there is exact and both halves of it
