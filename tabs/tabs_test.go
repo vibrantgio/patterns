@@ -42,8 +42,8 @@ func defaultShaper(t *testing.T) *text.Shaper {
 
 // contentRect returns a layout.Widget that fills its constraints with a
 // fixed colour. A per-tab distinct colour is used so swapping the
-// selected index produces a visible diff in the content pane of each
-// golden.
+// selected index produces a visible diff in the tab's content region of
+// each golden.
 func contentRect(c color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, c, clip.Rect{Max: gtx.Constraints.Max}.Op())
@@ -67,9 +67,9 @@ func scene(w layout.Widget, bg color.NRGBA) layout.Widget {
 // three leave the strip comfortably inside it.
 var tabTitles = []string{"Preview", "Code", "Notes"}
 
-// contentPlane is the fill every specimen here stands on: the platform's
-// content plane, which is what a tab pattern laid out in a document column
-// stands on. The strip has no fill of its own, so the caller states it.
+// contentPlane is the fill every specimen here is drawn on: the platform's
+// content plane, the fill of a document column. The strip has no fill of its
+// own, so the caller passes it.
 func contentPlane(c tokens.PlatformColors) color.NRGBA { return c.ControlBackground }
 
 // threeTabs returns a deterministic three-tab fixture. The per-tab content
@@ -137,8 +137,8 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 
 // TestTheStripStandsOnTheFillItIsGiven reads the pattern's contract off
 // sampled pixels: the strip has no fill of its own, so its band is the fill
-// the caller handed it and its trim is the platform's separator flattened
-// onto that same fill. Two fills are handed per scheme — the content plane
+// the caller passed and its trim is the platform's separator flattened
+// onto that same fill. Two fills are passed per scheme — the content plane
 // and the chrome material, which differ in both — so a band that answered
 // with a constant would fail one of them.
 func TestTheStripStandsOnTheFillItIsGiven(t *testing.T) {
@@ -183,6 +183,56 @@ func TestTheStripStandsOnTheFillItIsGiven(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestTheTabsContentIsDrawnOnTheStripsFill reads the active tab's content
+// region off sampled pixels for a passed fill that differs from the content
+// plane in both schemes: the region is that fill, the same as the strip's
+// band. The active tab's content paints nothing and the scene under the
+// pattern is a grey neither scheme uses, so the region shows only what the
+// pattern paints.
+func TestTheTabsContentIsDrawnOnTheStripsFill(t *testing.T) {
+	shaper := defaultShaper(t)
+	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+	chrome := func(c tokens.PlatformColors) color.NRGBA { return c.SidebarMaterial }
+	stripH := int(tokens.Comfortable.ControlHeight)
+	for _, sc := range []struct {
+		name   string
+		colors tokens.PlatformColors
+	}{
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
+	} {
+		t.Run(sc.name, func(t *testing.T) {
+			fill := chrome(sc.colors)
+			if plane := contentPlane(sc.colors); fill == plane {
+				t.Fatalf("the passed fill %v equals the content plane; the test needs them to differ", fill)
+			}
+			empty := func(gtx layout.Context) layout.Dimensions {
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			}
+			tt := []tabs.Tab{{Title: tabTitles[0], Content: empty}, {Title: tabTitles[1]}}
+			props := tabs.Props{Tabs: tt, Shaper: shaper, Fill: chrome}
+			w := tabs.Render(shaper, props, 0, sc.colors, tokens.Spacing,
+				tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			img := golden.Capture(t, frameSize, scene(w, bg))
+			at := func(x, y int) [3]uint8 {
+				off := img.PixOffset(x, y)
+				return [3]uint8{img.Pix[off], img.Pix[off+1], img.Pix[off+2]}
+			}
+			band := at(frameSize.X-1, stripH/2)
+			if want := [3]uint8{fill.R, fill.G, fill.B}; band != want {
+				t.Errorf("the strip's band is %v, want the passed fill %v", band, want)
+			}
+			for _, p := range []image.Point{
+				{0, stripH}, {frameSize.X / 2, (stripH + frameSize.Y) / 2}, {frameSize.X - 1, frameSize.Y - 1},
+			} {
+				if got := at(p.X, p.Y); got != band {
+					t.Errorf("the tab's content at %v is %v, want the strip's fill %v", p, got, band)
+				}
+			}
+		})
 	}
 }
 
@@ -316,7 +366,7 @@ func densityTheme(d tokens.Density) theme.Theme {
 // TestTabsCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline (the static Render path is frozen at
 // tokens.Comfortable): the strip height drops from 36 to 28 dp
-// (ControlHeight) and the content pane grows by the difference.
+// (ControlHeight) and the tab's content region grows by the difference.
 func TestTabsCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := tabs.Props{Tabs: threeTabs(), Selected: rx.Of(0), Shaper: defaultShaper(t), Fill: contentPlane}

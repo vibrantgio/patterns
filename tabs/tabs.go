@@ -1,13 +1,11 @@
 // Package tabs provides the Patterns Tabs pattern: a horizontal tab strip
 // with an underline in the platform's selection colour on the selected tab,
-// plus a content pane rendered below that shows the selected tab's
-// content.
+// and the selected tab's content drawn below it.
 //
-// The two are different kinds of area. The pane is content and wears the
-// platform's content fill; the strip is a row of handles on it and has no
-// fill of its own — it stands on the fill of the column it is laid out in,
-// which its caller states — and its trim is a hairline: the separator
-// flattened onto that same fill, ruling the strip's foot.
+// The strip has no fill of its own: it is drawn on the fill of the region
+// it is laid out in, which its caller passes, and its trim is a hairline,
+// the separator flattened onto that same fill along the strip's foot. The
+// tab's content is content, drawn on the same fill as the strip.
 //
 // Tabs is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. Source is intentionally short and
@@ -38,8 +36,9 @@ import (
 	"github.com/vibrantgio/theme/typeset"
 )
 
-// Tab is one entry in the tab strip. Content may be nil; a nil content
-// renders as an empty content pane when this tab is selected.
+// Tab is one entry in the tab strip. Content may be nil; when this tab is
+// selected, a nil Content leaves the tab's content region showing the fill
+// the strip is drawn on.
 type Tab struct {
 	Title   string
 	Content layout.Widget
@@ -60,21 +59,21 @@ type Props struct {
 	// the frontmost window.
 	Unemphasized bool
 
-	// Fill answers the fill the strip stands on, for the scheme being
-	// drawn: the fill of the column this pattern is laid out in, which the
-	// caller paints. A tab strip has no fill of its own — it stands on the
-	// fill it is in — so this is what its titles flatten their foreground
-	// onto and what the hairline along its foot is the separator flattened
-	// onto, exactly as a toolbar's shares take the fill of the column
-	// beneath them.
+	// Fill answers the fill of the region this pattern is laid out in, for
+	// the scheme being drawn. The pattern paints it under its whole frame:
+	// the strip and the tab's content are both drawn on it. A tab strip has
+	// no fill of its own, so this is the fill its titles flatten their
+	// foreground onto and the fill the hairline along its foot is the
+	// separator flattened onto. A caller that already painted its region's
+	// fill passes that same fill, so the frame matches the region around it.
 	//
 	// It is a function of the colour set rather than a colour because a
-	// live strip outlives a change of scheme and the fill it stands on is a
-	// different colour on the other side of one; components/input's Surface
+	// live strip outlives a change of scheme and the fill it is drawn on is
+	// a different colour on the other side of one; components/input's Surface
 	// is the same shape for the same reason.
 	//
-	// Nil takes the platform's content fill, which is what a pattern
-	// standing in a document's column stands on.
+	// Nil takes the platform's content fill, the fill of a document's
+	// column.
 	Fill func(tokens.PlatformColors) color.NRGBA
 
 	// OnSelect is invoked when the user changes the selection via click,
@@ -96,8 +95,9 @@ type Props struct {
 	Shaper *text.Shaper
 }
 
-// fill answers the fill the strip stands on for the scheme being drawn: what
-// the caller stated, and the platform's content fill where it stated nothing.
+// fill answers the fill the strip and the tab's content are drawn on for the
+// scheme being drawn: what the caller passed, and the platform's content fill
+// where it passed nothing.
 func (p Props) fill(c tokens.PlatformColors) color.NRGBA {
 	if p.Fill == nil {
 		return c.ControlBackground
@@ -264,21 +264,20 @@ func drawTabs(
 ) layout.Dimensions {
 	size := gtx.Constraints.Max
 	fill := props.fill(colors)
-	// The pane's surface first — the platform's content fill, which is what
-	// the document below the strip is — then the strip's own rows in the
-	// fill the strip stands on, so the band reads as the column it is in
-	// however the column is painted.
-	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
+	// One fill under the whole frame: the strip and the tab's content are
+	// drawn on the same fill, the one the caller passed. The pattern paints
+	// it rather than relying on the caller, so a caller that painted
+	// nothing still gets the strip and the tab's content on that fill.
+	paint.FillShape(gtx.Ops, fill, clip.Rect{Max: size}.Op())
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
 	if stripH > size.Y {
 		stripH = size.Y
 	}
-	paint.FillShape(gtx.Ops, fill, clip.Rect{Max: image.Pt(size.X, stripH)}.Op())
 	if stripH < size.Y {
 		// The strip's trim: a hairline inside its own foot, the separator
-		// flattened onto the fill the strip stands on, which is what parts
-		// the handles from the document they cap.
+		// flattened onto the fill the strip is drawn on, which separates
+		// the titles from the tab's content below them.
 		trimH := gtx.Dp(unit.Dp(1))
 		if trimH < 1 {
 			trimH = 1
@@ -292,10 +291,10 @@ func drawTabs(
 	drawStrip(stripGtx, shaper, props, clicks, selected, colors, sp, style, fill)
 
 	if size.Y > stripH && selected >= 0 && selected < len(props.Tabs) && props.Tabs[selected].Content != nil {
-		paneSize := image.Pt(size.X, size.Y-stripH)
+		contentSize := image.Pt(size.X, size.Y-stripH)
 		st := op.Offset(image.Pt(0, stripH)).Push(gtx.Ops)
 		contentGtx := gtx
-		contentGtx.Constraints = layout.Exact(paneSize)
+		contentGtx.Constraints = layout.Exact(contentSize)
 		props.Tabs[selected].Content(contentGtx)
 		st.Pop()
 	}
