@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"testing"
 
+	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -14,6 +15,7 @@ import (
 	"github.com/vibrantgio/patterns/shell"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // emptyStateText is the platform's own line for a content column with
@@ -141,7 +143,8 @@ func emptyStateImage(t *testing.T, sh *text.Shaper, c tokens.PlatformColors,
 	t.Helper()
 	return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
-		return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill, emptyStateText)
+		return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill,
+			shell.EmptyStateProps{Line: emptyStateText})
 	})
 }
 
@@ -197,4 +200,206 @@ func abs(n int) int {
 		return -n
 	}
 	return n
+}
+
+// emptyStateDescription and the action below are the two parts that may
+// stand under the line. The description is short enough not to wrap in
+// either frame the group tests use, so its height is the same in both and
+// the block moves only because the frame grew.
+const emptyStateDescription = "Choose a message in the list to read it here."
+
+// emptyStateActionSize is the box the probe control takes and
+// emptyStateActionColor what it paints, a colour no glyph in either
+// appearance comes near, so the control's own rectangle can be read straight
+// off the rendering and held against the place the group puts it.
+var (
+	emptyStateActionSize  = image.Pt(120, 24)
+	emptyStateActionColor = color.NRGBA{R: 0xff, A: 0xff}
+)
+
+// TestEmptyStateLineAloneIsTheColumnsReading holds the grown pattern against
+// what the column had before it: a props value carrying nothing but the line
+// renders the same pixels as the line laid out by itself in the frame — the
+// body role at the measured size, no line height, TertiaryLabel over the
+// fill, centred by the frame's own floor. Every pixel is compared, so a
+// group that moved the line by one row fails here.
+func TestEmptyStateLineAloneIsTheColumnsReading(t *testing.T) {
+	sh := defaultShaper(t)
+	for _, tc := range emptyStateCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fill := tc.colors.TextBackground
+			style := tokens.DefaultTypography.BodyLarge
+			style.Size = shell.EmptyStateSizeSp
+			style.LineHeight = 0
+			got := emptyStateImage(t, sh, tc.colors, fill, emptyStateFrame)
+			want := emptyStateLineOnly(t, sh, tc.colors, fill, style, emptyStateFrame)
+			if n := golden.PixelDiff(want, got); n != 0 {
+				t.Errorf("the line alone renders %d pixel(s) away from the line laid out by itself", n)
+			}
+		})
+	}
+}
+
+// TestPaneSizeSetsTheLineInTheRowsStyle holds the other size the props
+// carries: a section or a field handing in the style of the rows it stands
+// for gets the line set in that style and nothing else about the pattern
+// changes. The rendering is compared with the same line laid out by itself
+// in that style, every pixel, and then with the column's own rendering,
+// which it must differ from — otherwise the style handed in was dropped and
+// the first comparison would be holding the pattern against itself.
+func TestPaneSizeSetsTheLineInTheRowsStyle(t *testing.T) {
+	sh := defaultShaper(t)
+	rows := tokens.DefaultTypography.BodyLarge
+	for _, tc := range emptyStateCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fill := tc.colors.TextBackground
+			got := golden.Capture(t, emptyStateFrame, func(gtx layout.Context) layout.Dimensions {
+				paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+				return shell.EmptyState(gtx, sh, tc.colors, tokens.DefaultTypography, fill,
+					shell.EmptyStateProps{Line: emptyStateText, LineStyle: rows})
+			})
+			want := emptyStateLineOnly(t, sh, tc.colors, fill, rows, emptyStateFrame)
+			if n := golden.PixelDiff(want, got); n != 0 {
+				t.Errorf("the pane's line renders %d pixel(s) away from the rows' own style", n)
+			}
+			column := emptyStateImage(t, sh, tc.colors, fill, emptyStateFrame)
+			if golden.PixelDiff(column, got) == 0 {
+				t.Error("the pane's line renders the column's measured size, want the rows' style")
+			}
+		})
+	}
+}
+
+// TestEmptyStateCentresTheGroupItIsGiven holds the three parts together: a
+// line with a description and one action centre in the frame as one block,
+// not one part at a time.
+//
+// It is read off the action, because the action is the only part whose box
+// is its own: the control paints a rectangle of a size this test states, so
+// the place the group put it is exact where a glyph box carries the slack
+// the face leaves above and below the text. The block's height is the three
+// parts' heights and the two gaps, each measured the way the pattern lays
+// it, so the place the action must stand is arithmetic rather than a
+// recorded number.
+//
+// The reading is taken twice, in a frame and in one grown by an even amount
+// on both axes, because a block standing in the middle of one frame could be
+// standing at a fixed offset instead: a centred block moves by exactly half
+// the growth and a block placed any other way does not.
+func TestEmptyStateCentresTheGroupItIsGiven(t *testing.T) {
+	sh := defaultShaper(t)
+	line := tokens.DefaultTypography.BodyLarge
+	line.Size = shell.EmptyStateSizeSp
+	line.LineHeight = 0
+	for _, tc := range emptyStateCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fill := tc.colors.TextBackground
+			grown := image.Pt(emptyStateFrame.X+emptyStateGrowth.X, emptyStateFrame.Y+emptyStateGrowth.Y)
+			small := emptyStateGroupImage(t, sh, tc.colors, fill, emptyStateFrame)
+			large := emptyStateGroupImage(t, sh, tc.colors, fill, grown)
+
+			lineH := emptyStateHeightOf(t, sh, line, emptyStateText, emptyStateFrame, 1)
+			descH := emptyStateHeightOf(t, sh, tokens.DefaultTypography.BodyLarge,
+				emptyStateDescription, emptyStateFrame, 0)
+			// The metric the captures are taken under is one pixel per dp,
+			// so the two gaps convert to their own numbers.
+			gaps := int(shell.EmptyStateDescriptionGap) + int(shell.EmptyStateActionsGap)
+			block := lineH + descH + gaps + emptyStateActionSize.Y
+			if block >= emptyStateFrame.Y {
+				t.Fatalf("the block measures %d in a frame %d deep; the frame no longer holds it",
+					block, emptyStateFrame.Y)
+			}
+
+			want := image.Rectangle{
+				Min: image.Pt((emptyStateFrame.X-emptyStateActionSize.X)/2,
+					(emptyStateFrame.Y-block)/2+lineH+descH+gaps),
+			}
+			want.Max = want.Min.Add(emptyStateActionSize)
+			action := boxOfColor(small, emptyStateActionColor)
+			if action != want {
+				t.Errorf("the action stands at %v, want %v — the block centred in the frame", action, want)
+			}
+
+			moved := boxOfColor(large, emptyStateActionColor)
+			if got, want := moved.Min.X-action.Min.X, emptyStateGrowth.X/2; got != want {
+				t.Errorf("a frame %d wider moved the block %d across, want half the growth, %d",
+					emptyStateGrowth.X, got, want)
+			}
+			if got, want := moved.Min.Y-action.Min.Y, emptyStateGrowth.Y/2; got != want {
+				t.Errorf("a frame %d deeper moved the block %d down, want half the growth, %d",
+					emptyStateGrowth.Y, got, want)
+			}
+		})
+	}
+}
+
+// emptyStateGroupImage renders the line, the description and one action on
+// the fill they stand on.
+func emptyStateGroupImage(t *testing.T, sh *text.Shaper, c tokens.PlatformColors,
+	fill color.NRGBA, size image.Point) *image.RGBA {
+	t.Helper()
+	action := func(gtx layout.Context) layout.Dimensions {
+		paint.FillShape(gtx.Ops, emptyStateActionColor,
+			clip.Rect{Max: emptyStateActionSize}.Op())
+		return layout.Dimensions{Size: emptyStateActionSize}
+	}
+	return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
+		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill, shell.EmptyStateProps{
+			Line:        emptyStateText,
+			Description: emptyStateDescription,
+			Actions:     []layout.Widget{action},
+		})
+	})
+}
+
+// emptyStateLineOnly renders the line by itself in the frame, in the style
+// handed over, the way a column stood it before the props value existed:
+// one line, TertiaryLabel over the fill, centred by the frame's own floor.
+func emptyStateLineOnly(t *testing.T, sh *text.Shaper, c tokens.PlatformColors,
+	fill color.NRGBA, style tokens.TextStyle, size image.Point) *image.RGBA {
+	t.Helper()
+	return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
+		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		gtx.Constraints = layout.Exact(size)
+		typeset.TextAligned(gtx, sh, emptyStateText, style,
+			vgcolor.Flatten(c.TertiaryLabel, fill), 1, font.Normal, text.Middle)
+		return layout.Dimensions{Size: size}
+	})
+}
+
+// emptyStateHeightOf is the height one part of the group takes: the text
+// laid out across the frame's width with no floor under it, which is the
+// box the pattern stacks.
+func emptyStateHeightOf(t *testing.T, sh *text.Shaper, style tokens.TextStyle,
+	txt string, frame image.Point, maxLines int) int {
+	t.Helper()
+	h := 0
+	golden.Capture(t, frame, func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints = layout.Constraints{Min: image.Pt(frame.X, 0), Max: frame}
+		h = typeset.TextAligned(gtx, sh, txt, style, color.NRGBA{A: 0xff}, maxLines,
+			font.Normal, text.Middle).Size.Y
+		return layout.Dimensions{Size: frame}
+	})
+	return h
+}
+
+// boxOfColor is the bounding box of every pixel painted exactly col.
+func boxOfColor(img *image.RGBA, col color.NRGBA) image.Rectangle {
+	box := image.Rectangle{}
+	first := true
+	b := img.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if c := img.RGBAAt(x, y); c.R != col.R || c.G != col.G || c.B != col.B {
+				continue
+			}
+			if first {
+				box, first = image.Rect(x, y, x+1, y+1), false
+				continue
+			}
+			box = box.Union(image.Rect(x, y, x+1, y+1))
+		}
+	}
+	return box
 }
