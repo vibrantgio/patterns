@@ -48,27 +48,20 @@ func TestEmptyStateFrameTakesAStandingBarsLane(t *testing.T) {
 	}
 }
 
-// TestBarAnchorOccupiesAStandingBarsLane holds the anchor a region's rows
-// are laid out with against the bar: a bar that stands takes a lane and the
-// rows stop short of it, and a bar that fades lies over the rows and takes
-// none. It reads the bar as EmptyStateFrame does, so the two agree on every
-// style.
-func TestBarAnchorOccupiesAStandingBarsLane(t *testing.T) {
+// TestEmptyStateFrameAgreesWithTheRowsAnchor holds the empty state's frame
+// against the anchor the rows are laid out with: the frame loses a lane
+// exactly when list.AnchorFor returns Occupy, so the rows and the empty
+// state stop short of the same lane on every style.
+func TestEmptyStateFrameAgreesWithTheRowsAnchor(t *testing.T) {
 	c := tokens.PlatformLight
 	fading := scrollbar.FromTokens(c, c.ControlBackground)
 	standing := fading.Always()
-	if got := shell.BarAnchor(standing); got != list.Occupy {
-		t.Errorf("a standing bar is anchored %v, want list.Occupy", got)
-	}
-	if got := shell.BarAnchor(fading); got != list.Overlay {
-		t.Errorf("a fading bar is anchored %v, want list.Overlay", got)
-	}
 
 	gtx := layout.Context{Ops: new(op.Ops), Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}
 	frame := image.Pt(600, 400)
 	for _, bar := range []scrollbar.Style{standing, fading} {
 		takesLane := shell.EmptyStateFrame(gtx, frame, bar) != frame
-		if occupies := shell.BarAnchor(bar) == list.Occupy; occupies != takesLane {
+		if occupies := list.AnchorFor(bar) == list.Occupy; occupies != takesLane {
 			t.Errorf("with FadeDelay %v the anchor occupies a lane: %v, the empty state's frame loses one: %v; want them to agree",
 				bar.FadeDelay, occupies, takesLane)
 		}

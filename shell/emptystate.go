@@ -141,39 +141,19 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 //
 // It takes the bar's style rather than the "Show scroll bars" setting
 // because the style is the one value that holds both facts: the lane's width
-// is [scrollbar.Style.Width], and a style with no fade delay is a bar that
-// stands, which is what an application's style is once the setting Always
-// has been applied to it. The setting alone holds no width, and this package
-// would then need a second value to be told it.
+// is [scrollbar.Style.Width], and whether the bar stands is what
+// [list.AnchorFor] returns for it, so the rows and a region's empty state
+// stop short of the same lane. The setting alone holds no width, and this
+// package would then need a second value to be told it.
 //
 // The lane is taken off the trailing edge only, so the frame's origin does
 // not move and the caller sets the result as its constraints' maximum.
 func EmptyStateFrame(gtx layout.Context, frame image.Point, bar scrollbar.Style) image.Point {
-	if !barStands(bar) {
+	if list.AnchorFor(bar) != list.Occupy {
 		return frame
 	}
 	frame.X = max(frame.X-gtx.Dp(bar.Width()), 0)
 	return frame
-}
-
-// BarAnchor returns the anchor a region's rows are laid out with under bar:
-// [list.Occupy] when the bar stands, so the bar takes a lane of its own and
-// the rows stop short of it, and [list.Overlay] when it fades, so the bar
-// lies over the rows' trailing edge and takes no lane. It reads the bar the
-// way [EmptyStateFrame] does, so the rows and a region's empty state stop
-// short of the same lane.
-func BarAnchor(bar scrollbar.Style) list.Anchor {
-	if barStands(bar) {
-		return list.Occupy
-	}
-	return list.Overlay
-}
-
-// barStands reports whether bar stands rather than fades: a style with no
-// fade delay is what an application's style is once the setting Always has
-// been applied to it.
-func barStands(bar scrollbar.Style) bool {
-	return bar.FadeDelay == 0
 }
 
 // emptyStateGroup draws the parts one under the other across the width gtx
