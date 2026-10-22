@@ -5,6 +5,8 @@ import (
 	"maps"
 
 	"gioui.org/layout"
+
+	"github.com/vibrantgio/components/tooltip"
 )
 
 // availableRoomKey is the key the available room is set under in
@@ -41,13 +43,21 @@ func WithAvailableRoom(gtx layout.Context, r image.Rectangle) layout.Context {
 // AvailableRoomAt returns gtx with the available room moved into the
 // coordinates of a child placed at off: the area less off. An arrangement
 // calls it with the offset it pushes before it lays the child out. Where no
-// area is set, gtx is returned as it is.
+// area is set, the area is not set on the result either.
+//
+// Where gtx has a [tooltip.Surfaces] set, the arrangement is laid out inside
+// a child of a layout that places that child only after measuring it, and
+// the Surfaces is moved by off too (see [tooltip.SurfacesAt]), so a tooltip
+// in the arrangement's child is placed at its trigger.
 func AvailableRoomAt(gtx layout.Context, off image.Point) layout.Context {
-	r, ok := gtx.Values[availableRoomKey].(image.Rectangle)
-	if !ok || off == (image.Point{}) {
+	if off == (image.Point{}) {
 		return gtx
 	}
-	return WithAvailableRoom(gtx, r.Sub(off))
+	gtx = tooltip.SurfacesAt(gtx, off)
+	if r, ok := gtx.Values[availableRoomKey].(image.Rectangle); ok {
+		gtx = WithAvailableRoom(gtx, r.Sub(off))
+	}
+	return gtx
 }
 
 // AvailableRoom reads the available room in gtx's own coordinates. Its
@@ -67,8 +77,10 @@ func AvailableRoom(gtx layout.Context) image.Rectangle {
 // child whose offset is decided only after it is laid out: a row that
 // centres what it holds, or a group that is measured before it is placed.
 // An area that is not moved by that offset would place a tooltip against
-// edges that are not the window's, so the child is given none, and a
-// tooltip in it is placed as one given no available room.
+// edges that are not the window's, so the child is given none. Such a
+// layout sets a [tooltip.Surfaces] on the child and places the surfaces in
+// it once the child is placed; a tooltip in a child given neither, as the
+// stacked page's navbar is, is placed as one given no available room.
 func withoutAvailableRoom(gtx layout.Context) layout.Context {
 	if _, ok := gtx.Values[availableRoomKey]; !ok {
 		return gtx

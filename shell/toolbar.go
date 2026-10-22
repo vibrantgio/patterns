@@ -158,65 +158,66 @@ func (t Toolbar) layout(gtx layout.Context, buttons, gutter int, lead []layout.W
 	m := t.Metrics.resolve()
 	// The row centres every control on its middle and places the trailing
 	// group from the end, so a control's offset is decided only after it is
-	// laid out: the controls are given no available room.
-	gtx = withoutAvailableRoom(gtx)
-
-	children := make([]layout.FlexChild, 0, len(lead)+len(t.Leading)+len(t.Trailing)+6)
+	// laid out: the row places the tooltip surfaces of its controls once it
+	// has placed them (see [placingFlex]).
+	children := make([]placedChild, 0, len(lead)+len(t.Leading)+len(t.Trailing)+6)
 	if buttons > 0 {
 		// The buttons' own run is left alone: a move action declared over
 		// them would fight them for the press.
-		children = append(children, layout.Rigid(complayout.HSpacer(float32(buttons))))
+		children = append(children, placedRigid(complayout.HSpacer(float32(buttons))))
 	}
 	if gutter > 0 {
-		children = append(children, layout.Rigid(dragRun(gutter)))
+		children = append(children, placedRigid(dragRun(gutter)))
 	}
 	group := append(append([]layout.Widget{}, lead...), t.Leading...)
 	for i, w := range group {
 		if i > 0 {
-			children = append(children, layout.Rigid(pane.DragSpacer(m.ControlGap)))
+			children = append(children, placedRigid(pane.DragSpacer(m.ControlGap)))
 		}
-		children = append(children, layout.Rigid(w))
+		children = append(children, placedRigid(w))
 	}
 	if t.Center != nil {
 		if len(group) > 0 {
-			children = append(children, layout.Rigid(pane.DragSpacer(m.TitleGap)))
+			children = append(children, placedRigid(pane.DragSpacer(m.TitleGap)))
 		}
-		children = append(children, layout.Rigid(t.Center))
+		children = append(children, placedRigid(t.Center))
 	}
 	// The bare run between the centre and the trailing group carries
 	// nothing: finder-window-light.png reads 255 at every column of its
 	// toolbar clear of a control. It is the flexible middle, so the
 	// trailing group keeps its fixed end while everything before it keeps
 	// the leading one.
-	children = append(children, layout.Flexed(1, pane.DragFill))
+	children = append(children, placedFlexed(1, pane.DragFill))
 	for i, w := range t.Trailing {
 		if i > 0 {
-			children = append(children, layout.Rigid(pane.DragSpacer(m.ControlGap)))
+			children = append(children, placedRigid(pane.DragSpacer(m.ControlGap)))
 		}
-		children = append(children, layout.Rigid(w))
+		children = append(children, placedRigid(w))
 	}
-	children = append(children, layout.Rigid(pane.DragSpacer(m.Trail)))
+	children = append(children, placedRigid(pane.DragSpacer(m.Trail)))
 	// The toolbar hands what stands in it ROOM and not a depth: a control
 	// or a title reports its own box and the row centres it. Left at the
 	// row's own minimum every child would be cut to the full depth and
 	// drawn from its top edge, which centres nothing.
 	gtx.Constraints.Min.Y = 0
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
+	return placingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 }
 
 // ToolbarPair lays controls that belong together out as one entry of a
 // toolbar group: parted by the measured [ToolbarMetrics.PairGap] rather
-// than by the wider gap between two merely adjacent controls.
+// than by the wider gap between two merely adjacent controls. It places the
+// tooltip surfaces of its controls once it has placed them, as the toolbar
+// does.
 func ToolbarPair(controls ...layout.Widget) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		children := make([]layout.FlexChild, 0, 2*len(controls))
+		children := make([]placedChild, 0, 2*len(controls))
 		for i, w := range controls {
 			if i > 0 {
-				children = append(children, layout.Rigid(pane.DragSpacer(PlatformToolbar.PairGap)))
+				children = append(children, placedRigid(pane.DragSpacer(PlatformToolbar.PairGap)))
 			}
-			children = append(children, layout.Rigid(w))
+			children = append(children, placedRigid(w))
 		}
-		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
+		return placingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 	}
 }
 

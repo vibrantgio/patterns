@@ -39,7 +39,6 @@ func placedFlexed(weight float32, w layout.Widget) placedChild {
 // area moved by it. The surfaces are drawn after the whole row, and each
 // through op.Defer, so they paint above it.
 func placingFlex(gtx layout.Context, f layout.Flex, children ...placedChild) layout.Dimensions {
-	room := AvailableRoom(gtx)
 	dims := make([]layout.Dimensions, len(children))
 	surfaces := make([]*tooltip.Surfaces, len(children))
 	flex := make([]layout.FlexChild, len(children))
@@ -58,10 +57,23 @@ func placingFlex(gtx layout.Context, f layout.Flex, children ...placedChild) lay
 	d := f.Layout(withoutAvailableRoom(gtx), flex...)
 	for i, off := range flexOffsets(f, gtx.Constraints, dims) {
 		st := op.Offset(off).Push(gtx.Ops)
-		tooltip.PlaceSurfaces(gtx, surfaces[i], room.Sub(off))
+		placeSurfaces(gtx, surfaces[i], off)
 		st.Pop()
 	}
 	return d
+}
+
+// placeSurfaces places the surfaces s recorded in a child placed at off, in
+// the available room gtx has set moved by off. The caller has pushed the
+// transform the child was placed at, or calls it from inside the child.
+//
+// Where gtx has a [tooltip.Surfaces] set, the layout is itself laid out in
+// a child that is placed only after it is measured: the callbacks are then
+// added to that Surfaces, moved by off, and called once the outer layout
+// places its child.
+func placeSurfaces(gtx layout.Context, s *tooltip.Surfaces, off image.Point) {
+	cgtx := AvailableRoomAt(gtx, off)
+	tooltip.PlaceSurfaces(cgtx, s, AvailableRoom(cgtx))
 }
 
 // flexOffsets returns the offset f.Layout places each child at, given the

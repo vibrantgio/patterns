@@ -24,6 +24,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	complayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/components/tooltip"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/patterns/splitter"
@@ -385,7 +387,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	if !g.Toolbar.Empty() {
 		buttons, gutter := ToolbarLead(gtx, g.ContentX, f.Toolbar.Lead, f.buttonsEnd(), f.Toolbar.ButtonFallback)
 		st := op.Offset(g.Toolbar.Min).Push(gtx.Ops)
-		bgtx := gtx
+		bgtx := AvailableRoomAt(gtx, g.Toolbar.Min)
 		bgtx.Constraints = layout.Exact(g.Toolbar.Size())
 		f.Toolbar.layout(bgtx, buttons, gutter, f.toolbarLead(c))
 		st.Pop()
@@ -541,10 +543,7 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 
 	// The strip is drawn after the slots it was reserved ahead of, which is
 	// a statement about focus order and not about paint.
-	//
-	// The strip centres its marks in a row, which places each only after
-	// it is laid out: the marks are given no available room.
-	sgtx := withoutAvailableRoom(gtx)
+	sgtx := gtx
 	sgtx.Constraints = layout.Exact(image.Pt(size.X, stripH))
 	p.strip(sgtx, c, lead, toggle)
 
@@ -579,14 +578,25 @@ func (p PaneColumn) strip(gtx layout.Context, c tokens.PlatformColors, lead unit
 			return PaneMark(gtx, c, t.Click, t.Mark, t.PaneTitle)
 		})
 	}
-	controls := make([]layout.Widget, 0, 2*len(marks))
+	// The row is the one [pane.Strip] lays out: the buttons' span skipped,
+	// a stretch that moves the window, the marks, and one margin before the
+	// pane's trailing edge. It centres the marks on its middle and places
+	// them from the end, so a mark's offset is decided only after it is laid
+	// out: the row places the tooltip surfaces of the marks once it has
+	// placed them (see [placingFlex]).
+	skip := max(lead-pane.MarginDp, 0)
+	children := make([]placedChild, 0, 2*len(marks)+2)
+	children = append(children,
+		placedRigid(complayout.HSpacer(float32(skip))),
+		placedFlexed(1, pane.DragFill))
 	for i, w := range marks {
 		if i > 0 {
-			controls = append(controls, pane.DragSpacer(pane.MarkGapDp))
+			children = append(children, placedRigid(pane.DragSpacer(pane.MarkGapDp)))
 		}
-		controls = append(controls, w)
+		children = append(children, placedRigid(w))
 	}
-	return pane.Strip(gtx, lead, controls...)
+	children = append(children, placedRigid(pane.DragSpacer(pane.MarginDp)))
+	return placingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 }
 
 // footer draws the pane's own footer: a hairline the pane's width, drawn
@@ -606,13 +616,19 @@ func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors, colH int
 // footerSlot lays a column's footer slot out under the hairline, at depth
 // when one is stated. gtx's available room is in the column's coordinates.
 //
-// The footer is laid out before the rows above it, so its offset is known
-// only where its depth is: the slot then ends at the column's foot, colH,
-// and is given the available room moved there. A slot that takes its own
-// depth is placed only after it is laid out and is given no available room.
+// The slot ends at the column's foot, colH. Where a depth is stated the
+// slot's offset is known before it is laid out, and the slot is given the
+// available room moved there. A slot that takes its own depth is placed
+// only after it is laid out: it is laid out with a [tooltip.Surfaces] set,
+// and the tooltip surfaces in it are placed once its depth is known, in the
+// area moved by the offset that depth gives. The slot's ops are replayed at
+// that offset, so the surfaces are placed from inside them.
 func footerSlot(gtx layout.Context, depth unit.Dp, colH int, slot layout.Widget) layout.Dimensions {
 	if depth <= 0 {
-		return slot(withoutAvailableRoom(gtx))
+		sgtx, s := tooltip.WithSurfaces(withoutAvailableRoom(gtx))
+		dims := slot(sgtx)
+		placeSurfaces(gtx, s, image.Pt(0, colH-dims.Size.Y))
+		return dims
 	}
 	h := gtx.Dp(depth)
 	gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, h))

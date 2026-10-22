@@ -510,14 +510,14 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 		lead := f.listToolbar()
 		buttons, gutter := ToolbarLead(gtx, g.ListX, lead.Lead, f.buttonsEnd(), lead.ButtonFallback)
 		st := op.Offset(g.ListToolbar.Min).Push(gtx.Ops)
-		bgtx := gtx
+		bgtx := AvailableRoomAt(gtx, g.ListToolbar.Min)
 		bgtx.Constraints = layout.Exact(g.ListToolbar.Size())
 		lead.layout(bgtx, buttons, gutter, f.toolbarLead(c))
 		st.Pop()
 	}
 	if !g.Toolbar.Empty() {
 		st := op.Offset(g.Toolbar.Min).Push(gtx.Ops)
-		bgtx := gtx
+		bgtx := AvailableRoomAt(gtx, g.Toolbar.Min)
 		bgtx.Constraints = layout.Exact(g.Toolbar.Size())
 		f.Toolbar.layout(bgtx, 0, gtx.Dp(f.Toolbar.Lead), nil)
 		st.Pop()
