@@ -24,6 +24,9 @@
 // with and [RenderStackedPage] draws it with pre-resolved tokens and no
 // event processing.
 //
+// [EmptyState] is the one line a column with nothing to show stands in
+// place of its content, centred in the column's full frame.
+//
 // Shell is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is
 // intentionally short — copy it into your own app and modify as needed.
