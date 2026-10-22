@@ -375,7 +375,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	)
 	if f.Main != nil && f.MainFirst && g.RowH > 0 && mainW > 0 {
 		macro := op.Record(gtx.Ops)
-		mgtx := gtx
+		mgtx := AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
 		mgtx.Constraints = layout.Exact(image.Pt(mainW, g.RowH))
 		f.Main(mgtx)
 		mainCall = macro.Stop()
@@ -398,7 +398,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 		st.Pop()
 	case f.Main != nil && g.RowH > 0 && mainW > 0:
 		st := op.Offset(image.Pt(g.ContentX, g.RowTop)).Push(gtx.Ops)
-		mgtx := gtx
+		mgtx := AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
 		mgtx.Constraints = layout.Exact(image.Pt(mainW, g.RowH))
 		f.Main(mgtx)
 		st.Pop()
@@ -406,7 +406,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 
 	if f.Inspector != nil && insp > 0 && g.RowH > 0 {
 		st := op.Offset(image.Pt(inspX, g.RowTop)).Push(gtx.Ops)
-		agtx := gtx
+		agtx := AvailableRoomAt(gtx, image.Pt(inspX, g.RowTop))
 		agtx.Constraints = layout.Exact(image.Pt(insp, g.RowH))
 		f.Inspector(agtx)
 		st.Pop()
@@ -414,7 +414,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 
 	if f.Footer != nil && !g.Footer.Empty() {
 		st := op.Offset(g.Footer.Min).Push(gtx.Ops)
-		fgtx := gtx
+		fgtx := AvailableRoomAt(gtx, g.Footer.Min)
 		fgtx.Constraints = layout.Exact(g.Footer.Size())
 		f.Footer(fgtx)
 		st.Pop()
@@ -433,7 +433,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 
 	if f.Over != nil && g.RowH > 0 {
 		st := op.Offset(image.Pt(g.ContentX, 0)).Push(gtx.Ops)
-		ogtx := gtx
+		ogtx := AvailableRoomAt(gtx, image.Pt(g.ContentX, 0))
 		ogtx.Constraints = layout.Exact(image.Pt(max(size.X-g.ContentX, 0), size.Y))
 		f.Over(ogtx)
 		st.Pop()
@@ -504,6 +504,10 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 	size := gtx.Constraints.Max
 	stripH := min(gtx.Dp(unit.Dp(pane.StripDp)), size.Y)
 
+	// The flex places its children one under the other from the top, and
+	// lays every fixed child out before the rows: the header's offset is
+	// the strip's depth, and the rows' is known by the time they are laid
+	// out, so each is given the available room moved by its own offset.
 	var headH, rowsH, footH int
 	children := []layout.FlexChild{
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -513,7 +517,7 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 			if p.Header == nil {
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
 			}
-			dims := p.Header(gtx)
+			dims := p.Header(AvailableRoomAt(gtx, image.Pt(0, stripH)))
 			headH = dims.Size.Y
 			return dims
 		}),
@@ -521,14 +525,14 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 			if p.Rows == nil {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			dims := p.Rows(gtx)
+			dims := p.Rows(AvailableRoomAt(gtx, image.Pt(0, stripH+headH)))
 			rowsH = dims.Size.Y
 			return dims
 		}),
 	}
 	if p.Footer != nil {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims := p.footer(gtx, c)
+			dims := p.footer(gtx, c, size.Y)
 			footH = dims.Size.Y
 			return dims
 		}))
@@ -537,7 +541,10 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 
 	// The strip is drawn after the slots it was reserved ahead of, which is
 	// a statement about focus order and not about paint.
-	sgtx := gtx
+	//
+	// The strip centres its marks in a row, which places each only after
+	// it is laid out: the marks are given no available room.
+	sgtx := withoutAvailableRoom(gtx)
 	sgtx.Constraints = layout.Exact(image.Pt(size.X, stripH))
 	p.strip(sgtx, c, lead, toggle)
 
@@ -584,19 +591,32 @@ func (p PaneColumn) strip(gtx layout.Context, c tokens.PlatformColors, lead unit
 
 // footer draws the pane's own footer: a hairline the pane's width, drawn
 // inside its outline and running only the pane's width, and the slot under
-// it.
-func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
+// it. colH is the column's height, the edge the footer is placed against.
+func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors, colH int) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return FooterSeam(gtx, c)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if d := p.FooterDepth; d > 0 {
-				gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, gtx.Dp(d)))
-			}
-			return p.Footer(gtx)
+			return footerSlot(gtx, p.FooterDepth, colH, p.Footer)
 		}),
 	)
+}
+
+// footerSlot lays a column's footer slot out under the hairline, at depth
+// when one is stated. gtx's available room is in the column's coordinates.
+//
+// The footer is laid out before the rows above it, so its offset is known
+// only where its depth is: the slot then ends at the column's foot, colH,
+// and is given the available room moved there. A slot that takes its own
+// depth is placed only after it is laid out and is given no available room.
+func footerSlot(gtx layout.Context, depth unit.Dp, colH int, slot layout.Widget) layout.Dimensions {
+	if depth <= 0 {
+		return slot(withoutAvailableRoom(gtx))
+	}
+	h := gtx.Dp(depth)
+	gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, h))
+	return slot(AvailableRoomAt(gtx, image.Pt(0, colH-h)))
 }
 
 // FooterSeam draws the one hairline a footer stands under: the seam's own

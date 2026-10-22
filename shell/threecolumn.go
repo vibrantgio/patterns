@@ -495,7 +495,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	)
 	if f.Main != nil && f.MainFirst && !g.Main.Empty() {
 		macro := op.Record(gtx.Ops)
-		mgtx := gtx
+		mgtx := AvailableRoomAt(gtx, g.Main.Min)
 		mgtx.Constraints = layout.Exact(g.Main.Size())
 		f.Main(mgtx)
 		mainCall = macro.Stop()
@@ -525,7 +525,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 
 	if !g.List.Empty() {
 		st := op.Offset(g.List.Min).Push(gtx.Ops)
-		lgtx := gtx
+		lgtx := AvailableRoomAt(gtx, g.List.Min)
 		lgtx.Constraints = layout.Exact(g.List.Size())
 		_, cl := f.List.Layout(lgtx, c)
 		for _, r := range []*image.Rectangle{&cl.Rows, &cl.Footer} {
@@ -544,7 +544,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 		st.Pop()
 	case f.Main != nil && !g.Main.Empty():
 		st := op.Offset(g.Main.Min).Push(gtx.Ops)
-		mgtx := gtx
+		mgtx := AvailableRoomAt(gtx, g.Main.Min)
 		mgtx.Constraints = layout.Exact(g.Main.Size())
 		f.Main(mgtx)
 		st.Pop()
@@ -552,7 +552,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 
 	if f.Footer != nil && !g.Footer.Empty() {
 		st := op.Offset(g.Footer.Min).Push(gtx.Ops)
-		fgtx := gtx
+		fgtx := AvailableRoomAt(gtx, g.Footer.Min)
 		fgtx.Constraints = layout.Exact(g.Footer.Size())
 		f.Footer(fgtx)
 		st.Pop()
@@ -571,7 +571,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 
 	if f.Over != nil && g.RowH > 0 {
 		st := op.Offset(image.Pt(g.ListX, 0)).Push(gtx.Ops)
-		ogtx := gtx
+		ogtx := AvailableRoomAt(gtx, image.Pt(g.ListX, 0))
 		ogtx.Constraints = layout.Exact(image.Pt(max(size.X-g.ListX, 0), size.Y))
 		f.Over(ogtx)
 		st.Pop()
@@ -633,7 +633,7 @@ func (l ListColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.
 	}
 	if l.Footer != nil {
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			dims := l.footer(gtx, c)
+			dims := l.footer(gtx, c, size.Y)
 			footH = dims.Size.Y
 			return dims
 		}))
@@ -650,16 +650,13 @@ func (l ListColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.
 // footer draws the list column's footer: a hairline the column's width and
 // the slot under it, which is the pane's footer's own composition — one
 // window states one footer and the two must read alike.
-func (l ListColumn) footer(gtx layout.Context, c tokens.PlatformColors) layout.Dimensions {
+func (l ListColumn) footer(gtx layout.Context, c tokens.PlatformColors, colH int) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return FooterSeam(gtx, c)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if d := l.FooterDepth; d > 0 {
-				gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, gtx.Dp(d)))
-			}
-			return l.Footer(gtx)
+			return footerSlot(gtx, l.FooterDepth, colH, l.Footer)
 		}),
 	)
 }

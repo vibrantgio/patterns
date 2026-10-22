@@ -140,7 +140,14 @@ func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image
 	} else {
 		pane.FillTrailingCorners(gtx, f.ContentFill, bounds)
 	}
-	pane.Layout(gtx, c, bounds, f.Sidebar)
+	sidebar := f.Sidebar
+	if sidebar != nil {
+		// The pane places its contents at its own origin.
+		sidebar = func(gtx layout.Context) layout.Dimensions {
+			return f.Sidebar(AvailableRoomAt(gtx, bounds.Min))
+		}
+	}
+	pane.Layout(gtx, c, bounds, sidebar)
 }
 
 // Layout composes the whole frame in the order it reads, which is the focus
@@ -165,14 +172,14 @@ func (f PaneFrame) Layout(gtx layout.Context, c tokens.PlatformColors) layout.Di
 	band := min(gtx.Dp(unit.Dp(pane.BandDp)), size.Y)
 	if f.Band != nil && band > 0 {
 		st := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
-		bgtx := gtx
+		bgtx := AvailableRoomAt(gtx, image.Pt(x, 0))
 		bgtx.Constraints = layout.Exact(image.Pt(w, band))
 		f.Band(bgtx)
 		st.Pop()
 	}
 	if f.Main != nil && size.Y-band > 0 {
 		st := op.Offset(image.Pt(x, band)).Push(gtx.Ops)
-		mgtx := gtx
+		mgtx := AvailableRoomAt(gtx, image.Pt(x, band))
 		mgtx.Constraints = layout.Exact(image.Pt(w, size.Y-band))
 		f.Main(mgtx)
 		st.Pop()

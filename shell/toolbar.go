@@ -156,6 +156,11 @@ func (t Toolbar) depth() unit.Dp { return t.Metrics.resolve().Depth }
 // cast, which the platform does not cut off at the lower edge either.
 func (t Toolbar) layout(gtx layout.Context, buttons, gutter int, lead []layout.Widget) layout.Dimensions {
 	m := t.Metrics.resolve()
+	// The row centres every control on its middle and places the trailing
+	// group from the end, so a control's offset is decided only after it is
+	// laid out: the controls are given no available room.
+	gtx = withoutAvailableRoom(gtx)
+
 	children := make([]layout.FlexChild, 0, len(lead)+len(t.Leading)+len(t.Trailing)+6)
 	if buttons > 0 {
 		// The buttons' own run is left alone: a move action declared over

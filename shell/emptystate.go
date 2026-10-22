@@ -111,7 +111,11 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 	// The group is laid out across the frame's width at its own height and
 	// then moved down as one block, which is what centres the parts
 	// together rather than each in a share of its own.
-	ggtx := gtx
+	//
+	// The group is placed only after it is measured, and the actions in it
+	// are centred across the width, so no part's offset is known while it is
+	// laid out: the group is given no available room.
+	ggtx := withoutAvailableRoom(gtx)
 	ggtx.Constraints = layout.Constraints{Min: image.Pt(frame.X, 0), Max: frame}
 	rec := op.Record(gtx.Ops)
 	height := emptyStateGroup(ggtx, sh, c, typ, fill, p)

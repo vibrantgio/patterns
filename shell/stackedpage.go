@@ -98,6 +98,10 @@ func drawStackedPage(
 	list *layout.List,
 	navbarH unit.Dp,
 ) layout.Dimensions {
+	// The navbar centres what it holds in a row and the list places each
+	// section only after it is laid out and scrolled, so the page is given
+	// no available room.
+	gtx = withoutAvailableRoom(gtx)
 	size := gtx.Constraints.Max
 	navH := gtx.Dp(navbarH)
 	if navH > size.Y {
