@@ -4,9 +4,11 @@ import (
 	"image"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 
 	complayout "github.com/vibrantgio/components/layout"
+	"github.com/vibrantgio/components/tooltip"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/patterns/pane"
 )
@@ -97,6 +99,13 @@ func (m ToolbarMetrics) resolve() ToolbarMetrics {
 // the pane stands, and past the window's control buttons once the pane is
 // away ([ToolbarLead]) — and the arrangement is what knows which.
 //
+// Every control in the leading and the trailing group is laid out at the
+// width of its own content, so a control that fills the room it is given
+// does not take the rest of the row. The toolbar reads that width by laying
+// each control out once more with no room and with its events held back
+// (layout.Context.Disabled). A control in a toolbar changes no state in a
+// disabled context, as the controls Gio ships do not.
+//
 // Composed as the stored toolbars compose theirs: a leading group, the
 // centre, a flexible middle that moves the window, a trailing group, and
 // the trailing gutter. The middle and every gap carry the window's drag,
@@ -174,7 +183,7 @@ func (t Toolbar) layout(gtx layout.Context, buttons, gutter int, lead []layout.W
 		if i > 0 {
 			children = append(children, placedRigid(pane.DragSpacer(m.ControlGap)))
 		}
-		children = append(children, placedRigid(w))
+		children = append(children, placedRigid(ownWidth(w)))
 	}
 	if t.Center != nil {
 		if len(group) > 0 {
@@ -192,7 +201,7 @@ func (t Toolbar) layout(gtx layout.Context, buttons, gutter int, lead []layout.W
 		if i > 0 {
 			children = append(children, placedRigid(pane.DragSpacer(m.ControlGap)))
 		}
-		children = append(children, placedRigid(w))
+		children = append(children, placedRigid(ownWidth(w)))
 	}
 	children = append(children, placedRigid(pane.DragSpacer(m.Trail)))
 	// The toolbar hands what stands in it ROOM and not a depth: a control
@@ -215,10 +224,43 @@ func ToolbarPair(controls ...layout.Widget) layout.Widget {
 			if i > 0 {
 				children = append(children, placedRigid(pane.DragSpacer(PlatformToolbar.PairGap)))
 			}
-			children = append(children, placedRigid(w))
+			children = append(children, placedRigid(ownWidth(w)))
 		}
 		return placingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 	}
+}
+
+// ownWidth lays a toolbar control out at the width of its own content.
+//
+// The row gives each control the rest of the row as its maximum. A control
+// that fills the maximum it is given, as a push button does, would take the
+// whole rest of the row. So ownWidth first lays the control out with no room
+// at all, with its events held back and its drawing discarded. The width the
+// control reports there is the least it draws at: its text or symbol and its
+// insets. ownWidth then lays the control out with that width as its maximum.
+// A control that reports no width at no room sizes itself to the room it is
+// given, and it keeps the rest of the row as its maximum.
+func ownWidth(w layout.Widget) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		if own := widthAtNoRoom(gtx, w); own > 0 && own < gtx.Constraints.Max.X {
+			gtx.Constraints.Max.X = own
+			gtx.Constraints.Min.X = min(gtx.Constraints.Min.X, own)
+		}
+		return w(gtx)
+	}
+}
+
+// widthAtNoRoom answers the width w reports when it is given no room. The
+// pass receives no events and its drawing and its tooltip surfaces are
+// discarded, so it changes no state the real pass reads.
+func widthAtNoRoom(gtx layout.Context, w layout.Widget) int {
+	mgtx := gtx.Disabled()
+	mgtx.Constraints.Min.X, mgtx.Constraints.Max.X = 0, 0
+	mgtx, _ = tooltip.WithSurfaces(mgtx)
+	m := op.Record(mgtx.Ops)
+	dims := w(mgtx)
+	m.Stop()
+	return dims.Size.X
 }
 
 // ToolbarLead answers where a toolbar's own content may start, in pixels
