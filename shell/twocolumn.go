@@ -578,7 +578,7 @@ func (p PaneColumn) strip(gtx layout.Context, c tokens.PlatformColors, lead unit
 			return PaneMark(gtx, c, t.Click, t.Mark, t.PaneTitle)
 		})
 	}
-	// The row is the one [pane.Strip] lays out: the buttons' span skipped,
+	// The row skips the buttons' span, then lays out
 	// a stretch that moves the window, the marks, and one margin before the
 	// pane's trailing edge. It centres the marks on its middle and places
 	// them from the end, so a mark's offset is decided only after it is laid

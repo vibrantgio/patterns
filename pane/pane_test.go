@@ -164,58 +164,6 @@ func TestStripHoldsTheWindowButtons(t *testing.T) {
 	}
 }
 
-// TestStripStandsItsControlsAtTheTrailingCorner reads the band's own
-// arrangement: the leading skip is the lead in window coordinates less the
-// margin the pane already stands in, the drag fills the middle, and the
-// controls end one margin clear of the pane's trailing edge — which is
-// where the platform's own sidebar pane keeps its marks.
-func TestStripStandsItsControlsAtTheTrailingCorner(t *testing.T) {
-	const (
-		buttonsEnd = 90 // where the window's buttons end, in window coordinates
-		markW      = 24
-	)
-	mark := color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0xff}
-	control := func(gtx layout.Context) layout.Dimensions {
-		size := image.Pt(markW, gtx.Constraints.Min.Y)
-		paint.FillShape(gtx.Ops, mark, clip.Rect{Max: size}.Op())
-		return layout.Dimensions{Size: size}
-	}
-	// A strip with room to spare, and one cut to the exact width the skip,
-	// the control and the trailing margin need. With room the control is
-	// pushed to the trailing corner; cut to the fit it lands in the same
-	// place from the other direction.
-	skip := buttonsEnd - pane.MarginDp
-	for _, tc := range []struct {
-		what           string
-		width          int
-		wantLo, wantHi int
-	}{
-		{"with room to spare", paneW, paneW - pane.MarginDp - markW, paneW - pane.MarginDp},
-		{"cut to the exact fit", skip + markW + pane.MarginDp, skip, skip + markW},
-	} {
-		t.Run(tc.what, func(t *testing.T) {
-			size := image.Pt(tc.width, pane.StripDp)
-			w := func(gtx layout.Context) layout.Dimensions {
-				return pane.Strip(gtx, buttonsEnd, control)
-			}
-			img := golden.Capture(t, size, scene(w, color.NRGBA{A: 0xff}))
-			lo, hi := -1, -1
-			y := pane.StripDp / 2
-			for x := 0; x < size.X; x++ {
-				if sameColor(img.RGBAAt(x, y), mark) {
-					if lo < 0 {
-						lo = x
-					}
-					hi = x + 1
-				}
-			}
-			if lo != tc.wantLo || hi != tc.wantHi {
-				t.Errorf("the strip's control spans [%d,%d) %s, want [%d,%d)", lo, hi, tc.what, tc.wantLo, tc.wantHi)
-			}
-		})
-	}
-}
-
 // TestRimAndShadowAreThePlatformsNames pins the pane's two boundaries to
 // the platform's measured materials rather than to a coverage solved
 // against the fill: the rim is opaque in both appearances, so nothing is

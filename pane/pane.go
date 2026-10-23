@@ -67,7 +67,7 @@
 // line, their centres 42 apart, the trailing one ending twelve pixels clear
 // of the pane's rim — and neither carries a capsule, a fill or a rim. The
 // platform's bordered toolbar control is the BAND's drawing, not the
-// pane's. [Strip] stands the caller's controls at that corner.
+// pane's. The shell's placing row stands the pane's marks at that corner.
 //
 // THE RECALL CONVENTION. A control that travels with the pane cannot be the
 // one that recalls it. The pane's own dismiss control rides the strip; the
@@ -97,7 +97,6 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
-	complayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/effects/depth"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/theme/tokens"
@@ -171,7 +170,7 @@ const (
 	// stand 42 apart in voicememos-multi-folder-2026-09-18.png, which at the
 	// 24 dp mark box every chrome mark in this library is drawn in leaves
 	// eighteen between the boxes. A caller passes it between two controls
-	// handed to [Strip].
+	// handed to the shell's placing row.
 	MarkGapDp = 18
 )
 
@@ -400,44 +399,6 @@ func EdgeSpan(gtx layout.Context, bounds image.Rectangle) (top, bottom int) {
 func SeamTop(gtx layout.Context, bounds image.Rectangle) int {
 	top := bounds.Min.Y + gtx.Dp(unit.Dp(BandDp))
 	return min(top, bounds.Max.Y)
-}
-
-// Strip lays out the pane's top band: the window control buttons' span
-// skipped at the leading end, a stretch that moves the window across the
-// middle, and the caller's controls at the trailing corner, one margin in
-// from the pane's trailing edge.
-//
-// lead is where a band's own content may start, in WINDOW coordinates — the
-// buttons' trailing edge plus the air the platform leaves after it, or the
-// window's own edge inset where it has no such controls. The pane stands
-// one margin inside the window's leading edge, so the pane-local skip is
-// that measurement less the margin: the buttons are the window's and stand
-// where it puts them; it is the pane that slid in under them. The span is
-// skipped rather than claimed because a move action declared over the
-// buttons would fight them for the press.
-//
-// The controls stand at the trailing corner because that is where the
-// platform keeps a sidebar pane's own marks, which the package doc records
-// the measurement for. They are handed over in reading order and each takes
-// its own width; a caller wanting air between two of them passes a spacer of
-// [MarkGapDp] between them. The band's depth is the constraint the caller
-// gives it, which should be [StripDp] — the strip is reserved by the pane's
-// own vertical arrangement, and whether it is drawn in place or after the
-// rest is a question about focus order that belongs to the caller.
-func Strip(gtx layout.Context, lead unit.Dp, controls ...layout.Widget) layout.Dimensions {
-	lead -= MarginDp
-	if lead < 0 {
-		lead = 0
-	}
-	children := make([]layout.FlexChild, 0, len(controls)+3)
-	children = append(children,
-		layout.Rigid(complayout.HSpacer(float32(lead))),
-		layout.Flexed(1, DragFill))
-	for _, w := range controls {
-		children = append(children, layout.Rigid(w))
-	}
-	children = append(children, layout.Rigid(DragSpacer(MarginDp)))
-	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
 }
 
 // DragSpacer is a fixed-width gap that moves the window when it is dragged.
