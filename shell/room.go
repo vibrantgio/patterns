@@ -79,8 +79,8 @@ func AvailableRoom(gtx layout.Context) image.Rectangle {
 // An area that is not moved by that offset would place a tooltip against
 // edges that are not the window's, so the child is given none. Such a
 // layout sets a [tooltip.Surfaces] on the child and places the surfaces in
-// it once the child is placed; a tooltip in a child given neither, as the
-// stacked page's navbar is, is placed as one given no available room.
+// it once the child is placed; a tooltip in a child given neither is placed
+// as one given no available room.
 func withoutAvailableRoom(gtx layout.Context) layout.Context {
 	if _, ok := gtx.Values[availableRoomKey]; !ok {
 		return gtx

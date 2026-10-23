@@ -13,6 +13,7 @@ import (
 
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/components/tooltip"
+	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/patterns/shell"
 	"github.com/vibrantgio/theme/tokens"
 )
@@ -127,11 +128,19 @@ func TestTooltipPlacedAfterMeasuringIsInsideWindow(t *testing.T) {
 		}},
 		{"stacked-page-section", page, shell.RenderStackedPage(sh, shell.Props{}, []layout.Widget{sectionTooltip(c)},
 			c, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)},
+		{"stacked-page-navbar-trailing-action", page, shell.RenderStackedPage(sh,
+			shell.Props{Navbar: navbar.Props{Actions: []layout.Widget{fillNothingSmall, squareTooltip(c)}, Shaper: sh}},
+			[]layout.Widget{fillNothingBand}, c, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assertTooltipInsideWindow(t, tc.size, tc.window)
 		})
 	}
+}
+
+// fillNothingBand is a stacked page's section 40 px deep that draws nothing.
+func fillNothingBand(gtx layout.Context) layout.Dimensions {
+	return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, 40)}
 }
 
 // fillNothingSmall is a control that draws nothing at a small square size.

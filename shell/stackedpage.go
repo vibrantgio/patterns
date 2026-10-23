@@ -112,11 +112,14 @@ func drawStackedPage(
 
 	// Navbar pinned across the full width; sections scroll beneath it. The
 	// navbar centres what it holds in rows of its own, which place their
-	// children only after measuring them and place no tooltip surfaces, so
-	// the navbar is given no available room.
-	ngtx := withoutAvailableRoom(gtx)
+	// children only after measuring them. So the navbar is given no
+	// available room and is laid out with a [tooltip.Surfaces] set, and its
+	// rows add each child's surfaces to it at the child's offset. The page
+	// places those surfaces in the window's area once the navbar is drawn.
+	ngtx, navSurfaces := tooltip.WithSurfaces(withoutAvailableRoom(gtx))
 	ngtx.Constraints = layout.Exact(image.Pt(size.X, navH))
 	nb(ngtx)
+	placeSurfaces(gtx, navSurfaces, image.Point{})
 
 	children := len(sections)
 	if footer != nil {
