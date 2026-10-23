@@ -724,7 +724,7 @@ func drawToggle(gtx layout.Context, tt *toggleTag, size image.Point, colors toke
 	g := gtx.Dp(icon.Size(d))
 	gx := (size.X - g) / 2
 	gy := (size.Y - g) / 2
-	if mark := icons.Mark(icons.Sidebar); mark != nil {
+	if mark := icons.Mark(icons.SidebarLeft); mark != nil {
 		st := op.Offset(image.Pt(gx, gy)).Push(gtx.Ops)
 		mark(gtx, g, colors.ToolbarLabel)
 		st.Pop()

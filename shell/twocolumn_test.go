@@ -348,7 +348,7 @@ func TestToggleSidebarIsOneGestureSource(t *testing.T) {
 	presses, hidden := 0, false
 	toggle := &shell.ToggleSidebar{
 		Click:        new(widget.Clickable),
-		Mark:         icons.Mark(icons.Sidebar),
+		Mark:         icons.Mark(icons.SidebarLeft),
 		PaneTitle:    "Hide the sidebar",
 		ToolbarTitle: "Show the sidebar",
 		OnPress:      func(layout.Context) { presses++; hidden = !hidden },
