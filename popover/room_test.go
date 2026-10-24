@@ -206,3 +206,70 @@ func TestAPopoverInAPlacingFlexChildIsPlacedInTheWindowsRoom(t *testing.T) {
 		t.Errorf("content ends at row %d (found %v), want above the anchor at %d", greenHi, ok, top+16)
 	}
 }
+
+// TestAPopoverInAWindowReportingNoRoomIsKeptInsideTheFrame passes
+// attachment.AvailableRoom in a window that set no available room, so the
+// room it reports bounds nothing. The surface is then placed against the
+// frame as a popover with no AvailableRoom is: centred on an anchor at the
+// frame's trailing edge it would run past that edge, and it is shifted back
+// to end on it.
+func TestAPopoverInAWindowReportingNoRoomIsKeptInsideTheFrame(t *testing.T) {
+	colors := tokens.PlatformLight
+	props := popover.Props{
+		Anchor:        fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
+		Content:       fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 160, 36),
+		Placement:     popover.Bottom,
+		Align:         popover.AlignTrailing,
+		AvailableRoom: attachment.AvailableRoom,
+	}
+	w := popover.Render(props, true, colors, tokens.Spacing, sharpRadius)
+	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
+	img := golden.Capture(t, frameSize, scene(inRoom(w, roomW), bg))
+	lo, hi, ok := fillRun(img, 148, colors.WindowBackground)
+	if !ok {
+		t.Fatal("no surface pixels on the row under the surface's top edge")
+	}
+	if hi >= roomW || hi < roomW-3 {
+		t.Errorf("surface ends at x=%d; inside the %d-wide frame it ends on its edge at %d", hi, roomW, roomW-1)
+	}
+	if lo < 0 {
+		t.Errorf("surface starts at x=%d, off the frame's leading edge", lo)
+	}
+}
+
+// TestAPopoverRecordedTwoLayoutsDeepInAWindowReportingNoRoomIsKeptInsideTheFrame
+// records the popover's surface in a layout that places its child at an
+// offset, inside another layout that places the surfaces, in a window that
+// set no available room. The room handed down is the unbounded one moved by
+// that offset, which still bounds nothing, so the surface is placed against
+// the frame and ends on its trailing edge.
+func TestAPopoverRecordedTwoLayoutsDeepInAWindowReportingNoRoomIsKeptInsideTheFrame(t *testing.T) {
+	colors := tokens.PlatformLight
+	props := popover.Props{
+		Anchor:    fixedRect(color.NRGBA{R: 80, G: 160, B: 220, A: 255}, 60, 28),
+		Content:   fixedRect(color.NRGBA{R: 120, G: 120, B: 120, A: 255}, 160, 36),
+		Placement: popover.Bottom,
+		Align:     popover.AlignTrailing,
+	}
+	w := popover.Render(props, true, colors, tokens.Spacing, sharpRadius)
+	off := image.Pt(0, 1)
+	window := func(gtx layout.Context) layout.Dimensions {
+		sgtx, s := attachment.WithSurfaces(gtx)
+		st := op.Offset(off).Push(gtx.Ops)
+		inRoom(w, roomW)(attachment.AvailableRoomAt(sgtx, off))
+		st.Pop()
+		attachment.PlaceSurfaces(gtx, s, attachment.AvailableRoom(gtx))
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+	img := golden.Capture(t, frameSize, scene(window, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
+	lo, hi, ok := fillRun(img, 148, colors.WindowBackground)
+	if !ok {
+		t.Fatal("no surface pixels on the row under the surface's top edge")
+	}
+	if hi >= roomW || hi < roomW-3 {
+		t.Errorf("surface ends at x=%d; inside the %d-wide frame it ends on its edge at %d", hi, roomW, roomW-1)
+	}
+	if lo < 0 {
+		t.Errorf("surface starts at x=%d, off the frame's leading edge", lo)
+	}
+}

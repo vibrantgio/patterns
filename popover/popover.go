@@ -165,12 +165,14 @@ type Props struct {
 	Align Alignment
 
 	// AvailableRoom, if non-nil, is asked on every frame the surface is
-	// drawn for the rectangle the surface may occupy, in the coordinates the
-	// popover is laid out in: the frame lies inside it, and the rest of it is
-	// the space around the frame up to the window's edges. A window passes
-	// [attachment.AvailableRoom], which reports the room the window set as
-	// the layouts above moved it. Nil leaves the surface on the side asked
-	// for, bounded across that side by the frame alone.
+	// drawn for the window's reported available room: the rectangle the
+	// surface may occupy, in the coordinates the popover is laid out in. A
+	// window passes [attachment.AvailableRoom], which reports the room the
+	// window set as the layouts above moved it. When none is reported, by a
+	// nil AvailableRoom or a window that set no room, the surface is placed
+	// inside the frame: it keeps the side asked for and is shifted inside
+	// the frame across that side. Only a window that reports its room has
+	// the surface flip, scroll and stay inside the window.
 	AvailableRoom func(gtx layout.Context) image.Rectangle
 
 	// Arbiter is the set of popovers this one arbitrates within: opening it
@@ -360,12 +362,16 @@ func drawPopover(
 	//    attachment.Surfaces on the context, recorded there to be drawn in
 	//    the room that layout passes.
 	if openNow {
-		draw := func(gtx layout.Context, room image.Rectangle, bounded bool) {
+		draw := func(gtx layout.Context, room image.Rectangle) {
+			room, bounded := roomOrFrame(room, props.Placement, frame)
 			drawSurface(gtx, props, tok, st, live, anchorRect, frame, room, bounded)
 		}
-		if !attachment.Record(gtx, func(gtx layout.Context, room image.Rectangle) { draw(gtx, room, true) }) {
-			room, bounded := availableRoom(gtx, props, frame)
-			draw(gtx, room, bounded)
+		if !attachment.Record(gtx, draw) {
+			room := unreported
+			if props.AvailableRoom != nil {
+				room = props.AvailableRoom(gtx)
+			}
+			draw(gtx, room)
 		}
 	}
 
@@ -405,15 +411,24 @@ const unbounded = 1 << 20
 // It is gioui.org/layout's own choice for a scrolled child's extent.
 const unboundedContent = 1e6
 
-// availableRoom is the room the surface is placed in, in the popover's own
-// coordinates, and whether the caller reported it. With none reported it is
-// the frame across the placement's axis and unbounded along it, so the
+// unreported is the rectangle [attachment.AvailableRoom] reports where no
+// window set the available room. It bounds nothing, so a popover given it is
+// placed against its own frame instead.
+var unreported = attachment.AvailableRoom(layout.Context{})
+
+// roomOrFrame is the room the surface is placed in, in the popover's own
+// coordinates, and whether a window reported it. Where none was reported it
+// is the frame across the placement's axis and unbounded along it, so the
 // surface keeps the side asked for and is held inside the frame across it.
-func availableRoom(gtx layout.Context, props Props, frame image.Point) (image.Rectangle, bool) {
-	if props.AvailableRoom != nil {
-		return props.AvailableRoom(gtx), true
+//
+// The room is known to be unreported by its size, not its position: a layout
+// that records surfaces and places them at an offset moves the unbounded
+// room by that offset, and the moved room still bounds nothing.
+func roomOrFrame(room image.Rectangle, p Placement, frame image.Point) (image.Rectangle, bool) {
+	if room.Size() != unreported.Size() {
+		return room, true
 	}
-	if props.Placement.Vertical() {
+	if p.Vertical() {
 		return image.Rect(0, -unbounded, frame.X, unbounded), false
 	}
 	return image.Rect(-unbounded, 0, unbounded, frame.Y), false
