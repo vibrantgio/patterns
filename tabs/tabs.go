@@ -29,8 +29,8 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/pointershape"
-	"github.com/vibrantgio/components/tooltip"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -294,7 +294,7 @@ func drawTabs(
 	if size.Y > stripH && selected >= 0 && selected < len(props.Tabs) && props.Tabs[selected].Content != nil {
 		contentSize := image.Pt(size.X, size.Y-stripH)
 		st := op.Offset(image.Pt(0, stripH)).Push(gtx.Ops)
-		contentGtx := tooltip.AvailableRoomAt(gtx, image.Pt(0, stripH))
+		contentGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, stripH))
 		contentGtx.Constraints = layout.Exact(contentSize)
 
 		props.Tabs[selected].Content(contentGtx)

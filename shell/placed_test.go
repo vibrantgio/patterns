@@ -9,6 +9,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/components/tooltip"
 	"github.com/vibrantgio/patterns/navbar"
@@ -23,7 +24,7 @@ func squareTooltip(c tokens.PlatformColors) layout.Widget {
 	props := tooltip.Props{
 		Text:          "A tooltip at the window's edge",
 		Placement:     tooltip.Bottom,
-		AvailableRoom: tooltip.AvailableRoom,
+		AvailableRoom: attachment.AvailableRoom,
 		Trigger: func(gtx layout.Context) layout.Dimensions {
 			sz := image.Pt(roomTrigger, roomTrigger)
 			paint.FillShape(gtx.Ops, c.SystemBlue, clip.Rect{Max: sz}.Op())
@@ -60,7 +61,7 @@ func sectionTooltip(c tokens.PlatformColors) layout.Widget {
 		w := gtx.Constraints.Max.X
 		off := image.Pt(w-roomTrigger, 0)
 		st := op.Offset(off).Push(gtx.Ops)
-		tip(tooltip.AvailableRoomAt(gtx, off))
+		tip(attachment.AvailableRoomAt(gtx, off))
 		st.Pop()
 		return layout.Dimensions{Size: image.Pt(w, 40)}
 	}
@@ -151,7 +152,7 @@ func fillNothingSmall(gtx layout.Context) layout.Dimensions {
 // it, at an offset, with a shown tooltip in the arrangement's main slot. It
 // reads the window against the same arrangement placed at the same offset by
 // a plain transform with the area moved: the two are drawn alike, so the
-// arrangement moves the row's tooltip.Surfaces by its slot's offset and the
+// arrangement moves the row's attachment.Surfaces by its slot's offset and the
 // surface is placed at its trigger.
 func TestTooltipInArrangementInsideCollectedChildIsAtTrigger(t *testing.T) {
 	c := tokens.PlatformLight
@@ -172,15 +173,15 @@ func TestTooltipInArrangementInsideCollectedChildIsAtTrigger(t *testing.T) {
 		})
 	}
 	collected := capture(func(gtx layout.Context) layout.Dimensions {
-		return tooltip.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal},
-			tooltip.PlacedRigid(func(gtx layout.Context) layout.Dimensions {
+		return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal},
+			attachment.PlacedRigid(func(gtx layout.Context) layout.Dimensions {
 				return layout.Dimensions{Size: lead}
 			}),
-			tooltip.PlacedRigid(arrangement))
+			attachment.PlacedRigid(arrangement))
 	})
 	direct := capture(func(gtx layout.Context) layout.Dimensions {
 		st := op.Offset(lead).Push(gtx.Ops)
-		arrangement(tooltip.AvailableRoomAt(gtx, lead))
+		arrangement(attachment.AvailableRoomAt(gtx, lead))
 		st.Pop()
 		return layout.Dimensions{Size: size}
 	})

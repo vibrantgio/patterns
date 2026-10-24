@@ -10,9 +10,9 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/components/scrollbar"
-	"github.com/vibrantgio/components/tooltip"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -115,9 +115,9 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 	//
 	// The group is placed only after it is measured, and the actions in it
 	// are centred across the width, so no part's offset is known while it is
-	// laid out: the group is laid out with a [tooltip.Surfaces] set, and the
+	// laid out: the group is laid out with an [attachment.Surfaces] set, and the
 	// tooltip surfaces in it are placed once the group is placed.
-	ggtx, surfaces := tooltip.WithSurfaces(gtx)
+	ggtx, surfaces := attachment.WithSurfaces(gtx)
 	ggtx.Constraints = layout.Constraints{Min: image.Pt(frame.X, 0), Max: frame}
 	rec := op.Record(gtx.Ops)
 	height := emptyStateGroup(ggtx, sh, c, typ, fill, p)
@@ -130,7 +130,7 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 	}
 	off := op.Offset(image.Pt(0, above)).Push(gtx.Ops)
 	call.Add(gtx.Ops)
-	tooltip.PlaceSurfacesAt(gtx, surfaces, image.Pt(0, above))
+	attachment.PlaceSurfacesAt(gtx, surfaces, image.Pt(0, above))
 	off.Pop()
 	return layout.Dimensions{Size: frame}
 }
@@ -171,7 +171,7 @@ func emptyStateGroup(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColor
 			y += gap
 		}
 		rec := op.Record(gtx.Ops)
-		dims := w(tooltip.AvailableRoomAt(gtx, image.Pt(0, y)))
+		dims := w(attachment.AvailableRoomAt(gtx, image.Pt(0, y)))
 		call := rec.Stop()
 		if y > 0 {
 			off := op.Offset(image.Pt(0, y)).Push(gtx.Ops)
@@ -220,7 +220,7 @@ func emptyStateLineStyle(typ tokens.Typography, style tokens.TextStyle) tokens.T
 // every control stands on the row's middle.
 //
 // A control's offset is decided only after every control is measured, so
-// each is laid out with a [tooltip.Surfaces] set, and the tooltip surfaces
+// each is laid out with an [attachment.Surfaces] set, and the tooltip surfaces
 // in it are placed once the control is placed.
 func emptyStateActions(gtx layout.Context, actions []layout.Widget, gap int) layout.Dimensions {
 	full := gtx.Constraints.Max
@@ -230,13 +230,13 @@ func emptyStateActions(gtx layout.Context, actions []layout.Widget, gap int) lay
 	agtx.Constraints = layout.Constraints{Max: full}
 	var calls []op.CallOp
 	var sizes []image.Point
-	var surfaces []*tooltip.Surfaces
+	var surfaces []*attachment.Surfaces
 	width, height := 0, 0
 	for _, a := range actions {
 		if a == nil {
 			continue
 		}
-		cgtx, s := tooltip.WithSurfaces(agtx)
+		cgtx, s := attachment.WithSurfaces(agtx)
 		rec := op.Record(gtx.Ops)
 		dims := a(cgtx)
 		calls = append(calls, rec.Stop())
@@ -259,7 +259,7 @@ func emptyStateActions(gtx layout.Context, actions []layout.Widget, gap int) lay
 		at := image.Pt(x, (height-sizes[i].Y)/2)
 		off := op.Offset(at).Push(gtx.Ops)
 		call.Add(gtx.Ops)
-		tooltip.PlaceSurfacesAt(gtx, surfaces[i], at)
+		attachment.PlaceSurfacesAt(gtx, surfaces[i], at)
 		off.Pop()
 		x += sizes[i].X + gap
 	}

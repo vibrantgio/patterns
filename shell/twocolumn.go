@@ -24,8 +24,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/components/attachment"
 	complayout "github.com/vibrantgio/components/layout"
-	"github.com/vibrantgio/components/tooltip"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/patterns/splitter"
@@ -377,7 +377,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	)
 	if f.Main != nil && f.MainFirst && g.RowH > 0 && mainW > 0 {
 		macro := op.Record(gtx.Ops)
-		mgtx := tooltip.AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
+		mgtx := attachment.AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
 		mgtx.Constraints = layout.Exact(image.Pt(mainW, g.RowH))
 		f.Main(mgtx)
 		mainCall = macro.Stop()
@@ -387,7 +387,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	if !g.Toolbar.Empty() {
 		buttons, gutter := ToolbarLead(gtx, g.ContentX, f.Toolbar.Lead, f.buttonsEnd(), f.Toolbar.ButtonFallback)
 		st := op.Offset(g.Toolbar.Min).Push(gtx.Ops)
-		bgtx := tooltip.AvailableRoomAt(gtx, g.Toolbar.Min)
+		bgtx := attachment.AvailableRoomAt(gtx, g.Toolbar.Min)
 		bgtx.Constraints = layout.Exact(g.Toolbar.Size())
 		f.Toolbar.layout(bgtx, buttons, gutter, f.toolbarLead(c))
 		st.Pop()
@@ -400,7 +400,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 		st.Pop()
 	case f.Main != nil && g.RowH > 0 && mainW > 0:
 		st := op.Offset(image.Pt(g.ContentX, g.RowTop)).Push(gtx.Ops)
-		mgtx := tooltip.AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
+		mgtx := attachment.AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
 		mgtx.Constraints = layout.Exact(image.Pt(mainW, g.RowH))
 		f.Main(mgtx)
 		st.Pop()
@@ -408,7 +408,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 
 	if f.Inspector != nil && insp > 0 && g.RowH > 0 {
 		st := op.Offset(image.Pt(inspX, g.RowTop)).Push(gtx.Ops)
-		agtx := tooltip.AvailableRoomAt(gtx, image.Pt(inspX, g.RowTop))
+		agtx := attachment.AvailableRoomAt(gtx, image.Pt(inspX, g.RowTop))
 		agtx.Constraints = layout.Exact(image.Pt(insp, g.RowH))
 		f.Inspector(agtx)
 		st.Pop()
@@ -416,7 +416,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 
 	if f.Footer != nil && !g.Footer.Empty() {
 		st := op.Offset(g.Footer.Min).Push(gtx.Ops)
-		fgtx := tooltip.AvailableRoomAt(gtx, g.Footer.Min)
+		fgtx := attachment.AvailableRoomAt(gtx, g.Footer.Min)
 		fgtx.Constraints = layout.Exact(g.Footer.Size())
 		f.Footer(fgtx)
 		st.Pop()
@@ -435,7 +435,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 
 	if f.Over != nil && g.RowH > 0 {
 		st := op.Offset(image.Pt(g.ContentX, 0)).Push(gtx.Ops)
-		ogtx := tooltip.AvailableRoomAt(gtx, image.Pt(g.ContentX, 0))
+		ogtx := attachment.AvailableRoomAt(gtx, image.Pt(g.ContentX, 0))
 		ogtx.Constraints = layout.Exact(image.Pt(max(size.X-g.ContentX, 0), size.Y))
 		f.Over(ogtx)
 		st.Pop()
@@ -519,7 +519,7 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 			if p.Header == nil {
 				return layout.Dimensions{Size: image.Pt(gtx.Constraints.Min.X, 0)}
 			}
-			dims := p.Header(tooltip.AvailableRoomAt(gtx, image.Pt(0, stripH)))
+			dims := p.Header(attachment.AvailableRoomAt(gtx, image.Pt(0, stripH)))
 			headH = dims.Size.Y
 			return dims
 		}),
@@ -527,7 +527,7 @@ func (p PaneColumn) Layout(gtx layout.Context, c tokens.PlatformColors, lead uni
 			if p.Rows == nil {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			}
-			dims := p.Rows(tooltip.AvailableRoomAt(gtx, image.Pt(0, stripH+headH)))
+			dims := p.Rows(attachment.AvailableRoomAt(gtx, image.Pt(0, stripH+headH)))
 			rowsH = dims.Size.Y
 			return dims
 		}),
@@ -583,20 +583,20 @@ func (p PaneColumn) strip(gtx layout.Context, c tokens.PlatformColors, lead unit
 	// pane's trailing edge. It centres the marks on its middle and places
 	// them from the end, so a mark's offset is decided only after it is laid
 	// out: the row places the tooltip surfaces of the marks once it has
-	// placed them (see [tooltip.PlacingFlex]).
+	// placed them (see [attachment.PlacingFlex]).
 	skip := max(lead-pane.MarginDp, 0)
-	children := make([]tooltip.PlacedChild, 0, 2*len(marks)+2)
+	children := make([]attachment.PlacedChild, 0, 2*len(marks)+2)
 	children = append(children,
-		tooltip.PlacedRigid(complayout.HSpacer(float32(skip))),
-		tooltip.PlacedFlexed(1, pane.DragFill))
+		attachment.PlacedRigid(complayout.HSpacer(float32(skip))),
+		attachment.PlacedFlexed(1, pane.DragFill))
 	for i, w := range marks {
 		if i > 0 {
-			children = append(children, tooltip.PlacedRigid(pane.DragSpacer(pane.MarkGapDp)))
+			children = append(children, attachment.PlacedRigid(pane.DragSpacer(pane.MarkGapDp)))
 		}
-		children = append(children, tooltip.PlacedRigid(w))
+		children = append(children, attachment.PlacedRigid(w))
 	}
-	children = append(children, tooltip.PlacedRigid(pane.DragSpacer(pane.MarginDp)))
-	return tooltip.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
+	children = append(children, attachment.PlacedRigid(pane.DragSpacer(pane.MarginDp)))
+	return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 }
 
 // footer draws the pane's own footer: a hairline the pane's width, drawn
@@ -619,20 +619,20 @@ func (p PaneColumn) footer(gtx layout.Context, c tokens.PlatformColors, colH int
 // The slot ends at the column's foot, colH. Where a depth is stated the
 // slot's offset is known before it is laid out, and the slot is given the
 // available room moved there. A slot that takes its own depth is placed
-// only after it is laid out: it is laid out with a [tooltip.Surfaces] set,
+// only after it is laid out: it is laid out with an [attachment.Surfaces] set,
 // and the tooltip surfaces in it are placed once its depth is known, in the
 // area moved by the offset that depth gives. The slot's ops are replayed at
 // that offset, so the surfaces are placed from inside them.
 func footerSlot(gtx layout.Context, depth unit.Dp, colH int, slot layout.Widget) layout.Dimensions {
 	if depth <= 0 {
-		sgtx, s := tooltip.WithSurfaces(gtx)
+		sgtx, s := attachment.WithSurfaces(gtx)
 		dims := slot(sgtx)
-		tooltip.PlaceSurfacesAt(gtx, s, image.Pt(0, colH-dims.Size.Y))
+		attachment.PlaceSurfacesAt(gtx, s, image.Pt(0, colH-dims.Size.Y))
 		return dims
 	}
 	h := gtx.Dp(depth)
 	gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, h))
-	return slot(tooltip.AvailableRoomAt(gtx, image.Pt(0, colH-h)))
+	return slot(attachment.AvailableRoomAt(gtx, image.Pt(0, colH-h)))
 }
 
 // FooterSeam draws the one hairline a footer stands under: the seam's own

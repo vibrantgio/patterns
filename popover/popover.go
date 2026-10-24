@@ -17,16 +17,26 @@
 // intentionally short and free of opaque configuration — copy it into
 // your own app and modify as needed.
 //
-// THE FRAME IS THE ROOM. The popover stands its anchor in the frame its
-// caller hands it — at [Alignment]'s edge of it — and keeps the surface inside
-// that frame across the placement's cross axis, nudging it back where it
-// would run off rather than letting it clip. So the frame must be the room
-// the caller actually has, the content column or the window, and not a box
-// cut to the anchor's own size: a frame that cannot hold the surface is not
-// a bound, and the popover leaves such a surface where the anchor puts it.
-// Aligning the anchor is the popover's job for the same reason — it is the
-// one place the drawn anchor, the surface and the room are all known, so an
-// anchor handed here reports the shape it drew and nothing wider.
+// THE SURFACE IS PLACED IN THE AVAILABLE ROOM. The popover stands its anchor
+// in the frame its caller hands it, at [Alignment]'s edge of it, and places
+// the surface beside the anchor by the recipe every floating surface is
+// placed with, [github.com/vibrantgio/components/attachment]: inside the
+// available room [Props.AvailableRoom] reports, the surface takes the
+// opposite side when the preferred side has no room for it and the other
+// holds it whole, takes the side with more room when neither holds it, is
+// shifted inward along the other axis when it would cross the room's edge,
+// and scrolls inside itself when it is taller than the side it wins. The tail points at the anchor through all of it. Where a layout
+// set [attachment.Surfaces] on the context, the surface is recorded there and
+// placed by that layout in the room it passes, as a tooltip's is.
+//
+// With no room reported the frame is the bound across the placement's axis:
+// the surface keeps the side asked for and is shifted back inside the frame
+// where it would run off. A frame cut to the anchor's own size cannot hold
+// the surface, is not a bound, and the popover leaves such a surface where
+// the anchor puts it. Aligning the anchor is the popover's job for the same
+// reason: it is the one place the drawn anchor, the surface and the room are
+// all known, so an anchor handed here reports the shape it drew and nothing
+// wider.
 //
 // THE FLOATING SURFACE PAINTS LAST. The anchor is drawn where the caller
 // put it, but the surface, its tail and its input handler go through
@@ -43,9 +53,7 @@
 // floating surface in this organization is drawn with.
 //
 // Open/close is instantaneous in this package; entrance/exit transitions
-// are deferred to a later Effects-integration goal. Automatic flip to the
-// opposite side of the anchor is deferred: the clamp is a cross-axis nudge,
-// not a placement search.
+// are deferred to a later Effects-integration goal.
 package popover
 
 import (
@@ -62,6 +70,9 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
+	"github.com/vibrantgio/components/list"
+	"github.com/vibrantgio/components/scrollbar"
 	"github.com/vibrantgio/effects/depth"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
@@ -69,13 +80,13 @@ import (
 )
 
 // Placement is the side of the anchor on which the popover surface sits.
-type Placement int
+type Placement = attachment.Side
 
 const (
-	Top Placement = iota
-	Bottom
-	Left
-	Right
+	Top    = attachment.Top
+	Bottom = attachment.Bottom
+	Left   = attachment.Left
+	Right  = attachment.Right
 )
 
 // Alignment is where across the frame the popover stands its anchor.
@@ -153,6 +164,15 @@ type Props struct {
 	// contract.
 	Align Alignment
 
+	// AvailableRoom, if non-nil, is asked on every frame the surface is
+	// drawn for the rectangle the surface may occupy, in the coordinates the
+	// popover is laid out in: the frame lies inside it, and the rest of it is
+	// the space around the frame up to the window's edges. A window passes
+	// [attachment.AvailableRoom], which reports the room the window set as
+	// the layouts above moved it. Nil leaves the surface on the side asked
+	// for, bounded across that side by the frame alone.
+	AvailableRoom func(gtx layout.Context) image.Rectangle
+
 	// Arbiter is the set of popovers this one arbitrates within: opening it
 	// dismisses whichever popover of the same set was open. Give each window
 	// its own (see Arbiter). A nil Arbiter gets this popover one of its own,
@@ -214,6 +234,7 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 				switch {
 				case openNow && !st.holds:
 					st.holds = true
+					st.rows = list.NewState()
 					st.arb.claim(gtx, st)
 				case !openNow && st.holds:
 					st.holds = false
@@ -260,6 +281,9 @@ type popoverState struct {
 	dismiss func(gtx layout.Context)
 	holds   bool
 
+	// rows scrolls the content of a surface taller than the side it wins.
+	rows *list.State
+
 	outsideTag int
 	anchorTag  int
 	surfaceTag int
@@ -270,14 +294,14 @@ func newState(props Props) *popoverState {
 	if arb == nil {
 		arb = NewArbiter()
 	}
-	return &popoverState{arb: arb, dismiss: props.OnDismiss}
+	return &popoverState{arb: arb, dismiss: props.OnDismiss, rows: list.NewState()}
 }
 
 // drawPopover stands the anchor at Align's edge of the frame, then — when
-// open — the floating surface adjacent to it per Placement, nudged back
-// inside the frame where it would run off, plus a tail seated on the
-// anchor. When live, it also registers three event tags (outside, anchor,
-// surface) and dispatches the events drained for them.
+// open — the floating surface beside it, placed in the available room by
+// [drawSurface], plus a tail seated on the anchor. When live, it also
+// registers three event tags (outside, anchor, surface) and dispatches the
+// events drained for them.
 func drawPopover(
 	gtx layout.Context,
 	props Props,
@@ -286,10 +310,6 @@ func drawPopover(
 	openNow, live bool,
 ) layout.Dimensions {
 	frame := gtx.Constraints.Max
-	r := gtx.Dp(unit.Dp(tok.radius.Md))
-	pad := gtx.Dp(unit.Dp(tok.spacing.S3))
-	gap := gtx.Dp(unit.Dp(tok.spacing.S2))
-	tailW := gtx.Dp(tailRun)
 
 	// 1. Record the anchor into a macro to measure its dims; stand it at
 	//    Align's edge of the frame. That rect is the DRAWN anchor — the
@@ -305,57 +325,7 @@ func drawPopover(
 	anchorPos := image.Pt(alignX(props.Align, frame.X, anchorDims.Size.X), (frame.Y-anchorDims.Size.Y)/2)
 	anchorRect := image.Rectangle{Min: anchorPos, Max: anchorPos.Add(anchorDims.Size)}
 
-	// 2. If open, record the content into a macro to measure its dims;
-	//    surface = content + 2*pad in both axes (clamped to a min size).
-	var (
-		surfaceRect image.Rectangle
-		contentOps  op.CallOp
-		contentDims layout.Dimensions
-	)
-	if openNow {
-		contentMacro := op.Record(gtx.Ops)
-		contentGtx := gtx
-		contentGtx.Constraints = layout.Constraints{Max: image.Pt(frame.X/2, frame.Y/2)}
-		if props.Content != nil {
-			contentDims = props.Content(contentGtx)
-		}
-		contentOps = contentMacro.Stop()
-
-		surfW := contentDims.Size.X + 2*pad
-		surfH := contentDims.Size.Y + 2*pad
-		minW := gtx.Dp(unit.Dp(48))
-		minH := gtx.Dp(unit.Dp(24))
-		if surfW < minW {
-			surfW = minW
-		}
-		if surfH < minH {
-			surfH = minH
-		}
-
-		anchorMidX := (anchorRect.Min.X + anchorRect.Max.X) / 2
-		anchorMidY := (anchorRect.Min.Y + anchorRect.Max.Y) / 2
-		switch props.Placement {
-		case Top:
-			x := anchorMidX - surfW/2
-			y := anchorRect.Min.Y - gap - surfH
-			surfaceRect = image.Rect(x, y, x+surfW, y+surfH)
-		case Bottom:
-			x := anchorMidX - surfW/2
-			y := anchorRect.Max.Y + gap
-			surfaceRect = image.Rect(x, y, x+surfW, y+surfH)
-		case Left:
-			x := anchorRect.Min.X - gap - surfW
-			y := anchorMidY - surfH/2
-			surfaceRect = image.Rect(x, y, x+surfW, y+surfH)
-		case Right:
-			x := anchorRect.Max.X + gap
-			y := anchorMidY - surfH/2
-			surfaceRect = image.Rect(x, y, x+surfW, y+surfH)
-		}
-		surfaceRect = clampToFrame(surfaceRect, frame, props.Placement)
-	}
-
-	// 3. Outside-press absorber. The frame is the room this popover may
+	// 2. Outside-press absorber. The frame is the room this popover may
 	//    use, not the window, so the absorber extends a wide margin beyond
 	//    it on every side to catch presses anywhere in the window.
 	//    Registered first so the anchor's clip tag, added after it, and the
@@ -371,7 +341,7 @@ func drawPopover(
 		outsideClip.Pop()
 	}
 
-	// 4. Anchor: anchor-absorber tag, then the recorded anchor ops at the
+	// 3. Anchor: anchor-absorber tag, then the recorded anchor ops at the
 	//    aligned offset. The absorber catches presses on the anchor so
 	//    they do not bubble to the outside-absorber and dismiss.
 	{
@@ -385,44 +355,18 @@ func drawPopover(
 		anchorOff.Pop()
 	}
 
-	// 5. Surface + tail + content, only when open, recorded and handed to
-	//    op.Defer so they paint and hit-test above every sibling the window
-	//    lays out after this popover's slot (see the package doc). The
-	//    surface absorbs presses; the tail is a triangular path bridging the
-	//    gap to the anchor, drawn in the surface fill colour and carrying the
-	//    surface's own edge around it. It floats: the window background under
-	//    the platform's shadow, inside the platform's separator.
+	// 4. Surface + tail + content, only when open: drawn at once in the
+	//    available room the props report, or, where a layout set
+	//    attachment.Surfaces on the context, recorded there to be drawn in
+	//    the room that layout passes.
 	if openNow {
-		floating := op.Record(gtx.Ops)
-		fill := tok.color.WindowBackground
-		// The edge is the platform's separator laid over the fill it
-		// circles, and the tail's own edge is that same line for the same
-		// reason.
-		edge := vgcolor.Flatten(tok.color.Separator, fill)
-		stroke := float32(gtx.Dp(strokeWidth))
-		surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
-		surfRRect := clip.RRect{
-			Rect: image.Rectangle{Max: surfaceRect.Size()},
-			SE:   r, SW: r, NE: r, NW: r,
+		draw := func(gtx layout.Context, room image.Rectangle, bounded bool) {
+			drawSurface(gtx, props, tok, st, live, anchorRect, frame, room, bounded)
 		}
-		castShadow(gtx, image.Rectangle{Max: surfaceRect.Size()}, r, tok.color)
-		paint.FillShape(gtx.Ops, fill, surfRRect.Op(gtx.Ops))
-		paint.FillShape(gtx.Ops, edge, clip.Stroke{
-			Path:  surfRRect.Path(gtx.Ops),
-			Width: stroke,
-		}.Op())
-		if live {
-			absorbClip := clip.Rect{Max: surfaceRect.Size()}.Push(gtx.Ops)
-			event.Op(gtx.Ops, &st.surfaceTag)
-			absorbClip.Pop()
+		if !attachment.Record(gtx, func(gtx layout.Context, room image.Rectangle) { draw(gtx, room, true) }) {
+			room, bounded := availableRoom(gtx, props, frame)
+			draw(gtx, room, bounded)
 		}
-		contentOff := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
-		contentOps.Add(gtx.Ops)
-		contentOff.Pop()
-		surfOff.Pop()
-
-		drawTail(gtx, anchorRect, surfaceRect, props.Placement, tailW, r, fill, edge, stroke)
-		op.Defer(gtx.Ops, floating.Stop())
 	}
 
 	if live {
@@ -451,40 +395,147 @@ func alignX(a Alignment, frameW, shapeW int) int {
 	}
 }
 
-// clampToFrame nudges the surface back inside the frame along the axis the
-// placement does not travel on — the axis on which leaving the frame is an
-// overflow rather than the point. The placement axis is left alone: a
-// Bottom-placed surface is meant to hang below the frame.
-//
-// A frame too small to hold the surface is not a bound and is left alone:
-// shoving an over-wide surface against one edge only moves the overflow to
-// the other, and the caller that cut its frame to the anchor has said
-// nothing about the room it has. The tail is aimed at the anchor rather than
-// at the surface, so it keeps pointing where it did through the nudge.
-func clampToFrame(surface image.Rectangle, frame image.Point, p Placement) image.Rectangle {
-	switch p {
-	case Top, Bottom:
-		if surface.Dx() > frame.X {
-			return surface
-		}
-		if surface.Min.X < 0 {
-			return surface.Add(image.Pt(-surface.Min.X, 0))
-		}
-		if surface.Max.X > frame.X {
-			return surface.Add(image.Pt(frame.X-surface.Max.X, 0))
-		}
-	case Left, Right:
-		if surface.Dy() > frame.Y {
-			return surface
-		}
-		if surface.Min.Y < 0 {
-			return surface.Add(image.Pt(0, -surface.Min.Y))
-		}
-		if surface.Max.Y > frame.Y {
-			return surface.Add(image.Pt(0, frame.Y-surface.Max.Y))
-		}
+// unbounded is the extent along the placement's axis of the room a popover
+// with no room reported is placed in: far enough that no surface is kept off
+// the side asked for.
+const unbounded = 1 << 20
+
+// unboundedContent is the height content is measured at inside a reported
+// room: its own height, which the surface then caps to the side it wins.
+// It is gioui.org/layout's own choice for a scrolled child's extent.
+const unboundedContent = 1e6
+
+// availableRoom is the room the surface is placed in, in the popover's own
+// coordinates, and whether the caller reported it. With none reported it is
+// the frame across the placement's axis and unbounded along it, so the
+// surface keeps the side asked for and is held inside the frame across it.
+func availableRoom(gtx layout.Context, props Props, frame image.Point) (image.Rectangle, bool) {
+	if props.AvailableRoom != nil {
+		return props.AvailableRoom(gtx), true
 	}
-	return surface
+	if props.Placement.Vertical() {
+		return image.Rect(0, -unbounded, frame.X, unbounded), false
+	}
+	return image.Rect(-unbounded, 0, unbounded, frame.Y), false
+}
+
+// drawSurface lays out the content and draws the floating surface, its tail
+// and the content beside anchor inside room, recorded and handed to op.Defer
+// so they paint and hit-test above every sibling the window lays out after
+// this popover's slot (see the package doc). The surface absorbs presses;
+// the tail is a triangular path bridging the gap to the anchor, drawn in the
+// surface fill colour and carrying the surface's own edge around it. It
+// floats: the window background under the platform's shadow, inside the
+// platform's separator.
+//
+// The content is measured at half the frame. Inside a reported room it is
+// measured at its own height and no wider than the room holds, and a surface
+// taller than the side it wins is capped to that side's length, its content
+// scrolling in a viewport with the platform's scroll bar.
+func drawSurface(
+	gtx layout.Context,
+	props Props,
+	tok resolvedTokens,
+	st *popoverState,
+	live bool,
+	anchor image.Rectangle,
+	frame image.Point,
+	room image.Rectangle,
+	bounded bool,
+) {
+	r := gtx.Dp(unit.Dp(tok.radius.Md))
+	pad := gtx.Dp(unit.Dp(tok.spacing.S3))
+	gap := gtx.Dp(unit.Dp(tok.spacing.S2))
+	tailW := gtx.Dp(tailRun)
+
+	preferred := props.Placement
+	bar := scrollbar.FromTokens(tok.color, tok.color.WindowBackground)
+	lane := 0
+	if list.AnchorFor(bar) == list.Occupy {
+		lane = gtx.Dp(bar.Width())
+	}
+	contentMax := image.Pt(frame.X/2, frame.Y/2)
+	if bounded {
+		// Across the room the content is no wider than the room less the
+		// padding and a standing scroll bar's lane, and beside the anchor no
+		// wider than the wider of the two sides. Down the room it is measured
+		// at its own height: a surface taller than the side it wins is capped
+		// below and its content scrolls.
+		wide := room.Dx()
+		if !preferred.Vertical() {
+			wide = max(attachment.SideRoom(anchor, preferred, gap, room), attachment.SideRoom(anchor, preferred.Opposite(), gap, room))
+		}
+		contentMax = image.Pt(max(min(frame.X/2, wide-2*pad-lane), 0), unboundedContent)
+	}
+	contentMacro := op.Record(gtx.Ops)
+	contentGtx := gtx
+	contentGtx.Constraints = layout.Constraints{Max: contentMax}
+	var contentDims layout.Dimensions
+	if props.Content != nil {
+		contentDims = props.Content(contentGtx)
+	}
+	contentOps := contentMacro.Stop()
+
+	minW := gtx.Dp(unit.Dp(48))
+	minH := gtx.Dp(unit.Dp(24))
+	size := image.Pt(max(contentDims.Size.X+2*pad, minW), max(contentDims.Size.Y+2*pad, minH))
+
+	side := attachment.TakeSide(anchor, size, preferred, gap, room)
+
+	// A surface taller than the side it wins is capped to that side's
+	// length, above or below the anchor, or to the room's height beside it,
+	// and its content scrolls inside it. A standing scroll bar takes a lane
+	// of its own, so the surface is that much wider.
+	limit := room.Dy()
+	if side.Vertical() {
+		limit = attachment.SideRoom(anchor, side, gap, room)
+	}
+	scrolls := bounded && size.Y > limit
+	if scrolls {
+		size.Y = limit
+		size.X += lane
+	}
+
+	surfaceRect := attachment.ShiftInward(attachment.Beside(anchor, size, side, gap), side, room, 0)
+
+	floating := op.Record(gtx.Ops)
+	fill := tok.color.WindowBackground
+	// The edge is the platform's separator laid over the fill it circles,
+	// and the tail's own edge is that same line for the same reason.
+	edge := vgcolor.Flatten(tok.color.Separator, fill)
+	stroke := float32(gtx.Dp(strokeWidth))
+	surfOff := op.Offset(surfaceRect.Min).Push(gtx.Ops)
+	surfRRect := clip.RRect{
+		Rect: image.Rectangle{Max: surfaceRect.Size()},
+		SE:   r, SW: r, NE: r, NW: r,
+	}
+	castShadow(gtx, image.Rectangle{Max: surfaceRect.Size()}, r, tok.color)
+	paint.FillShape(gtx.Ops, fill, surfRRect.Op(gtx.Ops))
+	paint.FillShape(gtx.Ops, edge, clip.Stroke{
+		Path:  surfRRect.Path(gtx.Ops),
+		Width: stroke,
+	}.Op())
+	if live {
+		absorbClip := clip.Rect{Max: surfaceRect.Size()}.Push(gtx.Ops)
+		event.Op(gtx.Ops, &st.surfaceTag)
+		absorbClip.Pop()
+	}
+	contentOff := op.Offset(image.Pt(pad, pad)).Push(gtx.Ops)
+	if scrolls && size.Y > 2*pad {
+		viewGtx := gtx
+		viewGtx.Constraints = layout.Exact(image.Pt(size.X-2*pad, size.Y-2*pad))
+		list.LayoutScrollbar(viewGtx, st.rows, bar, list.AnchorFor(bar), []int{0}, func(gtx layout.Context, _ int) layout.Dimensions {
+			contentOps.Add(gtx.Ops)
+			return contentDims
+		})
+	} else if !scrolls {
+		contentOps.Add(gtx.Ops)
+	}
+	contentOff.Pop()
+	surfOff.Pop()
+
+	drawTail(gtx, anchor, surfaceRect, side, tailW, r, fill, edge, stroke)
+	op.Defer(gtx.Ops, floating.Stop())
 }
 
 // drawTail paints the tail bridging the gap between the surface and the
@@ -499,29 +550,29 @@ func clampToFrame(surface image.Rectangle, frame image.Point, p Placement) image
 // The surface's edge therefore runs into the tail and out again rather than
 // being drawn straight through it. Coordinates are frame-absolute (no
 // transform is on the stack when this is called).
-func drawTail(gtx layout.Context, anchor, surface image.Rectangle, p Placement, run, radius int, fill, edge color.NRGBA, stroke float32) {
+func drawTail(gtx layout.Context, anchor, surface image.Rectangle, p attachment.Side, run, radius int, fill, edge color.NRGBA, stroke float32) {
 	var (
 		depth     int
 		centre    int
 		lo, hi    int
 		base, tip float32
-		vertical  = p == Top || p == Bottom
+		vertical  = p.Vertical()
 		toward    float32
 	)
 	switch p {
-	case Top:
+	case attachment.Top:
 		depth = anchor.Min.Y - surface.Max.Y
 		centre, lo, hi = (anchor.Min.X+anchor.Max.X)/2, surface.Min.X+radius, surface.Max.X-radius
 		base, toward = float32(surface.Max.Y), 1
-	case Bottom:
+	case attachment.Bottom:
 		depth = surface.Min.Y - anchor.Max.Y
 		centre, lo, hi = (anchor.Min.X+anchor.Max.X)/2, surface.Min.X+radius, surface.Max.X-radius
 		base, toward = float32(surface.Min.Y), -1
-	case Left:
+	case attachment.Left:
 		depth = anchor.Min.X - surface.Max.X
 		centre, lo, hi = (anchor.Min.Y+anchor.Max.Y)/2, surface.Min.Y+radius, surface.Max.Y-radius
 		base, toward = float32(surface.Max.X), 1
-	case Right:
+	case attachment.Right:
 		depth = surface.Min.X - anchor.Max.X
 		centre, lo, hi = (anchor.Min.Y+anchor.Max.Y)/2, surface.Min.Y+radius, surface.Max.Y-radius
 		base, toward = float32(surface.Min.X), -1

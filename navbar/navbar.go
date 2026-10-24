@@ -50,9 +50,9 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/components/pointershape"
-	"github.com/vibrantgio/components/tooltip"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -196,7 +196,7 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 	// The inset places its child at an offset known before the child is laid
 	// out, so the available room and the floating surfaces are moved by that
 	// offset first.
-	igtx := tooltip.AvailableRoomAt(gtx, image.Pt(gtx.Dp(inset.Left), gtx.Dp(inset.Top)))
+	igtx := attachment.AvailableRoomAt(gtx, image.Pt(gtx.Dp(inset.Left), gtx.Dp(inset.Top)))
 	inset.Layout(igtx, func(gtx layout.Context) layout.Dimensions {
 		return centredRow(gtx,
 			brandSlot(props.Brand),
@@ -248,19 +248,19 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 // traverses them.
 //
 // A slot's offset is decided only after every slot is measured, so each slot
-// is laid out with a [tooltip.Surfaces] of its own, and its surfaces are
-// placed once the slot is placed (see [tooltip.PlaceSurfacesAt]).
+// is laid out with an [attachment.Surfaces] of its own, and its surfaces are
+// placed once the slot is placed (see [attachment.PlaceSurfacesAt]).
 func centredRow(gtx layout.Context, brand, links, actions layout.Widget) layout.Dimensions {
 	width, h := gtx.Constraints.Max.X, gtx.Constraints.Max.Y
 	var (
 		calls    [3]op.CallOp
 		sizes    [3]image.Point
-		surfaces [3]*tooltip.Surfaces
+		surfaces [3]*attachment.Surfaces
 	)
 	room := width
 	for i, w := range [3]layout.Widget{brand, links, actions} {
 		macro := op.Record(gtx.Ops)
-		cgtx, s := tooltip.WithSurfaces(gtx)
+		cgtx, s := attachment.WithSurfaces(gtx)
 		cgtx.Constraints = layout.Constraints{Max: image.Pt(max(0, room), h)}
 		sizes[i] = w(cgtx).Size
 		calls[i] = macro.Stop()
@@ -275,7 +275,7 @@ func centredRow(gtx layout.Context, brand, links, actions layout.Widget) layout.
 		off := image.Pt(xs[i], h/2-sizes[i].Y/2)
 		stack := op.Offset(off).Push(gtx.Ops)
 		calls[i].Add(gtx.Ops)
-		tooltip.PlaceSurfacesAt(gtx, surfaces[i], off)
+		attachment.PlaceSurfacesAt(gtx, surfaces[i], off)
 		stack.Pop()
 	}
 	return layout.Dimensions{Size: image.Pt(width, h)}
@@ -316,15 +316,15 @@ func linksRow(shaper *text.Shaper, links []Link, clicks []widget.Clickable, mark
 // middle places them.
 //
 // An action's offset across the row is decided only after every action is
-// measured, so each action is laid out with a [tooltip.Surfaces] of its own,
+// measured, so each action is laid out with an [attachment.Surfaces] of its own,
 // and its surfaces are placed once the action is placed (see
-// [tooltip.PlaceSurfacesAt]).
+// [attachment.PlaceSurfacesAt]).
 func actionsRow(actions []layout.Widget, sp tokens.SpacingScale) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		var (
 			calls    []op.CallOp
 			sizes    []image.Point
-			surfaces []*tooltip.Surfaces
+			surfaces []*attachment.Surfaces
 			xs       []int
 		)
 		gap := gtx.Dp(unit.Dp(sp.S2))
@@ -337,7 +337,7 @@ func actionsRow(actions []layout.Widget, sp tokens.SpacingScale) layout.Widget {
 				x += min(gap, max(0, gtx.Constraints.Max.X-x))
 			}
 			macro := op.Record(gtx.Ops)
-			cgtx, s := tooltip.WithSurfaces(gtx)
+			cgtx, s := attachment.WithSurfaces(gtx)
 			cgtx.Constraints.Min.X = 0
 			cgtx.Constraints.Max.X = max(0, gtx.Constraints.Max.X-x)
 			size := a(cgtx).Size
@@ -355,7 +355,7 @@ func actionsRow(actions []layout.Widget, sp tokens.SpacingScale) layout.Widget {
 			off := image.Pt(xs[i], (h-sizes[i].Y)/2)
 			stack := op.Offset(off).Push(gtx.Ops)
 			calls[i].Add(gtx.Ops)
-			tooltip.PlaceSurfacesAt(gtx, surfaces[i], off)
+			attachment.PlaceSurfacesAt(gtx, surfaces[i], off)
 			stack.Pop()
 		}
 		return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(x, h))}

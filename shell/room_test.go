@@ -10,6 +10,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/components/tooltip"
 	"github.com/vibrantgio/patterns/shell"
@@ -36,7 +37,7 @@ func cornerTooltip(c tokens.PlatformColors) layout.Widget {
 	props := tooltip.Props{
 		Text:          "A tooltip at the window's edge",
 		Placement:     tooltip.Bottom,
-		AvailableRoom: tooltip.AvailableRoom,
+		AvailableRoom: attachment.AvailableRoom,
 		Trigger: func(gtx layout.Context) layout.Dimensions {
 			sz := image.Pt(roomTrigger, roomTrigger)
 			paint.FillShape(gtx.Ops, c.SystemBlue, clip.Rect{Max: sz}.Op())
@@ -54,7 +55,7 @@ func cornerTooltip(c tokens.PlatformColors) layout.Widget {
 		size := gtx.Constraints.Max
 		off := size.Sub(image.Pt(roomTrigger, roomTrigger))
 		st := op.Offset(off).Push(gtx.Ops)
-		tgtx := tooltip.AvailableRoomAt(gtx, off)
+		tgtx := attachment.AvailableRoomAt(gtx, off)
 		tgtx.Constraints = layout.Exact(image.Pt(roomTrigger, roomTrigger))
 		tip(tgtx)
 		st.Pop()

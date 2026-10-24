@@ -10,7 +10,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
-	"github.com/vibrantgio/components/tooltip"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/patterns/sidebar"
 	"github.com/vibrantgio/theme/tokens"
@@ -145,7 +145,7 @@ func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image
 	if sidebar != nil {
 		// The pane places its contents at its own origin.
 		sidebar = func(gtx layout.Context) layout.Dimensions {
-			return f.Sidebar(tooltip.AvailableRoomAt(gtx, bounds.Min))
+			return f.Sidebar(attachment.AvailableRoomAt(gtx, bounds.Min))
 		}
 	}
 	pane.Layout(gtx, c, bounds, sidebar)
@@ -173,14 +173,14 @@ func (f PaneFrame) Layout(gtx layout.Context, c tokens.PlatformColors) layout.Di
 	band := min(gtx.Dp(unit.Dp(pane.BandDp)), size.Y)
 	if f.Band != nil && band > 0 {
 		st := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
-		bgtx := tooltip.AvailableRoomAt(gtx, image.Pt(x, 0))
+		bgtx := attachment.AvailableRoomAt(gtx, image.Pt(x, 0))
 		bgtx.Constraints = layout.Exact(image.Pt(w, band))
 		f.Band(bgtx)
 		st.Pop()
 	}
 	if f.Main != nil && size.Y-band > 0 {
 		st := op.Offset(image.Pt(x, band)).Push(gtx.Ops)
-		mgtx := tooltip.AvailableRoomAt(gtx, image.Pt(x, band))
+		mgtx := attachment.AvailableRoomAt(gtx, image.Pt(x, band))
 		mgtx.Constraints = layout.Exact(image.Pt(w, size.Y-band))
 		f.Main(mgtx)
 		st.Pop()

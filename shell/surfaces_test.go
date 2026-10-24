@@ -18,6 +18,7 @@ import (
 
 	"github.com/reactivego/rx"
 
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/components/tooltip"
@@ -35,10 +36,10 @@ func centredRow(trigger layout.Widget, trail int) layout.Widget {
 		return layout.Dimensions{Size: image.Pt(trail, 0)}
 	}
 	return func(gtx layout.Context) layout.Dimensions {
-		return tooltip.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle},
-			tooltip.PlacedFlexed(1, fillNothing),
-			tooltip.PlacedRigid(trigger),
-			tooltip.PlacedRigid(pad))
+		return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle},
+			attachment.PlacedFlexed(1, fillNothing),
+			attachment.PlacedRigid(trigger),
+			attachment.PlacedRigid(pad))
 	}
 }
 
@@ -49,7 +50,7 @@ func rowTooltip(c tokens.PlatformColors) layout.Widget {
 	props := tooltip.Props{
 		Text:          "A tooltip at the window's edge",
 		Placement:     tooltip.Bottom,
-		AvailableRoom: tooltip.AvailableRoom,
+		AvailableRoom: attachment.AvailableRoom,
 		Trigger: func(gtx layout.Context) layout.Dimensions {
 			sz := image.Pt(roomTrigger, roomTrigger)
 			paint.FillShape(gtx.Ops, c.SystemBlue, clip.Rect{Max: sz}.Op())
@@ -131,7 +132,7 @@ func pixelsPastWindowByFocus(t *testing.T, size image.Point, setRoom bool) int {
 	tip := live(tooltip.Tooltip(th, tooltip.Props{
 		Text: "Save the note to the notebook it was opened from", Trigger: btn,
 		Placement: tooltip.Bottom, Delay: delay, Arbiter: arb,
-		TriggerTag: &save, AvailableRoom: tooltip.AvailableRoom,
+		TriggerTag: &save, AvailableRoom: attachment.AvailableRoom,
 		Shaper: tokens.DefaultTypography.DeterministicShaper(),
 	}))
 	// The padding after the button keeps its focus ring, which is drawn

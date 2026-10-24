@@ -12,7 +12,7 @@ import (
 
 	"github.com/reactivego/rx"
 
-	"github.com/vibrantgio/components/tooltip"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -113,13 +113,13 @@ func drawStackedPage(
 	// Navbar pinned across the full width; sections scroll beneath it. The
 	// navbar centres what it holds in rows of its own, which place their
 	// children only after measuring them. So the navbar is given no
-	// available room and is laid out with a [tooltip.Surfaces] set, and its
+	// available room and is laid out with an [attachment.Surfaces] set, and its
 	// rows add each child's surfaces to it at the child's offset. The page
 	// places those surfaces in the window's area once the navbar is drawn.
-	ngtx, navSurfaces := tooltip.WithSurfaces(gtx)
+	ngtx, navSurfaces := attachment.WithSurfaces(gtx)
 	ngtx.Constraints = layout.Exact(image.Pt(size.X, navH))
 	nb(ngtx)
-	tooltip.PlaceSurfacesAt(gtx, navSurfaces, image.Point{})
+	attachment.PlaceSurfacesAt(gtx, navSurfaces, image.Point{})
 
 	children := len(sections)
 	if footer != nil {
@@ -132,16 +132,16 @@ func drawStackedPage(
 		}
 		margin := (size.X - contentW) / 2
 		st := op.Offset(image.Pt(0, navH)).Push(gtx.Ops)
-		body := tooltip.AvailableRoomAt(gtx, image.Pt(0, navH))
+		body := attachment.AvailableRoomAt(gtx, image.Pt(0, navH))
 		// The list places each section only after it is laid out and
-		// scrolled, so each is laid out with a [tooltip.Surfaces] set, which
+		// scrolled, so each is laid out with an [attachment.Surfaces] set, which
 		// removes the available room, and the tooltip surfaces in the
 		// sections shown are placed once the list has placed them.
 		bgtx := body
 		// Exact viewport constraints force every child to the full page
 		// width; the list gives children an unbounded height.
 		bgtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
-		surfaces := make([]*tooltip.Surfaces, children)
+		surfaces := make([]*attachment.Surfaces, children)
 		heights := make([]int, children)
 		list.Layout(bgtx, children, func(gtx layout.Context, i int) layout.Dimensions {
 			w := footer
@@ -152,7 +152,7 @@ func drawStackedPage(
 				heights[i] = 0
 				return layout.Dimensions{}
 			}
-			gtx, surfaces[i] = tooltip.WithSurfaces(gtx)
+			gtx, surfaces[i] = attachment.WithSurfaces(gtx)
 			if margin == 0 {
 				dims := w(gtx)
 				heights[i] = dims.Size.Y
@@ -179,7 +179,7 @@ func drawStackedPage(
 		for i := list.Position.First; i < min(list.Position.First+list.Position.Count, children); i++ {
 			at := image.Pt(margin, y)
 			off := op.Offset(at).Push(gtx.Ops)
-			tooltip.PlaceSurfacesAt(body, surfaces[i], at)
+			attachment.PlaceSurfacesAt(body, surfaces[i], at)
 			off.Pop()
 			y += heights[i]
 		}

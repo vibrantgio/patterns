@@ -30,14 +30,14 @@
 //
 // A window's root sets its content area as the available room with
 // [WithAvailableRoom], and every floating surface under it is passed
-// [tooltip.AvailableRoom]. A layout between the root and a floating surface
+// [attachment.AvailableRoom]. A layout between the root and a floating surface
 // that pushes an offset moves the available room and the floating surfaces
-// ([tooltip.Surfaces]) together with [tooltip.AvailableRoomAt] before it lays
+// ([attachment.Surfaces]) together with [attachment.AvailableRoomAt] before it lays
 // its child out; a layout that pushes an offset without moving them places
 // the surface away from its anchor. A layout that places its child only after
-// measuring it sets a [tooltip.Surfaces] with [tooltip.WithSurfaces] and
-// places the surfaces with [tooltip.PlaceSurfacesAt] once the child is
-// placed, as [tooltip.PlacingFlex] does for a flex.
+// measuring it sets an [attachment.Surfaces] with [attachment.WithSurfaces] and
+// places the surfaces with [attachment.PlaceSurfacesAt] once the child is
+// placed, as [attachment.PlacingFlex] does for a flex.
 //
 // Shell is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is
