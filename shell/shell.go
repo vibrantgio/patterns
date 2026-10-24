@@ -29,15 +29,15 @@
 // one group in the region's full frame and stated with [EmptyStateProps].
 //
 // A window's root sets its content area as the available room with
-// [WithAvailableRoom], and every tooltip under it is passed [AvailableRoom].
-// A layout between the root and a tooltip that pushes an offset moves the
-// tooltip collector ([tooltip.Surfaces]) and the area with [AvailableRoomAt]
-// before it lays its child out; a layout in a package this one is built on
-// moves the collector with [tooltip.SurfacesAt]. A layout that pushes an
-// offset without moving the collector places the surface away from its
-// trigger. A layout that places its child only after measuring it sets the
-// collector with [tooltip.WithSurfaces] and places the surfaces with
-// [tooltip.PlaceSurfaces] once the child is placed.
+// [WithAvailableRoom], and every floating surface under it is passed
+// [tooltip.AvailableRoom]. A layout between the root and a floating surface
+// that pushes an offset moves the available room and the floating surfaces
+// ([tooltip.Surfaces]) together with [tooltip.AvailableRoomAt] before it lays
+// its child out; a layout that pushes an offset without moving them places
+// the surface away from its anchor. A layout that places its child only after
+// measuring it sets a [tooltip.Surfaces] with [tooltip.WithSurfaces] and
+// places the surfaces with [tooltip.PlaceSurfacesAt] once the child is
+// placed, as [tooltip.PlacingFlex] does for a flex.
 //
 // Shell is a callable Go function consuming a components theme
 // observable, returning a stream of layout.Widget. Source is

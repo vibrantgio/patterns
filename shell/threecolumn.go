@@ -29,6 +29,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/components/tooltip"
 	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/patterns/splitter"
 	"github.com/vibrantgio/theme/tokens"
@@ -495,7 +496,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	)
 	if f.Main != nil && f.MainFirst && !g.Main.Empty() {
 		macro := op.Record(gtx.Ops)
-		mgtx := AvailableRoomAt(gtx, g.Main.Min)
+		mgtx := tooltip.AvailableRoomAt(gtx, g.Main.Min)
 		mgtx.Constraints = layout.Exact(g.Main.Size())
 		f.Main(mgtx)
 		mainCall = macro.Stop()
@@ -510,14 +511,14 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 		lead := f.listToolbar()
 		buttons, gutter := ToolbarLead(gtx, g.ListX, lead.Lead, f.buttonsEnd(), lead.ButtonFallback)
 		st := op.Offset(g.ListToolbar.Min).Push(gtx.Ops)
-		bgtx := AvailableRoomAt(gtx, g.ListToolbar.Min)
+		bgtx := tooltip.AvailableRoomAt(gtx, g.ListToolbar.Min)
 		bgtx.Constraints = layout.Exact(g.ListToolbar.Size())
 		lead.layout(bgtx, buttons, gutter, f.toolbarLead(c))
 		st.Pop()
 	}
 	if !g.Toolbar.Empty() {
 		st := op.Offset(g.Toolbar.Min).Push(gtx.Ops)
-		bgtx := AvailableRoomAt(gtx, g.Toolbar.Min)
+		bgtx := tooltip.AvailableRoomAt(gtx, g.Toolbar.Min)
 		bgtx.Constraints = layout.Exact(g.Toolbar.Size())
 		f.Toolbar.layout(bgtx, 0, gtx.Dp(f.Toolbar.Lead), nil)
 		st.Pop()
@@ -525,7 +526,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 
 	if !g.List.Empty() {
 		st := op.Offset(g.List.Min).Push(gtx.Ops)
-		lgtx := AvailableRoomAt(gtx, g.List.Min)
+		lgtx := tooltip.AvailableRoomAt(gtx, g.List.Min)
 		lgtx.Constraints = layout.Exact(g.List.Size())
 		_, cl := f.List.Layout(lgtx, c)
 		for _, r := range []*image.Rectangle{&cl.Rows, &cl.Footer} {
@@ -544,7 +545,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 		st.Pop()
 	case f.Main != nil && !g.Main.Empty():
 		st := op.Offset(g.Main.Min).Push(gtx.Ops)
-		mgtx := AvailableRoomAt(gtx, g.Main.Min)
+		mgtx := tooltip.AvailableRoomAt(gtx, g.Main.Min)
 		mgtx.Constraints = layout.Exact(g.Main.Size())
 		f.Main(mgtx)
 		st.Pop()
@@ -552,7 +553,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 
 	if f.Footer != nil && !g.Footer.Empty() {
 		st := op.Offset(g.Footer.Min).Push(gtx.Ops)
-		fgtx := AvailableRoomAt(gtx, g.Footer.Min)
+		fgtx := tooltip.AvailableRoomAt(gtx, g.Footer.Min)
 		fgtx.Constraints = layout.Exact(g.Footer.Size())
 		f.Footer(fgtx)
 		st.Pop()
@@ -571,7 +572,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 
 	if f.Over != nil && g.RowH > 0 {
 		st := op.Offset(image.Pt(g.ListX, 0)).Push(gtx.Ops)
-		ogtx := AvailableRoomAt(gtx, image.Pt(g.ListX, 0))
+		ogtx := tooltip.AvailableRoomAt(gtx, image.Pt(g.ListX, 0))
 		ogtx.Constraints = layout.Exact(image.Pt(max(size.X-g.ListX, 0), size.Y))
 		f.Over(ogtx)
 		st.Pop()

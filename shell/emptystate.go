@@ -117,7 +117,7 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 	// are centred across the width, so no part's offset is known while it is
 	// laid out: the group is laid out with a [tooltip.Surfaces] set, and the
 	// tooltip surfaces in it are placed once the group is placed.
-	ggtx, surfaces := tooltip.WithSurfaces(withoutAvailableRoom(gtx))
+	ggtx, surfaces := tooltip.WithSurfaces(gtx)
 	ggtx.Constraints = layout.Constraints{Min: image.Pt(frame.X, 0), Max: frame}
 	rec := op.Record(gtx.Ops)
 	height := emptyStateGroup(ggtx, sh, c, typ, fill, p)
@@ -130,7 +130,7 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 	}
 	off := op.Offset(image.Pt(0, above)).Push(gtx.Ops)
 	call.Add(gtx.Ops)
-	placeSurfaces(gtx, surfaces, image.Pt(0, above))
+	tooltip.PlaceSurfacesAt(gtx, surfaces, image.Pt(0, above))
 	off.Pop()
 	return layout.Dimensions{Size: frame}
 }
@@ -171,7 +171,7 @@ func emptyStateGroup(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColor
 			y += gap
 		}
 		rec := op.Record(gtx.Ops)
-		dims := w(AvailableRoomAt(gtx, image.Pt(0, y)))
+		dims := w(tooltip.AvailableRoomAt(gtx, image.Pt(0, y)))
 		call := rec.Stop()
 		if y > 0 {
 			off := op.Offset(image.Pt(0, y)).Push(gtx.Ops)
@@ -259,7 +259,7 @@ func emptyStateActions(gtx layout.Context, actions []layout.Widget, gap int) lay
 		at := image.Pt(x, (height-sizes[i].Y)/2)
 		off := op.Offset(at).Push(gtx.Ops)
 		call.Add(gtx.Ops)
-		placeSurfaces(gtx, surfaces[i], at)
+		tooltip.PlaceSurfacesAt(gtx, surfaces[i], at)
 		off.Pop()
 		x += sizes[i].X + gap
 	}

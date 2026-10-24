@@ -194,8 +194,9 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 		Right:  unit.Dp(sp.S4),
 	}
 	// The inset places its child at an offset known before the child is laid
-	// out, so the tooltip collector is moved by that offset first.
-	igtx := tooltip.SurfacesAt(gtx, image.Pt(gtx.Dp(inset.Left), gtx.Dp(inset.Top)))
+	// out, so the available room and the floating surfaces are moved by that
+	// offset first.
+	igtx := tooltip.AvailableRoomAt(gtx, image.Pt(gtx.Dp(inset.Left), gtx.Dp(inset.Top)))
 	inset.Layout(igtx, func(gtx layout.Context) layout.Dimensions {
 		return centredRow(gtx,
 			brandSlot(props.Brand),
@@ -247,8 +248,8 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 // traverses them.
 //
 // A slot's offset is decided only after every slot is measured, so each slot
-// is laid out with a tooltip collector of its own, and its surfaces are
-// placed once the slot is placed (see [placeSurfaces]).
+// is laid out with a [tooltip.Surfaces] of its own, and its surfaces are
+// placed once the slot is placed (see [tooltip.PlaceSurfacesAt]).
 func centredRow(gtx layout.Context, brand, links, actions layout.Widget) layout.Dimensions {
 	width, h := gtx.Constraints.Max.X, gtx.Constraints.Max.Y
 	var (
@@ -274,29 +275,10 @@ func centredRow(gtx layout.Context, brand, links, actions layout.Widget) layout.
 		off := image.Pt(xs[i], h/2-sizes[i].Y/2)
 		stack := op.Offset(off).Push(gtx.Ops)
 		calls[i].Add(gtx.Ops)
+		tooltip.PlaceSurfacesAt(gtx, surfaces[i], off)
 		stack.Pop()
-		placeSurfaces(gtx, surfaces[i], off)
 	}
 	return layout.Dimensions{Size: image.Pt(width, h)}
-}
-
-// unboundedRoom is the extent a tooltip surface is placed in where no layout
-// above the navbar set a tooltip collector: wide and tall enough that it
-// bounds no surface, so the surface is placed as one given no available room.
-const unboundedRoom = 1 << 20
-
-// placeSurfaces places the surfaces s recorded in a child placed at off.
-//
-// Where gtx has a tooltip collector set, the navbar is laid out in a layout
-// that places it only after measuring it. The surfaces are then added to
-// that collector, moved by off, and that layout places them in the window's
-// area. Where gtx has none, the navbar knows no available room, and the
-// surfaces are drawn at once in an unbounded area.
-func placeSurfaces(gtx layout.Context, s *tooltip.Surfaces, off image.Point) {
-	st := op.Offset(off).Push(gtx.Ops)
-	room := image.Rect(-unboundedRoom, -unboundedRoom, unboundedRoom, unboundedRoom)
-	tooltip.PlaceSurfaces(tooltip.SurfacesAt(gtx, off), s, room)
-	st.Pop()
 }
 
 func brandSlot(w layout.Widget) layout.Widget {
@@ -334,9 +316,9 @@ func linksRow(shaper *text.Shaper, links []Link, clicks []widget.Clickable, mark
 // middle places them.
 //
 // An action's offset across the row is decided only after every action is
-// measured, so each action is laid out with a tooltip collector of its own,
+// measured, so each action is laid out with a [tooltip.Surfaces] of its own,
 // and its surfaces are placed once the action is placed (see
-// [placeSurfaces]).
+// [tooltip.PlaceSurfacesAt]).
 func actionsRow(actions []layout.Widget, sp tokens.SpacingScale) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		var (
@@ -373,8 +355,8 @@ func actionsRow(actions []layout.Widget, sp tokens.SpacingScale) layout.Widget {
 			off := image.Pt(xs[i], (h-sizes[i].Y)/2)
 			stack := op.Offset(off).Push(gtx.Ops)
 			calls[i].Add(gtx.Ops)
+			tooltip.PlaceSurfacesAt(gtx, surfaces[i], off)
 			stack.Pop()
-			placeSurfaces(gtx, surfaces[i], off)
 		}
 		return layout.Dimensions{Size: gtx.Constraints.Constrain(image.Pt(x, h))}
 	}

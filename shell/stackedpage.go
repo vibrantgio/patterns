@@ -116,10 +116,10 @@ func drawStackedPage(
 	// available room and is laid out with a [tooltip.Surfaces] set, and its
 	// rows add each child's surfaces to it at the child's offset. The page
 	// places those surfaces in the window's area once the navbar is drawn.
-	ngtx, navSurfaces := tooltip.WithSurfaces(withoutAvailableRoom(gtx))
+	ngtx, navSurfaces := tooltip.WithSurfaces(gtx)
 	ngtx.Constraints = layout.Exact(image.Pt(size.X, navH))
 	nb(ngtx)
-	placeSurfaces(gtx, navSurfaces, image.Point{})
+	tooltip.PlaceSurfacesAt(gtx, navSurfaces, image.Point{})
 
 	children := len(sections)
 	if footer != nil {
@@ -132,12 +132,12 @@ func drawStackedPage(
 		}
 		margin := (size.X - contentW) / 2
 		st := op.Offset(image.Pt(0, navH)).Push(gtx.Ops)
-		body := AvailableRoomAt(gtx, image.Pt(0, navH))
+		body := tooltip.AvailableRoomAt(gtx, image.Pt(0, navH))
 		// The list places each section only after it is laid out and
-		// scrolled, so each is laid out with a [tooltip.Surfaces] set, and
-		// the tooltip surfaces in the sections shown are placed once the
-		// list has placed them.
-		bgtx := withoutAvailableRoom(body)
+		// scrolled, so each is laid out with a [tooltip.Surfaces] set, which
+		// removes the available room, and the tooltip surfaces in the
+		// sections shown are placed once the list has placed them.
+		bgtx := body
 		// Exact viewport constraints force every child to the full page
 		// width; the list gives children an unbounded height.
 		bgtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
@@ -179,7 +179,7 @@ func drawStackedPage(
 		for i := list.Position.First; i < min(list.Position.First+list.Position.Count, children); i++ {
 			at := image.Pt(margin, y)
 			off := op.Offset(at).Push(gtx.Ops)
-			placeSurfaces(body, surfaces[i], at)
+			tooltip.PlaceSurfacesAt(body, surfaces[i], at)
 			off.Pop()
 			y += heights[i]
 		}

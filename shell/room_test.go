@@ -36,7 +36,7 @@ func cornerTooltip(c tokens.PlatformColors) layout.Widget {
 	props := tooltip.Props{
 		Text:          "A tooltip at the window's edge",
 		Placement:     tooltip.Bottom,
-		AvailableRoom: shell.AvailableRoom,
+		AvailableRoom: tooltip.AvailableRoom,
 		Trigger: func(gtx layout.Context) layout.Dimensions {
 			sz := image.Pt(roomTrigger, roomTrigger)
 			paint.FillShape(gtx.Ops, c.SystemBlue, clip.Rect{Max: sz}.Op())
@@ -54,7 +54,7 @@ func cornerTooltip(c tokens.PlatformColors) layout.Widget {
 		size := gtx.Constraints.Max
 		off := size.Sub(image.Pt(roomTrigger, roomTrigger))
 		st := op.Offset(off).Push(gtx.Ops)
-		tgtx := shell.AvailableRoomAt(gtx, off)
+		tgtx := tooltip.AvailableRoomAt(gtx, off)
 		tgtx.Constraints = layout.Exact(image.Pt(roomTrigger, roomTrigger))
 		tip(tgtx)
 		st.Pop()
@@ -207,26 +207,5 @@ func TestTooltipInTrailingSlotIsInsideWindow(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			assertTooltipInsideWindow(t, size, tc.window)
 		})
-	}
-}
-
-// TestAvailableRoomUnsetIsUnbounded reads the value a caller reads where no
-// root set an area: a rectangle wide enough to place any annotation as no
-// available room does.
-func TestAvailableRoomUnsetIsUnbounded(t *testing.T) {
-	gtx := measureCtx(twoColSize)
-	r := shell.AvailableRoom(gtx)
-	if !image.Rect(-1<<19, -1<<19, 1<<19, 1<<19).In(r) {
-		t.Errorf("AvailableRoom with nothing set = %v, want an unbounded rectangle", r)
-	}
-	if got := shell.AvailableRoom(shell.AvailableRoomAt(gtx, image.Pt(10, 10))); got != r {
-		t.Errorf("AvailableRoomAt with nothing set moved the area to %v", got)
-	}
-	set := shell.WithAvailableRoom(gtx, image.Rect(0, 0, 100, 50))
-	if got := shell.AvailableRoom(shell.AvailableRoomAt(set, image.Pt(10, 20))); got != image.Rect(-10, -20, 90, 30) {
-		t.Errorf("AvailableRoomAt moved the area to %v, want (-10,-20)-(90,30)", got)
-	}
-	if got := shell.AvailableRoom(gtx); got != r {
-		t.Errorf("WithAvailableRoom wrote into the caller's context: %v", got)
 	}
 }
