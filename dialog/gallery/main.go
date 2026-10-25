@@ -46,6 +46,7 @@ import (
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 func main() {
@@ -191,8 +192,9 @@ func (d *demo) body(gtx layout.Context) layout.Dimensions {
 	m := op.Record(gtx.Ops)
 	paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.SecondaryLabel, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
 	mat := m.Stop()
+	role := tokens.DefaultTypography.BodyLarge
 	lbl := widget.Label{}
-	return lbl.Layout(gtx, d.shaper, font.Font{}, unit.Sp(15),
+	return lbl.Layout(gtx, d.shaper, typeset.Font(role, font.Normal), unit.Sp(role.Size),
 		"This is a decision dialog, so it has no close ×: the footer answers it. "+
 			"Tab cycles the focus ring Cancel → OK → Cancel; Space activates the "+
 			"focused button; Return takes the default (OK) from wherever focus is; "+
@@ -222,8 +224,9 @@ func (d *demo) frame(gtx layout.Context) layout.Dimensions {
 				m := op.Record(gtx.Ops)
 				paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.Label, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
 				mat := m.Stop()
+				role := tokens.DefaultTypography.BodyMedium
 				lbl := widget.Label{MaxLines: 1}
-				return lbl.Layout(gtx, d.shaper, font.Font{}, unit.Sp(14),
+				return lbl.Layout(gtx, d.shaper, typeset.Font(role, font.Normal), unit.Sp(role.Size),
 					fmt.Sprintf("Dismissed %d time(s)", n), mat)
 			}),
 		)

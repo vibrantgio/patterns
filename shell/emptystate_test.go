@@ -220,7 +220,7 @@ var (
 // TestEmptyStateLineAloneIsTheColumnsReading holds the grown pattern against
 // what the column had before it: a props value carrying nothing but the line
 // renders the same pixels as the line laid out by itself in the frame — the
-// body role at the measured size, no line height, TertiaryLabel over the
+// Headline Medium role, no line height, TertiaryLabel over the
 // fill, centred by the frame's own floor. Every pixel is compared, so a
 // group that moved the line by one row fails here.
 func TestEmptyStateLineAloneIsTheColumnsReading(t *testing.T) {
@@ -228,8 +228,7 @@ func TestEmptyStateLineAloneIsTheColumnsReading(t *testing.T) {
 	for _, tc := range emptyStateCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fill := tc.colors.TextBackground
-			style := tokens.DefaultTypography.BodyLarge
-			style.Size = shell.EmptyStateSizeSp
+			style := tokens.DefaultTypography.HeadlineMedium
 			style.LineHeight = 0
 			got := emptyStateImage(t, sh, tc.colors, fill, emptyStateFrame)
 			want := emptyStateLineOnly(t, sh, tc.colors, fill, style, emptyStateFrame)
@@ -288,8 +287,7 @@ func TestPaneSizeSetsTheLineInTheRowsStyle(t *testing.T) {
 // the growth and a block placed any other way does not.
 func TestEmptyStateCentresTheGroupItIsGiven(t *testing.T) {
 	sh := defaultShaper(t)
-	line := tokens.DefaultTypography.BodyLarge
-	line.Size = shell.EmptyStateSizeSp
+	line := tokens.DefaultTypography.HeadlineMedium
 	line.LineHeight = 0
 	for _, tc := range emptyStateCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -18,13 +18,6 @@ import (
 	"github.com/vibrantgio/theme/typeset"
 )
 
-// EmptyStateSizeSp is the size one line of a column's empty state is set at.
-// MEASURED off reference/macos/mail-empty-column-light.png and
-// mail-empty-column-dark.png at 1x: the glyphs carry a cap band 20 px tall,
-// which at a cap height of 0.709 em is 28 sp. No role in the type set states
-// it — it stands above every one of them — so the number is carried here.
-const EmptyStateSizeSp = 28
-
 // EmptyStateDescriptionGap is the room between the line and the description
 // under it, and EmptyStateActionsGap the room above the actions row.
 //
@@ -64,8 +57,8 @@ type EmptyStateProps struct {
 	Actions []layout.Widget
 
 	// LineStyle is the text style the line is set in. The zero value is the
-	// column's reading: the body role at [EmptyStateSizeSp], with no line
-	// height, which is what a content column stands. A pane's section or a
+	// column's reading: the Headline Medium role, with no line height, which
+	// is what a content column stands. A pane's section or a
 	// sheet's field hands in the style of the rows it stands for instead, so
 	// that a line replacing four rows is set at the size those rows are.
 	//
@@ -207,8 +200,7 @@ func emptyStateLineStyle(typ tokens.Typography, style tokens.TextStyle) tokens.T
 	if style.Size > 0 {
 		return style
 	}
-	style = typ.BodyLarge
-	style.Size = EmptyStateSizeSp
+	style = typ.HeadlineMedium
 	// The line box is the text's own, so the group's own height is what
 	// centres it rather than a role's leading above and below the glyphs.
 	style.LineHeight = 0
