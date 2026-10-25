@@ -50,6 +50,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
@@ -308,11 +309,9 @@ func drawTable[T any](
 
 	// Header row.
 	hSize := image.Pt(size.X, headerH)
-	hStack := op.Offset(image.Point{}).Push(gtx.Ops)
 	hGtx := gtx
 	hGtx.Constraints = layout.Exact(hSize)
 	drawHeaderRow(hGtx, shaper, columns, widths, sk, clicks, tok)
-	hStack.Pop()
 
 	// Body.
 	bodyY := headerH
@@ -321,7 +320,7 @@ func drawTable[T any](
 		return layout.Dimensions{Size: size}
 	}
 	bStack := op.Offset(image.Pt(0, bodyY)).Push(gtx.Ops)
-	bGtx := gtx
+	bGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, bodyY))
 	bGtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
 	list.Layout(bGtx, state, rows.upTo(len(items)), func(rGtx layout.Context, i int) layout.Dimensions {
 		item := items[i]
@@ -404,7 +403,7 @@ func drawHeaderRow[T any](
 			continue
 		}
 		st := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
-		cellGtx := gtx
+		cellGtx := attachment.AvailableRoomAt(gtx, image.Pt(x, 0))
 		cellGtx.Constraints = layout.Exact(image.Pt(w, size.Y))
 		drawHeaderCell(cellGtx, shaper, col, i == sk.Column, sk.Asc, clickFor(clicks, i, col.Sortable), tok)
 		st.Pop()
@@ -526,7 +525,7 @@ func drawRow[T any](
 			continue
 		}
 		st := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
-		cellGtx := gtx
+		cellGtx := attachment.AvailableRoomAt(gtx, image.Pt(x, 0))
 		cellGtx.Constraints = layout.Exact(image.Pt(w, rowH))
 		if col.Cell != nil {
 			cw := col.Cell(item)

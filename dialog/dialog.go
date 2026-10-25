@@ -136,6 +136,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/button"
 	"github.com/vibrantgio/components/composite"
 	pllayout "github.com/vibrantgio/components/layout"
@@ -661,6 +662,16 @@ func drawDialog(
 	inset := gtx.Dp(unit.Dp(tok.spacing.S5))
 	colW := surfW - 2*inset
 
+	// The content and the footer's band are laid out before the surface's
+	// position is known, because the surface's height is the content's. A
+	// floating surface in them is therefore recorded in a Surfaces of their
+	// own and placed in the available room once the surface is placed.
+	// Without the available room or a Surfaces, the dialog collects nothing:
+	// the flexes inside the content and the band place their own surfaces
+	// with no available room.
+	collect := attachment.HasSurfaces(gtx) || attachment.HasAvailableRoom(gtx)
+	var contentSurfaces, bandSurfaces *attachment.Surfaces
+
 	// The decision footer's own band, laid out before the content so the room
 	// left for the content is what the band does not take. Its actions are
 	// stateful components, so it is laid out ONCE into a macro and replayed
@@ -673,6 +684,9 @@ func drawDialog(
 		hairline = max(gtx.Dp(footerHairlineDp), 1)
 		air = gtx.Dp(unit.Dp(footerAirDp))
 		bandGtx := gtx
+		if collect {
+			bandGtx, bandSurfaces = attachment.WithSurfaces(gtx)
+		}
 		bandGtx.Constraints = layout.Constraints{
 			Min: image.Pt(colW, 0),
 			Max: image.Pt(colW, maxH),
@@ -691,6 +705,9 @@ func drawDialog(
 	}
 
 	contentGtx := gtx
+	if collect {
+		contentGtx, contentSurfaces = attachment.WithSurfaces(gtx)
+	}
 	contentGtx.Constraints = layout.Constraints{
 		Min: image.Pt(colW, 0),
 		Max: image.Pt(colW, maxH-inset-below),
@@ -727,6 +744,9 @@ func drawDialog(
 	content.Add(gtx.Ops)
 	contentOff.Pop()
 	contentClip.Pop()
+	contentOff = op.Offset(image.Pt(inset, inset)).Push(gtx.Ops)
+	attachment.PlaceSurfacesAt(gtx, contentSurfaces, surfPos.Add(image.Pt(inset, inset)))
+	contentOff.Pop()
 
 	// The footer's hairline and the band under it. The line is the sheet's
 	// and runs its full width, so it is drawn here rather than inside the
@@ -738,6 +758,7 @@ func drawDialog(
 			clip.Rect(image.Rect(0, lineTop, surfW, bandTop)).Op())
 		bandOff := op.Offset(image.Pt(inset, bandTop+air)).Push(gtx.Ops)
 		band.Add(gtx.Ops)
+		attachment.PlaceSurfacesAt(gtx, bandSurfaces, surfPos.Add(image.Pt(inset, bandTop+air)))
 		bandOff.Pop()
 	}
 	off.Pop()
@@ -763,14 +784,14 @@ func drawSurfaceContents(
 	gap int,
 	closeWidget layout.Widget,
 ) layout.Dimensions {
-	children := []layout.FlexChild{
-		layout.Rigid(headerWidget(shaper, props, tok, closeWidget)),
-		layout.Rigid(spacerV(gap)),
+	children := []attachment.PlacedChild{
+		attachment.PlacedRigid(headerWidget(shaper, props, tok, closeWidget)),
+		attachment.PlacedRigid(spacerV(gap)),
 	}
 	if props.Body != nil {
-		children = append(children, layout.Rigid(props.Body))
+		children = append(children, attachment.PlacedRigid(props.Body))
 	}
-	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
+	return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Vertical}, children...)
 }
 
 // headerWidget renders the title (drawn only when non-empty) on the left and
@@ -779,7 +800,7 @@ func drawSurfaceContents(
 // ring and click handling; the header only positions it.
 func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWidget layout.Widget) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		titleFlex := layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+		titleFlex := attachment.PlacedFlexed(1, func(gtx layout.Context) layout.Dimensions {
 			if props.Title == "" {
 				// Empty title contributes no height; the Rigid close button
 				// drives the header row height via Middle alignment.
@@ -791,10 +812,10 @@ func headerWidget(shaper *text.Shaper, props Props, tok resolvedTokens, closeWid
 			return typeset.TextWeight(gtx, shaper, props.Title, tok.title, fg, 1, font.SemiBold)
 		})
 		if closeWidget == nil {
-			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, titleFlex)
+			return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, titleFlex)
 		}
-		closeFlex := layout.Rigid(closeWidget)
-		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, titleFlex, closeFlex)
+		closeFlex := attachment.PlacedRigid(closeWidget)
+		return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, titleFlex, closeFlex)
 	}
 }
 
@@ -873,7 +894,7 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 		filler := func(gtx layout.Context) layout.Dimensions {
 			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, 0)}
 		}
-		children := []layout.FlexChild{layout.Flexed(1, filler)}
+		children := []attachment.PlacedChild{attachment.PlacedFlexed(1, filler)}
 		first := true
 		for _, a := range props.Actions {
 			a := a
@@ -881,12 +902,12 @@ func footerWidget(props Props, tok resolvedTokens) layout.Widget {
 				continue
 			}
 			if !first {
-				children = append(children, layout.Rigid(pllayout.HSpacer(gap)))
+				children = append(children, attachment.PlacedRigid(pllayout.HSpacer(gap)))
 			}
 			first = false
-			children = append(children, layout.Rigid(actionBox(a, btnW)))
+			children = append(children, attachment.PlacedRigid(actionBox(a, btnW)))
 		}
-		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx, children...)
+		return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 	}
 }
 

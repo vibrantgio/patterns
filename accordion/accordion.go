@@ -29,6 +29,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/pointershape"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
@@ -242,7 +243,7 @@ func drawAccordion(
 	for i, sec := range props.Sections {
 		hSize := image.Pt(size.X, headerH)
 		stH := op.Offset(image.Pt(0, y)).Push(gtx.Ops)
-		hGtx := gtx
+		hGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, y))
 		hGtx.Constraints = layout.Exact(hSize)
 		drawHeader(hGtx, shaper, sec, clickFor(clicks, i), openMap[i], hSize, colors, sp, style)
 		stH.Pop()
@@ -251,7 +252,7 @@ func drawAccordion(
 		if openMap[i] && sec.Body != nil {
 			bSize := image.Pt(size.X, bodyH)
 			stB := op.Offset(image.Pt(0, y)).Push(gtx.Ops)
-			bGtx := gtx
+			bGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, y))
 			bGtx.Constraints = layout.Exact(bSize)
 			sec.Body(bGtx)
 			stB.Pop()

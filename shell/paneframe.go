@@ -141,14 +141,7 @@ func (f PaneFrame) Under(gtx layout.Context, c tokens.PlatformColors, size image
 	} else {
 		pane.FillTrailingCorners(gtx, f.ContentFill, bounds)
 	}
-	sidebar := f.Sidebar
-	if sidebar != nil {
-		// The pane places its contents at its own origin.
-		sidebar = func(gtx layout.Context) layout.Dimensions {
-			return f.Sidebar(attachment.AvailableRoomAt(gtx, bounds.Min))
-		}
-	}
-	pane.Layout(gtx, c, bounds, sidebar)
+	pane.Layout(gtx, c, bounds, f.Sidebar)
 }
 
 // Layout composes the whole frame in the order it reads, which is the focus

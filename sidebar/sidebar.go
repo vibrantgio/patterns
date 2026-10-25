@@ -124,6 +124,7 @@ import (
 	"golang.org/x/image/math/fixed"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/icon"
 	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/components/list"
@@ -589,7 +590,7 @@ func drawSidebar(
 	}
 	itemH := gtx.Dp(RowHeight)
 	stk := op.Offset(image.Pt(0, toggleH)).Push(gtx.Ops)
-	lGtx := gtx
+	lGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, toggleH))
 	lGtx.Constraints = layout.Exact(image.Pt(w, listH))
 	idx := make([]int, len(props.Items))
 	for i := range idx {
@@ -770,6 +771,7 @@ func drawItem(
 			vgcolor.Flatten(SectionForeground(colors), colors.SidebarMaterial))
 	}
 	defer op.Offset(image.Pt(0, head)).Push(gtx.Ops).Pop()
+	gtx = attachment.AvailableRoomAt(gtx, image.Pt(0, head))
 
 	// The selected row is the platform's pill, and a row that is not selected
 	// takes no fill of its own and no hover tint either — the platform tints

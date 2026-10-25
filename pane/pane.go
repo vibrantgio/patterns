@@ -97,6 +97,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
+	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/effects/depth"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/theme/tokens"
@@ -251,6 +252,11 @@ func Bounds(gtx layout.Context, size image.Point, width unit.Dp, hidden bool) im
 // poke through a corner, nor paint over the rim that says the pane is an
 // object. An empty rectangle draws nothing, which is the dismissed state; a
 // nil contents draws the pane and nothing in it.
+//
+// The contents are laid out at the pane's origin, and Layout moves the
+// available room and the floating surfaces there with
+// [attachment.AvailableRoomAt]. A floating surface in the contents is
+// therefore placed against the window, not clipped by the fill.
 func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle, contents layout.Widget) {
 	if bounds.Empty() {
 		return
@@ -272,6 +278,7 @@ func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle,
 	}
 	defer inner.Push(gtx.Ops).Pop()
 	defer op.Offset(bounds.Min).Push(gtx.Ops).Pop()
+	gtx = attachment.AvailableRoomAt(gtx, bounds.Min)
 	gtx.Constraints = layout.Exact(bounds.Size())
 	contents(gtx)
 }
