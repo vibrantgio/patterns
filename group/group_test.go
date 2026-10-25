@@ -82,7 +82,7 @@ func scene(w layout.Widget, margin int, bgColor color.NRGBA) layout.Widget {
 }
 
 // TestGroupGolden records or diffs the canonical group renders in both
-// schemes, with a title and without. The scene fills the level-0 surface so the
+// schemes, with a title and without. The scene fills the content surface so the
 // group's interior and its surroundings are one fill, which is the whole
 // point of the pattern: only the hairline says where it ends.
 func TestGroupGolden(t *testing.T) {
