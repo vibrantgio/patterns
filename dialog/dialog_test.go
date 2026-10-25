@@ -93,11 +93,11 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 // There are two of them, one per purpose, because a fixture's title is half
 // of what makes that purpose legible. "Discard changes?" is a question you
 // must answer; "Preferences" is a place you opened. A fixture must never
-// pair a decision's title with a pane's X over a dismissing scrim — that
+// pair a decision's title with a dismissible dialog's X over a dismissing scrim — that
 // combination is not a valid purpose.
 const (
-	paneTitle     = "Preferences"
-	decisionTitle = "Discard changes?"
+	dismissibleTitle = "Preferences"
+	decisionTitle    = "Discard changes?"
 	// dialogTitle is the interaction tests' title; those tests are mostly
 	// decisions, and none of them looks at pixels.
 	dialogTitle = decisionTitle
@@ -108,7 +108,7 @@ const (
 // TestDialogGolden records or diffs the stored goldens, one fixture per
 // purpose:
 //
-//   - light-open / dark-open / light-closed are PANES — a title and an
+//   - light-open / dark-open / light-closed are DISMISSIBLE DIALOGS — a title and an
 //     understated
 //     ghost X, the surface you can leave.
 //   - light-with-actions is the DECISION — the question, the footer that
@@ -134,9 +134,9 @@ func TestDialogGolden(t *testing.T) {
 		colors   tokens.PlatformColors
 		bg       color.NRGBA
 	}{
-		{"light-open", true, paneTitle, nil, nil, tokens.PlatformLight, lightBG},
-		{"dark-open", true, paneTitle, nil, nil, tokens.PlatformDark, darkBG},
-		{"light-closed", false, paneTitle, nil, nil, tokens.PlatformLight, lightBG},
+		{"light-open", true, dismissibleTitle, nil, nil, tokens.PlatformLight, lightBG},
+		{"dark-open", true, dismissibleTitle, nil, nil, tokens.PlatformDark, darkBG},
+		{"light-closed", false, dismissibleTitle, nil, nil, tokens.PlatformLight, lightBG},
 		// The destructive primary is marked, so Return would reach Cancel and
 		// not Discard. Nothing about that is visible here — the fixture states
 		// it because a fixture is also documentation of the intended call.
@@ -197,7 +197,7 @@ func TestDialogCompactGolden(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	obs := dialog.Dialog(rx.Of(densityTheme(tokens.Compact)), dialog.Props{
 		Open:   rx.Of(true),
-		Title:  paneTitle,
+		Title:  dismissibleTitle,
 		Body:   body,
 		Shaper: defaultShaper(t),
 	})
@@ -346,7 +346,7 @@ func TestCloseButtonActivatesOnClose(t *testing.T) {
 // the scrim region but outside the dialog surface invokes OnClose. A press
 // inside the surface must NOT invoke OnClose.
 //
-// This is the PANE half of the purpose contract; TestBackdropClickOnDecisionIsInert
+// This is the DISMISSIBLE DIALOG half of the purpose contract; TestBackdropClickOnDecisionIsInert
 // is the other half.
 func TestBackdropClickInvokesOnClose(t *testing.T) {
 	var closed int
@@ -697,11 +697,11 @@ func TestBackdropClickOnDecisionIsInert(t *testing.T) {
 	}
 }
 
-// TestBackdropClickOnPaneCloses is the pane half stated in the purpose's own
+// TestBackdropClickOnDismissibleCloses is the dismissible dialog half stated in the purpose's own
 // terms, next to its opposite, TestBackdropClickOnDecisionIsInert; the pair
 // reads as one contract so a future change cannot silence half of it
 // unnoticed.
-func TestBackdropClickOnPaneCloses(t *testing.T) {
+func TestBackdropClickOnDismissibleCloses(t *testing.T) {
 	var closed int
 	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
@@ -716,16 +716,16 @@ func TestBackdropClickOnPaneCloses(t *testing.T) {
 	scrimPress(w, ops, r)
 
 	if closed == 0 {
-		t.Error("backdrop click on a pane did not invoke OnClose; a pane is a place you can leave")
+		t.Error("backdrop click on a dismissible dialog did not invoke OnClose; a dismissible dialog is a place you can leave")
 	}
 }
 
 // TestEscapeWorksOnBothPurposes pins the clause that survives the split:
-// whatever the purpose, Escape leaves. On a pane it invokes OnClose; on a
+// whatever the purpose, Escape leaves. On a dismissible dialog it invokes OnClose; on a
 // decision dialog it invokes Cancel, which is Apple's binding and the reason a
 // decision needs no X.
 func TestEscapeWorksOnBothPurposes(t *testing.T) {
-	t.Run("pane", func(t *testing.T) {
+	t.Run("dismissible dialog", func(t *testing.T) {
 		var closed int
 		w := liveDialog(t, dialog.Props{
 			Open:    rx.Of(true),
@@ -739,7 +739,7 @@ func TestEscapeWorksOnBothPurposes(t *testing.T) {
 		r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
 		driveFrame(w, ops, r, frameSize)
 		if closed != 1 {
-			t.Errorf("Escape on a pane: OnClose called %d times, want 1", closed)
+			t.Errorf("Escape on a dismissible dialog: OnClose called %d times, want 1", closed)
 		}
 	})
 
@@ -912,10 +912,10 @@ func TestReturnNeverReachesADestructivePrimary(t *testing.T) {
 	})
 }
 
-// TestPaneLeavesReturnToTheFocusedControl is the negative of the two tests
-// above: a pane claims no default action, so Return still activates whatever
-// holds focus — which on an opening pane is its close button.
-func TestPaneLeavesReturnToTheFocusedControl(t *testing.T) {
+// TestDismissibleDialogLeavesReturnToTheFocusedControl is the negative of the two tests
+// above: a dismissible dialog claims no default action, so Return still activates whatever
+// holds focus — which on an opening dismissible dialog is its close button.
+func TestDismissibleDialogLeavesReturnToTheFocusedControl(t *testing.T) {
 	var closed int
 	w := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
@@ -930,13 +930,13 @@ func TestPaneLeavesReturnToTheFocusedControl(t *testing.T) {
 	pressReturn(w, ops, r)
 
 	if closed != 1 {
-		t.Errorf("Return on a pane with its close button focused: OnClose called %d times, want 1", closed)
+		t.Errorf("Return on a dismissible dialog with its close button focused: OnClose called %d times, want 1", closed)
 	}
 }
 
 // TestDecisionDrawsNoCloseAffordance checks the derivation in pixels rather
 // than in predicates: the same Props with and without a Decision differ, and
-// the difference is the X — a decision dialog rendered next to a pane whose
+// the difference is the X — a decision dialog rendered next to a dismissible dialog whose
 // close button is hidden by HideClose is pixel-identical.
 func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 	shaper := defaultShaper(t)
@@ -949,23 +949,23 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 			tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 	}
 
-	pane := golden.Capture(t, frameSize, scene(render(dialog.Props{}), bg))
+	dismissible := golden.Capture(t, frameSize, scene(render(dialog.Props{}), bg))
 	decision := golden.Capture(t, frameSize, scene(render(dialog.Props{Decision: &dialog.Decision{}}), bg))
 	hidden := golden.Capture(t, frameSize, scene(render(dialog.Props{HideClose: true}), bg))
 
-	if n := golden.PixelDiff(pane, decision); n == 0 {
-		t.Error("a decision dialog renders identically to a pane; it must drop the close X")
+	if n := golden.PixelDiff(dismissible, decision); n == 0 {
+		t.Error("a decision dialog renders identically to a dismissible dialog; it must drop the close X")
 	}
 	if n := golden.PixelDiff(decision, hidden); n != 0 {
-		t.Errorf("a decision dialog differs from a close-less pane by %d pixel(s); "+
+		t.Errorf("a decision dialog differs from a close-less dismissible dialog by %d pixel(s); "+
 			"hiding the X is exactly what the purpose derives", n)
 	}
 }
 
-// TestHideCloseStillWorksOnAPane is the deprecation window: the field keeps
+// TestHideCloseStillWorksOnADismissibleDialog is the deprecation window: the field keeps
 // compiling AND keeps its meaning for the purpose it belongs to, so an
 // existing caller is not silently changed underneath.
-func TestHideCloseStillWorksOnAPane(t *testing.T) {
+func TestHideCloseStillWorksOnADismissibleDialog(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -976,7 +976,7 @@ func TestHideCloseStillWorksOnAPane(t *testing.T) {
 		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 
 	if n := golden.PixelDiff(golden.Capture(t, frameSize, scene(with, bg)), golden.Capture(t, frameSize, scene(without, bg))); n == 0 {
-		t.Error("HideClose no longer hides a pane's close button; the deprecation window must keep it working")
+		t.Error("HideClose no longer hides a dismissible dialog's close button; the deprecation window must keep it working")
 	}
 }
 
@@ -1019,16 +1019,16 @@ func TestDefaultActionDerivation(t *testing.T) {
 // TestPurposeIsDerivedFromDecision pins the single source of truth: there is no
 // purpose field to fall out of step with the callbacks.
 func TestPurposeIsDerivedFromDecision(t *testing.T) {
-	if got := (dialog.Props{}).Purpose(); got != dialog.PurposePane {
-		t.Errorf("zero Props derive %v, want %v", got, dialog.PurposePane)
+	if got := (dialog.Props{}).Purpose(); got != dialog.PurposeDismissible {
+		t.Errorf("zero Props derive %v, want %v", got, dialog.PurposeDismissible)
 	}
-	if got := (dialog.Props{HideClose: true}).Purpose(); got != dialog.PurposePane {
-		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, dialog.PurposePane)
+	if got := (dialog.Props{HideClose: true}).Purpose(); got != dialog.PurposeDismissible {
+		t.Errorf("HideClose does not make a decision dialog: derived %v, want %v", got, dialog.PurposeDismissible)
 	}
 	if got := (dialog.Props{Decision: &dialog.Decision{}}).Purpose(); got != dialog.PurposeDecision {
 		t.Errorf("Props with a Decision derive %v, want %v", got, dialog.PurposeDecision)
 	}
-	if got, want := dialog.PurposePane.String()+"/"+dialog.PurposeDecision.String(), "pane/decision"; got != want {
+	if got, want := dialog.PurposeDismissible.String()+"/"+dialog.PurposeDecision.String(), "dismissible/decision"; got != want {
 		t.Errorf("the purpose names pair = %q, want %q", got, want)
 	}
 }
@@ -1036,16 +1036,16 @@ func TestPurposeIsDerivedFromDecision(t *testing.T) {
 // ---- The dialog stack ----
 
 // TestACoveredDialogIsInertEvenWhileFocused drives the dialog stack through the
-// whole live pipeline. Two panes are open at once in one Arbiter, and the
+// whole live pipeline. Two dismissible dialogs are open at once in one Arbiter, and the
 // one behind answers neither a key nor a press — even though a control of its
 // own still holds keyboard focus, which is the case where being covered is
 // the only thing that stops it.
 //
-// The front pane here is deliberately X-less and action-less, so it declares
+// The front dismissible dialog here is deliberately X-less and action-less, so it declares
 // no focus tags and never asks for focus: that is what leaves focus stranded
-// on the covered pane's close button and makes the assertion discriminating.
-// With a focusable front pane the router would move focus forward and the
-// covered pane could not answer a key whether the stack existed or not.
+// on the covered dismissible dialog's close button and makes the assertion discriminating.
+// With a focusable front dismissible dialog the router would move focus forward and the
+// covered dismissible dialog could not answer a key whether the stack existed or not.
 //
 // The dialog in front is the one laid out LAST, which is also the one painted
 // last and therefore on top. Push order is layout order, so the stack and the
@@ -1057,14 +1057,14 @@ func TestACoveredDialogIsInertEvenWhileFocused(t *testing.T) {
 
 	back := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
-		Title:   paneTitle,
+		Title:   dismissibleTitle,
 		Body:    body,
 		Arbiter: arb,
 		OnClose: func(_ layout.Context) { backClosed++ },
 	})
 	front := liveDialog(t, dialog.Props{
 		Open:      rx.Of(true),
-		Title:     paneTitle,
+		Title:     dismissibleTitle,
 		Body:      body,
 		HideClose: true,
 		Arbiter:   arb,
@@ -1078,13 +1078,13 @@ func TestACoveredDialogIsInertEvenWhileFocused(t *testing.T) {
 		return front(gtx)
 	}
 
-	// Frame 1: only the first pane is in the tree, so it is the front one
+	// Frame 1: only the first dismissible dialog is in the tree, so it is the front one
 	// and asks for initial focus on its close button.
 	driveFrame(back, ops, r, frameSize)
 	// Frame 2: that focus request lands.
 	driveFrame(back, ops, r, frameSize)
-	// Frame 3: the second pane joins and covers it. It declares no focus
-	// tags, so focus stays where it is — on the covered pane.
+	// Frame 3: the second dismissible dialog joins and covers it. It declares no focus
+	// tags, so focus stays where it is — on the covered dismissible dialog.
 	driveFrame(both, ops, r, frameSize)
 	driveFrame(both, ops, r, frameSize)
 
@@ -1094,8 +1094,8 @@ func TestACoveredDialogIsInertEvenWhileFocused(t *testing.T) {
 		t.Errorf("Escape reached a covered dialog that still held focus: backClosed = %d, want 0", backClosed)
 	}
 
-	// And the pane in front does answer: a corner press is guaranteed
-	// scrim, and a pane dismisses on its backdrop.
+	// And the dismissible dialog in front does answer: a corner press is guaranteed
+	// scrim, and a dismissible dialog dismisses on its backdrop.
 	corner := f32.Pt(4, 4)
 	r.Queue(
 		pointer.Event{Kind: pointer.Press, Position: corner, Buttons: pointer.ButtonPrimary, Source: pointer.Mouse},
@@ -1120,13 +1120,13 @@ func TestACoveredDialogIsStillPainted(t *testing.T) {
 
 	back := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
-		Title:   paneTitle,
+		Title:   dismissibleTitle,
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Arbiter: arb,
 	})
 	front := liveDialog(t, dialog.Props{
 		Open:    rx.Of(true),
-		Title:   paneTitle,
+		Title:   dismissibleTitle,
 		Body:    fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40),
 		Arbiter: arb,
 	})
@@ -1135,7 +1135,7 @@ func TestACoveredDialogIsStillPainted(t *testing.T) {
 		back(gtx)
 		return front(gtx)
 	}, bg))
-	// The covered pane keeps its place on the stack across this second
+	// The covered dismissible dialog keeps its place on the stack across this second
 	// capture — nothing pops it — so the only difference between the two
 	// images is the pixels it contributes.
 	imgFront := golden.Capture(t, frameSize, scene(front, bg))
@@ -1144,7 +1144,7 @@ func TestACoveredDialogIsStillPainted(t *testing.T) {
 		t.Fatal("the covered dialog painted nothing; it must stay visible and only go inert")
 	}
 	// A corner is scrim in both images: one scrim over the background in the
-	// second, two in the first, so the covered pane's dimming is measurable
+	// second, two in the first, so the covered dismissible dialog's dimming is measurable
 	// exactly where its surface is not.
 	bothCorner := imgBoth.RGBAAt(4, 4)
 	frontCorner := imgFront.RGBAAt(4, 4)

@@ -65,7 +65,7 @@ func TestDialogStandsAboveADeferredShadow(t *testing.T) {
 						button.RenderState{Variant: button.Chrome, Surface: colors.SidebarMaterial})(gtx)
 					st.Pop()
 				}
-				w := dialog.Render(shaper, dialog.Props{Title: paneTitle, Shaper: shaper},
+				w := dialog.Render(shaper, dialog.Props{Title: dismissibleTitle, Shaper: shaper},
 					withDialog, colors, tokens.Spacing, sharpRadius,
 					tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 				return w(gtx)
@@ -127,7 +127,7 @@ func TestFocusRingInsideADialogIsDrawn(t *testing.T) {
 			body := button.Render(shaper, "Save", colors, tokens.Spacing, sharpRadius,
 				tokens.DefaultTypography.LabelLarge, tokens.Comfortable,
 				button.RenderState{Focused: focused, Surface: colors.WindowBackground})
-			w := dialog.Render(shaper, dialog.Props{Title: paneTitle, Body: body, Shaper: shaper},
+			w := dialog.Render(shaper, dialog.Props{Title: dismissibleTitle, Body: body, Shaper: shaper},
 				true, colors, tokens.Spacing, sharpRadius,
 				tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
 			return w(gtx)

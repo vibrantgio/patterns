@@ -18,7 +18,7 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// A pane's close mark is a drawn cross, not a symbol and not a filled
+// A dismissible dialog's close mark is a drawn cross, not a symbol and not a filled
 // control, so what it has to clear is the floor for a mark that carries
 // meaning without being read as text — tokens.GraphicFloor, in the APCA
 // lightness contrast this system measures in since CC1.2. The text floor is
@@ -36,7 +36,7 @@ const closeMarkFloor = tokens.GraphicFloor
 // operable.
 var closeTargetDp = int(tokens.Comfortable.ControlHeight)
 
-// markOnly is the fixture both measurements below are taken from: a pane
+// markOnly is the fixture both measurements below are taken from: a dismissible dialog
 // with no title and no body, so the only thing drawn inside its surface is
 // the close mark. That is what lets the mark be found in the pixels by
 // looking for what is not the surface fill, with no coordinate written down
@@ -112,9 +112,9 @@ func absDiffU8(a, b uint8) int {
 	return int(b - a)
 }
 
-// capturePane renders the mark-only pane in one scheme and returns the
+// captureDismissible renders the mark-only dismissible dialog in one scheme and returns the
 // frame together with the surface fill it was drawn on.
-func capturePane(t *testing.T, c tokens.PlatformColors, bg color.NRGBA) (*image.RGBA, color.NRGBA) {
+func captureDismissible(t *testing.T, c tokens.PlatformColors, bg color.NRGBA) (*image.RGBA, color.NRGBA) {
 	t.Helper()
 	shaper := defaultShaper(t)
 	// The default radius rather than the goldens' sharp one: this is a
@@ -142,13 +142,13 @@ func TestCloseMarkContrast(t *testing.T) {
 		{"dark", tokens.PlatformDark, color.NRGBA{R: 20, G: 20, B: 20, A: 255}},
 	} {
 		t.Run(sc.name, func(t *testing.T) {
-			img, fill := capturePane(t, sc.c, sc.bg)
+			img, fill := captureDismissible(t, sc.c, sc.bg)
 			surface, mark, markColor, contrast := surfaceAndMark(img, fill, cornerInset)
 			if surface.Empty() {
 				t.Fatal("no surface found: nothing in the frame holds the dialog's own fill")
 			}
 			if mark.Empty() {
-				t.Fatal("no close mark found: the pane's surface is bare")
+				t.Fatal("no close mark found: the dismissible dialog's surface is bare")
 			}
 			t.Logf("surface %v, mark %v (%d×%d px), colour %v on fill %v, |Lc| %.2f",
 				surface, mark, mark.Dx(), mark.Dy(), markColor, fill, contrast)
@@ -182,18 +182,18 @@ func TestCloseMarkContrast(t *testing.T) {
 
 // TestCloseTargetMeetsTheStandaloneFloor measures the mark's POINTER target
 // the only way a target can honestly be measured: by pressing at points
-// around it and seeing which of them close the pane.
+// around it and seeing which of them close the dismissible dialog.
 //
 // The run is walked outward from the mark's own centre until a press stops
 // arriving, on each of the four sides, so what comes out is the live target's
 // width and height and not a restatement of the constant that produced them.
 // The walk is bounded well inside the surface: past the surface a press lands
-// on the scrim, which closes a pane too, and would report a target running
+// on the scrim, which closes a dismissible dialog too, and would report a target running
 // off to the window's edge.
 func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	// Find the mark's centre from the static render, which lays the header
 	// out exactly as the live pipeline does.
-	img, fill := capturePane(t, tokens.PlatformLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
+	img, fill := captureDismissible(t, tokens.PlatformLight, color.NRGBA{R: 240, G: 240, B: 240, A: 255})
 	surface, mark, _, _ := surfaceAndMark(img, fill, cornerInset)
 	if mark.Empty() {
 		t.Fatal("no close mark found to measure the target of")
@@ -225,7 +225,7 @@ func TestCloseTargetMeetsTheStandaloneFloor(t *testing.T) {
 	}
 
 	if !press(cx, cy) {
-		t.Fatalf("a press on the mark itself at (%d,%d) did not close the pane", cx, cy)
+		t.Fatalf("a press on the mark itself at (%d,%d) did not close the dismissible dialog", cx, cy)
 	}
 
 	// bound keeps the walk clear of the surface's edge by a margin wider than

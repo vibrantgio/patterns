@@ -209,10 +209,10 @@ func TestAffordancesAreDerivedFromPurpose(t *testing.T) {
 		wantDismiss      bool
 		wantEscapeCancel bool // Escape routes to Decision.Cancel rather than OnClose
 	}{
-		{"a bare pane", Props{OnClose: onClose},
-			PurposePane, true, true, false},
-		{"a pane that hides its X", Props{OnClose: onClose, HideClose: true},
-			PurposePane, false, true, false},
+		{"a bare dismissible dialog", Props{OnClose: onClose},
+			PurposeDismissible, true, true, false},
+		{"a dismissible dialog that hides its X", Props{OnClose: onClose, HideClose: true},
+			PurposeDismissible, false, true, false},
 		{"a decision", Props{OnClose: onClose, Decision: &Decision{Cancel: cancel}},
 			PurposeDecision, false, false, true},
 		{"a decision that asked for its X back", Props{OnClose: onClose, HideClose: false, Decision: &Decision{Cancel: cancel}},

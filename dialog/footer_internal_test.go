@@ -130,8 +130,8 @@ func TestADialogOpensOnItsBodysFirstFocusable(t *testing.T) {
 		want event.Tag
 		why  string
 	}{
-		{"pane", func(p *Props) { p.Decision = nil }, &first,
-			"a pane opens on its body's first control, not on the close affordance"},
+		{"dismissible dialog", func(p *Props) { p.Decision = nil }, &first,
+			"a dismissible dialog opens on its body's first control, not on the close affordance"},
 		{"decision", func(p *Props) { p.Decision = &Decision{} }, &first,
 			"a decision opens on its body's first control, not on its first answer"},
 	} {
