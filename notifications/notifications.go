@@ -251,10 +251,6 @@ type resolvedTokens struct {
 	radius  tokens.RadiusScale
 	style   tokens.TextStyle // the LabelMedium role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
-	// elevation is snapshotted so a theme elevation change re-emits the
-	// layout.Widget; the toast's fill resolves through the inverse pair,
-	// which reads the default tokens.Elevation scale.
-	elevation tokens.ElevationScale
 	// fade is the trailing fade window, the motion scale's DurSlow stop.
 	// Zero (the Render path) disables fading: toasts paint fully opaque
 	// until they leave the queue.
@@ -270,24 +266,19 @@ type resolvedTokens struct {
 func Column(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
 	// typography emission supplies both the LabelMedium text style and the
-	// theme's cached shaper; the motion emission supplies the fade window
-	// (rx tops out at CombineLatest5, hence the nested CombineLatest2).
+	// theme's cached shaper; the motion emission supplies the fade window.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest2(
-				rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Elevation),
-				t.Motion,
-			),
-			func(n rx.Tuple2[rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.ElevationScale], tokens.MotionScale]) resolvedTokens {
-				typ := n.First.Fourth
+			rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Motion),
+			func(n rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.MotionScale]) resolvedTokens {
+				typ := n.Fourth
 				return resolvedTokens{
-					color:     n.First.First,
-					spacing:   n.First.Second,
-					radius:    n.First.Third,
-					style:     typ.LabelMedium,
-					shaper:    typ.Shaper(),
-					elevation: n.First.Fifth,
-					fade:      n.Second.DurSlow,
+					color:   n.First,
+					spacing: n.Second,
+					radius:  n.Third,
+					style:   typ.LabelMedium,
+					shaper:  typ.Shaper(),
+					fade:    n.Fifth.DurSlow,
 				}
 			},
 		)

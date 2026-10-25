@@ -386,10 +386,6 @@ type resolvedTokens struct {
 	radius  tokens.RadiusScale
 	title   tokens.TextStyle // the TitleMedium role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
-	// elevation is snapshotted so a theme elevation change re-emits the
-	// layout.Widget; the shadow's reach resolves through effects/depth,
-	// which reads the default tokens.Elevation scale.
-	elevation tokens.ElevationScale
 }
 
 // Dialog returns an rx.Observable[layout.Widget] that emits a new one
@@ -408,16 +404,15 @@ func Dialog(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 	// theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest5(t.Platform, t.Spacing, t.Radius, t.Typography, t.Elevation),
-			func(n rx.Tuple5[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography, tokens.ElevationScale]) resolvedTokens {
+			rx.CombineLatest4(t.Platform, t.Spacing, t.Radius, t.Typography),
+			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.Typography]) resolvedTokens {
 				typ := n.Fourth
 				return resolvedTokens{
-					color:     n.First,
-					spacing:   n.Second,
-					radius:    n.Third,
-					title:     typ.TitleMedium,
-					shaper:    typ.Shaper(),
-					elevation: n.Fifth,
+					color:   n.First,
+					spacing: n.Second,
+					radius:  n.Third,
+					title:   typ.TitleMedium,
+					shaper:  typ.Shaper(),
 				}
 			},
 		)

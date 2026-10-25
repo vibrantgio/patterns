@@ -186,10 +186,6 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	// elevation is snapshotted so a theme elevation change re-emits the
-	// layout.Widget; the shadow's reach resolves through effects/depth,
-	// which reads the default tokens.Elevation scale.
-	elevation tokens.ElevationScale
 }
 
 // Popover returns an rx.Observable[layout.Widget] that emits a new one
@@ -206,9 +202,9 @@ func Popover(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	}
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
-			rx.CombineLatest4(t.Platform, t.Spacing, t.Radius, t.Elevation),
-			func(n rx.Tuple4[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale, tokens.ElevationScale]) resolvedTokens {
-				return resolvedTokens{color: n.First, spacing: n.Second, radius: n.Third, elevation: n.Fourth}
+			rx.CombineLatest3(t.Platform, t.Spacing, t.Radius),
+			func(n rx.Tuple3[tokens.PlatformColors, tokens.SpacingScale, tokens.RadiusScale]) resolvedTokens {
+				return resolvedTokens{color: n.First, spacing: n.Second, radius: n.Third}
 			},
 		)
 	})

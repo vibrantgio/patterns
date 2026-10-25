@@ -13,8 +13,8 @@ stray backdrop click answer the question, the popover that dismisses
 when you open another one, the column that stacks and times its
 notifications, the table that lays out only the rows you can see. Each pattern reads its visual
 values from [theme](https://github.com/vibrantgio/theme)'s theme
-observable, and the theme carries the whole look: colour, typography, density,
-elevation and motion. A window follows the OS between light and dark with no
+observable, and the theme carries the whole look: colour, typography, density
+and motion. A window follows the OS between light and dark with no
 application code; switching an app to Compact density resizes the navbar,
 sidebar items, tabs and table rows as a theme change, not a sweep;
 every fill, foreground and seam reads the platform's own name for what that
