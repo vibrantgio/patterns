@@ -178,9 +178,9 @@ const underlineDp = 2
 
 // insetDp is the navbar's vertical inset at density d, in dp: the bar's inset
 // above and below its slots, and a link cell's padding above and below its
-// title. It is 2 at Comfortable and 0 at every other density. No measurement
-// stands behind these values. theme/export states the same pair as
-// --navbar-inset.
+// title. It is 2 at Comfortable and 0 at Compact; a density that is neither
+// preset takes 2. No measurement stands behind these values. theme/export
+// states the same pair as --navbar-inset.
 func insetDp(d tokens.Density) float32 {
 	if d == tokens.Compact {
 		return 0
