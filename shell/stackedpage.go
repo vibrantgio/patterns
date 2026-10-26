@@ -63,8 +63,8 @@ func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observ
 // linkTitle is the text style of the navbar's links: the SystemFont
 // role, because a link is text on a control. The page has no title, and
 // the navbar uses this style only for each link's title. d is the density
-// the navbar's own insets derive from. The navbar's band is the platform's
-// measured depth and takes no density. Pass
+// whose toolbar control height sets a link cell's height. The navbar's band
+// is the platform's measured depth and takes no density. Pass
 // tokens.DefaultTypography.SystemFont and tokens.Comfortable for the
 // default desktop look.
 func RenderStackedPage(

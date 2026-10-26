@@ -14,10 +14,9 @@
 // the true centre by half the difference. Match the two slots' widths
 // when that matters. Vertically there is no approximation — all three
 // slots are measured with no minimum height and drawn so that each one's
-// own middle lands on the bar's middle, whatever height the bar is given
-// and whatever a slot brings. A Brand that fills the height it is offered
-// and draws at the top of it — a plain column of text does — is centred
-// here all the same.
+// own middle lands on the bar's middle, whatever height a slot brings. A
+// Brand that fills the height it is offered and draws at the top of it — a
+// plain column of text does — is centred here all the same.
 //
 // Link.Active and Link.OnClick are independent. Active only selects the
 // Primary underline, and a nil OnClick makes a link non-interactive and
@@ -26,13 +25,16 @@
 //
 // There is no overflow behaviour: every Link renders on one line, and a
 // bar too narrow for its own contents clips rather than wrapping or
-// collapsing to a menu affordance. The bar also fills the height it is
-// given — it reports gtx.Constraints.Max — so it needs a
-// height-constrained slot; patterns/shell pins it to the density's bar
-// height (ControlHeight + 2 × the bar's vertical inset — 52 dp Comfortable,
-// 40 dp Compact) for you. The bar's own vertical inset is 2 dp at
-// Comfortable and 0 at Compact, so a ControlHeight action (a components/button) fills a density-pinned slot
-// exactly; the horizontal inset stays spacing S4.
+// collapsing to a menu affordance.
+//
+// The bar is the window's toolbar band, and its height is the band's depth:
+// [pane.BandDp], 52 dp at every density. The reference measures this depth
+// from five toolbar windows: a 36 px control with 8 px above it and 8 px
+// below it. A caller that forces a larger minimum height gets a taller bar,
+// with the slots centred in it. The bar fills the width it is given. The bar
+// has no vertical inset of its own: each slot is centred in the band, so the
+// band leaves the space above and below its controls. The horizontal inset
+// is spacing S4.
 package navbar
 
 import (
@@ -53,6 +55,7 @@ import (
 	"github.com/vibrantgio/components/attachment"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/components/pointershape"
+	"github.com/vibrantgio/patterns/pane"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -148,8 +151,8 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // reads both of the parameters below off the theme.
 //
 // title is the SystemFont role's whole text style — typeface, weight,
-// size and line height all reach the shaper — and d is the density the
-// bar draws at (its vertical inset and the links' padding). Pass
+// size and line height all reach the shaper — and d is the density whose
+// toolbar control height sets a link cell's height. Pass
 // tokens.DefaultTypography.SystemFont and tokens.Comfortable for the
 // default desktop look.
 func Render(
@@ -169,46 +172,32 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	title   tokens.TextStyle // the SystemFont role: typeface, weight, size, line height
-	density tokens.Density   // bar inset and link padding source
+	density tokens.Density   // source of the link cell's height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
 // underlineDp is the thickness of the Active link's indicator.
 const underlineDp = 2
 
-// insetDp is the navbar's vertical inset at density d, in dp: the bar's inset
-// above and below its slots, and a link cell's padding above and below its
-// title. It is 2 at Comfortable and 0 at Compact; a density that is neither
-// preset takes 2. No measurement stands behind these values. theme/export
-// states the same pair as --navbar-inset.
-func insetDp(d tokens.Density) float32 {
-	if d == tokens.Compact {
-		return 0
-	}
-	return 2
-}
-
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.PlatformColors, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
-	size := gtx.Constraints.Max
+	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(unit.Dp(pane.BandDp))))
 	// A navigation bar is chrome, so it wears the
 	// chrome material: the sidebar and toolbar fill, which in the light appearance
 	// is the content's white exactly and in the dark one a blue-grey
 	// lighter than the content.
 	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: size}.Op())
 
-	// The vertical inset is [insetDp], so a ControlHeight control in a
-	// density-pinned slot (ControlHeight + 2 × insetDp) fills it exactly; the
-	// horizontal inset stays spacing S4.
+	// The bar has no vertical inset: centredRow centres each slot in the
+	// band. The horizontal inset is spacing S4.
 	inset := layout.Inset{
-		Top:    unit.Dp(insetDp(d)),
-		Bottom: unit.Dp(insetDp(d)),
-		Left:   unit.Dp(sp.S4),
-		Right:  unit.Dp(sp.S4),
+		Left:  unit.Dp(sp.S4),
+		Right: unit.Dp(sp.S4),
 	}
 	// The inset places its child at an offset known before the child is laid
 	// out, so the available room and the floating surfaces are moved by that
 	// offset first.
 	igtx := attachment.AvailableRoomAt(gtx, image.Pt(gtx.Dp(inset.Left), gtx.Dp(inset.Top)))
+	igtx.Constraints = layout.Exact(size)
 	inset.Layout(igtx, func(gtx layout.Context) layout.Dimensions {
 		return centredRow(gtx,
 			brandSlot(props.Brand),
@@ -394,9 +383,11 @@ func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 	return colors.SelectedContentBackground
 }
 
-// linkWidget renders a single link as its title centred inside
-// (S3, insetDp) padding — the horizontal 12 dp stays on the spacing scale,
-// the vertical padding is the navbar's own inset for the density. The cell width is
+// linkWidget renders a single link as a cell of the density's toolbar
+// control height: 36 dp, which is what the band leaves between its 8 dp
+// above and 8 dp below. A title line taller than that makes the cell taller.
+// The title is centred in the part of the cell above the underline slot, and
+// S3 pads it horizontally. The cell width is
 // at least 2×S3 so the Active underline is visible even when the title
 // rasterises to zero width, which an empty Link.Title does. Links are
 // adjacent cells in a row, so their hit area stays the cell bounds
@@ -406,7 +397,6 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 	return func(gtx layout.Context) layout.Dimensions {
 		inner := func(gtx layout.Context) layout.Dimensions {
 			padH := gtx.Dp(unit.Dp(sp.S3))
-			padV := gtx.Dp(unit.Dp(insetDp(d)))
 			underlineH := gtx.Dp(unit.Dp(underlineDp))
 
 			titleGtx := gtx
@@ -422,7 +412,8 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 			titleCall := mTitle.Stop()
 
 			cellW := titleDims.Size.X + 2*padH
-			cellH := titleDims.Size.Y + 2*padV + underlineH
+			cellH := max(gtx.Dp(unit.Dp(d.ToolbarControlHeight)), titleDims.Size.Y+underlineH)
+			padV := (cellH - underlineH - titleDims.Size.Y) / 2
 
 			st := op.Offset(image.Pt(padH, padV)).Push(gtx.Ops)
 			titleCall.Add(gtx.Ops)

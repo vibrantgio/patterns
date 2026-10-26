@@ -21,13 +21,16 @@ import (
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/patterns/navbar"
+	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
 )
 
+// frameH is the toolbar band's depth, [pane.BandDp]: the height the bar
+// draws at every density.
 const (
-	frameW, frameH = 480, 64
+	frameW, frameH = 480, 52
 )
 
 var frameSize = image.Pt(frameW, frameH)
@@ -65,8 +68,8 @@ func links(activeIdx int) []navbar.Link {
 }
 
 // TestNavbarGolden records or diffs the three Measurable goldens. Each link
-// cell is its title plus (S3, S2) padding, so the Active link's underline
-// runs the width of the title.
+// cell is its title plus S3 padding either side, so the Active link's
+// underline runs the width of the title and its padding.
 func TestNavbarGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -316,20 +319,36 @@ func densityTheme(d tokens.Density) theme.Theme {
 	return th
 }
 
-// barHeight is the height the navbar actually draws at density d: a link
-// cell is the line its title draws plus the navbar's vertical inset above
-// and below plus the Active underline, and the bar insets that row by the
-// same inset again.
-//
-// It is computed rather than taken from Density.ControlHeight + 2 × the inset:
-// that pin does not budget for the link cell's 2 dp Active underline, so a
-// window sized from it alone can squeeze the bottom padding to nothing and
-// leave the underline flush against the last pixel row.
-func barHeight(t *testing.T, d tokens.Density, style tokens.TextStyle) int {
-	t.Helper()
-	inset := int(navbar.InsetDp(d))
-	cell := drawnLine(t, style) + 2*inset + navbarUnderlineDp
-	return cell + 2*inset
+// TestNavbarIsTheBandDepthAtEveryDensity asserts that the bar is the toolbar
+// band's depth, 52 dp, at Comfortable and at Compact, through the live
+// pipeline and the static path. The bar is offered more height than the band
+// in each case, so the depth is the bar's own and not the caller's.
+func TestNavbarIsTheBandDepthAtEveryDensity(t *testing.T) {
+	if pane.BandDp != 52 {
+		t.Fatalf("pane.BandDp = %v, want the measured 52", pane.BandDp)
+	}
+	props := navbar.Props{
+		Links:  []navbar.Link{{Title: linkLabels[0], Active: true, OnClick: func(_ layout.Context) {}}},
+		Shaper: defaultShaper(t),
+	}
+	for _, d := range []tokens.Density{tokens.Comfortable, tokens.Compact} {
+		for _, path := range []struct {
+			name string
+			w    layout.Widget
+		}{
+			{"live", liveWidget(t, navbar.Navbar(rx.Of(densityTheme(d)), props))},
+			{"static", navbar.Render(defaultShaper(t), props, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, d)},
+		} {
+			gtx := layout.Context{
+				Ops:         new(op.Ops),
+				Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+				Constraints: layout.Constraints{Max: image.Pt(frameW, 200)},
+			}
+			if got := path.w(gtx).Size; got != image.Pt(frameW, 52) {
+				t.Errorf("density %+v, %s: the bar is %v, want %dx52", d, path.name, got, frameW)
+			}
+		}
+	}
 }
 
 // drawnLine is the height of the line a link's title draws in style. It is
@@ -350,10 +369,8 @@ func drawnLine(t *testing.T, style tokens.TextStyle) int {
 const navbarUnderlineDp = 2
 
 // TestNavbarCompactGolden records or diffs the compact-density golden
-// through the LIVE pipeline (the static Render path is frozen at
-// tokens.Comfortable): the bar's vertical inset and the link padding
-// drop to the navbar's Compact inset (0 dp). The frame is [barHeight] at
-// Compact, 19 px, not the shell's pin; see barHeight for why.
+// through the LIVE pipeline. The bar is the band's depth at Compact too, so
+// the frame is [frameH].
 func TestNavbarCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := navbar.Props{
@@ -364,8 +381,7 @@ func TestNavbarCompactGolden(t *testing.T) {
 		Shaper: defaultShaper(t),
 	}
 	w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(tokens.Compact)), props))
-	h := barHeight(t, tokens.Compact, tokens.DefaultTypography.SystemFont)
-	golden.Render(t, "light-compact", image.Pt(frameW, h), scene(w, lightBG))
+	golden.Render(t, "light-compact", frameSize, scene(w, lightBG))
 }
 
 // colorBand reports the first and last row of img holding the colour c, or
@@ -412,9 +428,10 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	brandColor := color.NRGBA{R: 0, G: 0, B: 255, A: 255}
 	actionColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
 	const brandH, actionH = 10, 20
-	// cellH is a link cell as linkWidget builds one: the line the title
-	// draws, the navbar's inset above and below, and the Active underline.
-	cellH := drawnLine(t, style) + 2*int(navbar.InsetDp(d)) + navbarUnderlineDp
+	// cellH is a link cell as linkWidget builds one: the density's toolbar
+	// control height, or the title's line and the Active underline when they
+	// are taller.
+	cellH := max(int(d.ToolbarControlHeight), drawnLine(t, style)+navbarUnderlineDp)
 
 	// A brand that fills the height it is offered and paints only the top of
 	// it, which is what a run of text in a column does.
@@ -423,8 +440,9 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 		return layout.Dimensions{Size: image.Pt(60, max(gtx.Constraints.Min.Y, brandH))}
 	}
 
-	// The bar at its own height, and at two heights a caller might pin it to.
-	for _, h := range []int{barHeight(t, d, style), 64, 80} {
+	// The bar in a frame of its own height, and in two taller frames whose
+	// exact constraints force a taller bar.
+	for _, h := range []int{frameH, 64, 80} {
 		props := navbar.Props{
 			Brand:   brand,
 			Links:   []navbar.Link{{Title: linkLabels[0], Active: true}, {Title: linkLabels[1]}},
@@ -466,15 +484,14 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	}
 }
 
-// TestNavbarKeepsItsBottomPadding asserts that in a frame of [barHeight]
-// the Active underline — the lowest thing the bar draws — clears the
-// bottom inset, so the bar keeps the breathing room its own inset asks
-// for and is nowhere near the edge it would be clipped at.
+// TestNavbarKeepsItsBottomPadding asserts that the Active underline — the
+// lowest thing a link draws — stays clear of the space the band leaves below
+// its controls: the band is 52 dp, a toolbar control is 36 dp, and the band
+// centres it with 8 dp above and 8 dp below.
 //
-// The navbar fills its constraints, so its reported Dimensions can never
-// report an overflow; only the pixels can. This reads them.
+// The navbar reports the band's depth whatever it draws, so its Dimensions
+// can never report an overflow; only the pixels can. This reads them.
 func TestNavbarKeepsItsBottomPadding(t *testing.T) {
-	style := tokens.DefaultTypography.SystemFont
 	mark := tokens.PlatformLight.SelectedContentBackground
 
 	for _, d := range []tokens.Density{tokens.Comfortable, tokens.Compact} {
@@ -483,11 +500,10 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 			Shaper: defaultShaper(t),
 		}
 		w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(d)), props))
-		h := barHeight(t, d, style)
-		img := golden.Capture(t, image.Pt(frameW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
+		img := golden.Capture(t, frameSize, scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
 
 		lowest := -1
-		for y := 0; y < h; y++ {
+		for y := 0; y < frameH; y++ {
 			for x := 0; x < frameW; x++ {
 				r, g, b, _ := img.At(x, y).RGBA()
 				if uint8(r>>8) == mark.R && uint8(g>>8) == mark.G && uint8(b>>8) == mark.B {
@@ -499,9 +515,10 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 		if lowest < 0 {
 			t.Fatalf("density %+v: no selection-coloured pixel in the bar; the Active underline did not draw, so this proves nothing", d)
 		}
-		if want := h - int(navbar.InsetDp(d)); lowest >= want {
-			t.Errorf("density %+v: the underline reaches row %d of a %d px bar, inside the %d dp bottom inset",
-				d, lowest, h, int(navbar.InsetDp(d)))
+		below := (frameH - int(d.ToolbarControlHeight)) / 2
+		if want := frameH - below; lowest >= want {
+			t.Errorf("density %+v: the underline reaches row %d of a %d px bar, inside the %d dp the band leaves below its controls",
+				d, lowest, frameH, below)
 		}
 	}
 }
