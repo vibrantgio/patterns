@@ -32,8 +32,8 @@ func squareTooltip(c tokens.PlatformColors) layout.Widget {
 		},
 	}
 	sh := tokens.DefaultTypography.DeterministicShaper()
-	shown := tooltip.Render(sh, props, true, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
-	hidden := tooltip.Render(sh, props, false, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
+	shown := tooltip.Render(sh, props, true, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.SmallSystemFont)
+	hidden := tooltip.Render(sh, props, false, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.SmallSystemFont)
 	return func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints = layout.Exact(image.Pt(roomTrigger, roomTrigger))
 		if gtx.Values[showTooltips] == true {
