@@ -434,8 +434,8 @@ func columnWidths[T any](gtx layout.Context, columns []Column[T], totalW int) []
 // drawHeaderRow renders the bold-weight header titles with optional sort
 // chevrons and clickable hit areas for sortable columns. The header's
 // hairline is its own edge, part of the table's structure, not a seam. It
-// runs from the leading edge to rowsW, where the header's rows end: the
-// lane of a standing bar is short of it, as Finder's header measures.
+// runs from the leading edge to rowsW, where the header's rows end, and
+// stops short of a standing bar's lane, as Finder's header measures.
 func drawHeaderRow[T any](
 	gtx layout.Context,
 	shaper *text.Shaper,
