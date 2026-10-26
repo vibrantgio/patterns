@@ -36,8 +36,9 @@ type EmptyStateProps struct {
 	// Line is the application's own sentence saying why there is nothing to
 	// show: nothing selected, nothing in the collection, content still
 	// arriving, a read that failed. It names no control — a control is
-	// handed in through Actions — and it is one line: a frame too narrow for
-	// it truncates it rather than wrapping it. An empty Line paints nothing.
+	// handed in through Actions. A line wider than the frame is set on more
+	// lines, each centred across the frame, and no part of it is left out.
+	// An empty Line paints nothing.
 	Line string
 
 	// Description is what may stand under the line to say more. It is
@@ -158,7 +159,7 @@ func emptyStateGroup(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColor
 
 	stack(0, func(gtx layout.Context) layout.Dimensions {
 		return typeset.TextAligned(gtx, sh, p.Line, emptyStateLineStyle(typ, p.LineStyle),
-			vgcolor.Flatten(c.TertiaryLabel, fill), 1, font.Normal, text.Middle)
+			vgcolor.Flatten(c.TertiaryLabel, fill), 0, font.Normal, text.Middle)
 	})
 	if p.Description != "" {
 		stack(gtx.Dp(EmptyStateDescriptionGap), func(gtx layout.Context) layout.Dimensions {

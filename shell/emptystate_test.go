@@ -296,7 +296,7 @@ func TestEmptyStateCentresTheGroupItIsGiven(t *testing.T) {
 			small := emptyStateGroupImage(t, sh, tc.colors, fill, emptyStateFrame)
 			large := emptyStateGroupImage(t, sh, tc.colors, fill, grown)
 
-			lineH := emptyStateHeightOf(t, sh, line, emptyStateText, emptyStateFrame, 1)
+			lineH := emptyStateHeightOf(t, sh, line, emptyStateText, emptyStateFrame, 0)
 			descH := emptyStateHeightOf(t, sh, tokens.DefaultTypography.Body,
 				emptyStateDescription, emptyStateFrame, 0)
 			// The metric the captures are taken under is one pixel per dp,
@@ -361,7 +361,7 @@ func emptyStateLineOnly(t *testing.T, sh *text.Shaper, c tokens.PlatformColors,
 		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
 		gtx.Constraints = layout.Exact(size)
 		typeset.TextAligned(gtx, sh, emptyStateText, style,
-			vgcolor.Flatten(c.TertiaryLabel, fill), 1, font.Normal, text.Middle)
+			vgcolor.Flatten(c.TertiaryLabel, fill), 0, font.Normal, text.Middle)
 		return layout.Dimensions{Size: size}
 	})
 }
@@ -400,4 +400,44 @@ func boxOfColor(img *image.RGBA, col color.NRGBA) image.Rectangle {
 		}
 	}
 	return box
+}
+
+// longEmptyStateLine names a query far wider than the narrow frame below, set
+// between the platform's quotation marks as typed.
+const longEmptyStateLine = "No Results for \u201ca query typed far longer than the column is wide\u201d"
+
+// TestALineWiderThanTheFrameIsSetOnMoreLines renders a line far wider than a
+// narrow frame and reads it back: it is taller than one line, it stays inside
+// the frame's sides and centred in it, and two lines that differ only at
+// their ends draw differently, so no part of the line was left out.
+func TestALineWiderThanTheFrameIsSetOnMoreLines(t *testing.T) {
+	sh := defaultShaper(t)
+	frame := image.Pt(240, 400)
+	c := tokens.PlatformLight
+	fill := c.TextBackground
+	render := func(line string) *image.RGBA {
+		return golden.Capture(t, frame, func(gtx layout.Context) layout.Dimensions {
+			paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+			return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill,
+				shell.EmptyStateProps{Line: line})
+		})
+	}
+	short := glyphBox(render(emptyStateText[:2]), fill)
+	img := render(longEmptyStateLine)
+	box := glyphBox(img, fill)
+	if box.Empty() || short.Empty() {
+		t.Fatal("the line painted nothing at all")
+	}
+	if box.Min.X < 1 || box.Max.X > frame.X-1 {
+		t.Errorf("the line spans columns %d..%d, against the frame's 0..%d", box.Min.X, box.Max.X-1, frame.X-1)
+	}
+	if box.Dy() < 2*short.Dy() {
+		t.Errorf("the line is %d tall against %d for one line; it was not set on more lines", box.Dy(), short.Dy())
+	}
+	assertCentred(t, "a narrow frame", box, frame, 2, 2)
+
+	other := longEmptyStateLine[:len(longEmptyStateLine)-len("wide\u201d")] + "broad\u201d"
+	if golden.PixelDiff(img, render(other)) == 0 {
+		t.Error("two lines that differ only at their ends drew the same; the end was left out")
+	}
 }
