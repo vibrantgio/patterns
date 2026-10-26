@@ -19,6 +19,7 @@ import (
 
 	"github.com/reactivego/rx"
 	"github.com/vibrantgio/components/golden"
+	"github.com/vibrantgio/components/scrollbar"
 	"github.com/vibrantgio/patterns/table"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
@@ -354,6 +355,76 @@ func TestCurrentFillsTheChosenRow(t *testing.T) {
 	if got := render(func(i int) bool { return i == 1 }); got != surface {
 		t.Errorf("row 0 = %v while row 1 is current; the mark followed the wrong item", got)
 	}
+}
+
+// TestTheBarStandsBesideTheRows pins the table's scroll bar at the
+// platform's Always setting. When the rows overflow, the bar stands in a lane
+// at the body's trailing edge and the columns share the width short of the
+// lane. When the rows fit, the bar draws nothing and the columns share the
+// full width. The sort chevron is drawn at the active column's trailing edge,
+// so its place proves that the header's titles stay over their columns.
+// PxPerDp is 1 here.
+func TestTheBarStandsBesideTheRows(t *testing.T) {
+	shaper := defaultShaper(t)
+	size := image.Pt(360, 360)
+	c := tokens.PlatformLight
+	standing := scrollbar.FromTokens(c, c.ControlBackground).Always()
+	lane := int(standing.Width())
+	rowH := int(tokens.Comfortable.RowHeight)
+	cols := []table.Column[int]{
+		{Header: "ID", Width: unit.Dp(80), Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
+		{Header: "Name", Cell: textCell(shaper, func(i int) string { return rowNames[i%len(rowNames)] })},
+		{Header: "Steps", Width: unit.Dp(96), Sortable: true, Cell: textCell(shaper, func(i int) string { return strconv.Itoa(4 * (i + 1)) })},
+	}
+	// The chevron's centre is half a chevron and one cell padding inside
+	// the end of the last column.
+	const cellPad, chevron = 12, 10
+	chevronAt := func(colEnd int) image.Point { return image.Pt(colEnd-cellPad-chevron/2, rowH/2) }
+
+	render := func(rows int) *image.RGBA {
+		items := make([]int, rows)
+		for i := range items {
+			items[i] = i
+		}
+		props := table.Props[int]{
+			Columns:   cols,
+			Items:     rx.Of(items),
+			Sort:      rx.Of(table.Sort{Column: 2, Asc: true}),
+			Shaper:    shaper,
+			Scrollbar: func(s scrollbar.Style) scrollbar.Style { return s.Always() },
+		}
+		w := liveWidget(t, table.Table(rx.Of(densityTheme(tokens.Comfortable)), props))
+		return golden.Capture(t, size, scene(w, color.NRGBA{R: 255, G: 0, B: 255, A: 255}))
+	}
+
+	t.Run("rows overflow", func(t *testing.T) {
+		img := render(30)
+		// The thumb is at the top of the track, so the foot of the lane
+		// shows the track.
+		if got, want := pixelAt(img, size.X-lane/2, size.Y-rowH), standing.TrackColor; got != want {
+			t.Errorf("lane = %v, want the standing track %v", got, want)
+		}
+		if p := chevronAt(size.X - lane); pixelAt(img, p.X, p.Y) == c.ControlBackground {
+			t.Errorf("no chevron at %v; the header's columns must end where the rows end, short of the lane", p)
+		}
+		if p := chevronAt(size.X); pixelAt(img, p.X, p.Y) != c.ControlBackground {
+			t.Errorf("chevron at %v, over the lane; the header's columns must end where the rows end", p)
+		}
+	})
+	t.Run("rows fit", func(t *testing.T) {
+		img := render(4)
+		// Row 0 is not striped, so the row runs to the edge in the plane's
+		// own fill.
+		if got, want := pixelAt(img, size.X-lane/2, rowH+rowH/2), c.ControlBackground; got != want {
+			t.Errorf("trailing edge of row 0 = %v, want the plane %v; rows that fit take no lane", got, want)
+		}
+		if p := chevronAt(size.X); pixelAt(img, p.X, p.Y) == c.ControlBackground {
+			t.Errorf("no chevron at %v; rows that fit give the columns the full width", p)
+		}
+		if p := chevronAt(size.X - lane); pixelAt(img, p.X, p.Y) != c.ControlBackground {
+			t.Errorf("chevron at %v, short of a lane that rows that fit do not take", p)
+		}
+	})
 }
 
 // pixelAt reads one pixel as the opaque NRGBA every token in the set is.

@@ -7,6 +7,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/reactivego/rx"
+	"github.com/vibrantgio/components/scrollbar"
 	"github.com/vibrantgio/patterns/table"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -41,8 +42,11 @@ func ExampleTable() {
 		{ID: 4, Name: "Delta", Value: 6},
 	}
 
+	// This window's platform setting for scroll bars is Always, so the bar
+	// stands in a lane beside the rows while they overflow.
 	_ = table.Table(rx.Of(theme.Default()), table.Props[row]{
-		Columns: columns,
-		Items:   rx.Of(rows),
+		Columns:   columns,
+		Items:     rx.Of(rows),
+		Scrollbar: func(s scrollbar.Style) scrollbar.Style { return s.Always() },
 	})
 }

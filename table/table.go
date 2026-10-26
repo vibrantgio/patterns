@@ -53,6 +53,7 @@ import (
 	"github.com/vibrantgio/components/attachment"
 	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/components/pointershape"
+	"github.com/vibrantgio/components/scrollbar"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
@@ -121,6 +122,20 @@ type Props[T any] struct {
 	// row, not on a focus tag per row.
 	Current func(item T) bool
 
+	// Scrollbar, if non-nil, is handed the bar the rows scroll under — the
+	// theme's own, built from the content fill the rows are drawn on — and
+	// returns the bar to draw. It is where an application applies the
+	// platform's "Show scroll bars" setting, which is read through the
+	// platform bridge above this library. It is asked once per theme
+	// emission, so the bar keeps the colours of the current appearance. Nil
+	// draws the theme's bar, which fades.
+	//
+	// A bar that stands takes a lane at the rows' trailing edge while the
+	// rows overflow. The columns then share the width short of the lane, so
+	// the header's titles stay over their columns. The header band spans the
+	// full width.
+	Scrollbar func(scrollbar.Style) scrollbar.Style
+
 	// Shaper is an explicit per-instance override of the text shaper. Leave
 	// it nil in normal use: the table then shapes its header titles with the
 	// theme's shaper (Typography.Shaper()), which is built once for the
@@ -159,12 +174,24 @@ type resolvedTokens struct {
 	// unemphasized draws the current row's fill the way the platform draws
 	// a selection in a window that is not frontmost (`Props.Unemphasized`).
 	unemphasized bool
+	// bar is the scroll bar the body's rows scroll under (`Props.Scrollbar`).
+	bar scrollbar.Style
+}
+
+// rowsBar is the bar the rows scroll under: the theme's own, built from the
+// content fill the rows are drawn on, handed to spend when spend is non-nil.
+func rowsBar(c tokens.PlatformColors, spend func(scrollbar.Style) scrollbar.Style) scrollbar.Style {
+	bar := scrollbar.FromTokens(c, c.ControlBackground)
+	if spend == nil {
+		return bar
+	}
+	return spend(bar)
 }
 
 // Table returns an rx.Observable[layout.Widget] that emits a new one
 // whenever a consumed theme token, Items, or Sort changes. Header clicks
-// invoke OnSort; the body is laid out via components/list.Layout so per-frame
-// cost is O(visible-rows), not O(len(items)).
+// invoke OnSort; the body is laid out via components/list.LayoutScrollbar so
+// per-frame cost is O(visible-rows), not O(len(items)).
 func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[layout.Widget] {
 	items := props.Items
 	if items == nil {
@@ -189,6 +216,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 					density:      n.Fourth,
 					shaper:       typ.Shaper(),
 					unemphasized: props.Unemphasized,
+					bar:          rowsBar(n.First, props.Scrollbar),
 				}
 			},
 		)
@@ -215,7 +243,8 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // Render produces a layout.Widget for a table with a fixed dataset and
 // pre-resolved tokens. Intended for golden-image testing and static
 // demonstrations; production code should use Table, which reads both of the
-// parameters below off the theme.
+// parameters below off the theme. The rows scroll under the theme's bar,
+// which fades; [Props.Scrollbar] is the way to a bar that stands.
 //
 // header is the SystemFont role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the grid draws
@@ -233,7 +262,7 @@ func Render[T any](
 	header tokens.TextStyle,
 	d tokens.Density,
 ) layout.Widget {
-	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d}
+	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, bar: rowsBar(colors, nil)}
 	state := list.NewState()
 	rows := &rowIndex{}
 	return func(gtx layout.Context) layout.Dimensions {
@@ -278,10 +307,15 @@ func (r *rowIndex) upTo(n int) []int {
 	return r.idx
 }
 
-// drawTable renders the full table: header row + virtualised body. Width
-// is partitioned across columns once per frame (O(cols), independent of
-// row count); the body is laid out via components/list so only viewport-
-// visible rows incur per-row cost.
+// drawTable renders the full table: header row + virtualised body under the
+// scroll bar. Width is partitioned across columns once per row width
+// (O(cols), independent of row count); the body is laid out via
+// components/list so only viewport-visible rows incur per-row cost.
+//
+// The body is laid out before the header, because the header's columns
+// follow the width the rows got: the full width, or the width short of the
+// lane a standing bar takes. The body's ops are recorded and added after the
+// header's, so the body still paints over the header.
 func drawTable[T any](
 	gtx layout.Context,
 	shaper *text.Shaper,
@@ -299,35 +333,53 @@ func drawTable[T any](
 	// list, a table and a text view all stand on there.
 	paint.FillShape(gtx.Ops, tok.color.ControlBackground, clip.Rect{Max: size}.Op())
 
-	widths := columnWidths(gtx, columns, size.X)
 	// The header is a row in the grid, so its height is exactly
 	// Density.RowHeight, like the body rows below it.
-	headerH := gtx.Dp(unit.Dp(tok.density.RowHeight))
+	rowH := unit.Dp(tok.density.RowHeight)
+	headerH := gtx.Dp(rowH)
 	if headerH > size.Y {
 		headerH = size.Y
 	}
 
-	// Header row.
+	// Body. Every row is exactly Density.RowHeight, so the bar reads the
+	// content's length from that height and not from the rows laid out.
+	bodyY := headerH
+	bodyH := size.Y - bodyY
+	var body op.CallOp
+	if bodyH > 0 {
+		state.SetHeightOfRow(func(m unit.Metric, _ int) int { return m.Dp(rowH) })
+		var rowWidths []int
+		rowW := -1
+		macro := op.Record(gtx.Ops)
+		bStack := op.Offset(image.Pt(0, bodyY)).Push(gtx.Ops)
+		bGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, bodyY))
+		bGtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
+		list.LayoutScrollbar(bGtx, state, tok.bar, list.AnchorFor(tok.bar), rows.upTo(len(items)), func(rGtx layout.Context, i int) layout.Dimensions {
+			// The list lays the rows out short of a lane, and again across
+			// the full width when they fit, so the widths follow the row.
+			if w := rGtx.Constraints.Max.X; w != rowW {
+				rowW, rowWidths = w, columnWidths(rGtx, columns, w)
+			}
+			item := items[i]
+			return drawRow(rGtx, columns, rowWidths, item, tok, current != nil && current(item), i%2 == 1)
+		})
+		bStack.Pop()
+		body = macro.Stop()
+	}
+
+	// Header row. The band spans the full width; its columns share the
+	// width the rows got, so each title stays over its column.
+	lane := 0
+	if bodyH > 0 {
+		lane = state.Lane()
+	}
+	widths := columnWidths(gtx, columns, size.X-lane)
 	hSize := image.Pt(size.X, headerH)
 	hGtx := gtx
 	hGtx.Constraints = layout.Exact(hSize)
 	drawHeaderRow(hGtx, shaper, columns, widths, sk, clicks, tok)
 
-	// Body.
-	bodyY := headerH
-	bodyH := size.Y - bodyY
-	if bodyH <= 0 {
-		return layout.Dimensions{Size: size}
-	}
-	bStack := op.Offset(image.Pt(0, bodyY)).Push(gtx.Ops)
-	bGtx := attachment.AvailableRoomAt(gtx, image.Pt(0, bodyY))
-	bGtx.Constraints = layout.Exact(image.Pt(size.X, bodyH))
-	list.Layout(bGtx, state, rows.upTo(len(items)), func(rGtx layout.Context, i int) layout.Dimensions {
-		item := items[i]
-		return drawRow(rGtx, columns, widths, item, tok, current != nil && current(item), i%2 == 1)
-	})
-	bStack.Pop()
-
+	body.Add(gtx.Ops)
 	return layout.Dimensions{Size: size}
 }
 
