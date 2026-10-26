@@ -3,14 +3,17 @@ package shell
 import (
 	"image"
 
+	"gioui.org/font"
 	"gioui.org/layout"
-	"gioui.org/op"
+	"gioui.org/text"
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/components/attachment"
 	complayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/patterns/pane"
+	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // ToolbarDepth is the strip's depth across a content column: the platform's
@@ -99,12 +102,11 @@ func (m ToolbarMetrics) resolve() ToolbarMetrics {
 // the pane stands, and past the window's control buttons once the pane is
 // away ([ToolbarLead]) — and the arrangement is what knows which.
 //
-// Every control in the leading and the trailing group is laid out at the
-// width of its own content, so a control that fills the room it is given
-// does not take the rest of the row. The toolbar reads that width by laying
-// each control out once more with no room and with its events held back
-// (layout.Context.Disabled). A control in a toolbar changes no state in a
-// disabled context, as the controls Gio ships do not.
+// Every control in the leading and the trailing group states its own width,
+// and the toolbar lays it out once. A control titled with a symbol alone
+// draws the capsule ([ToolbarControl]); a control titled with text is laid
+// out through [ToolbarTitled], at the text's width and an inset each side. A
+// slot of fixed width reports that width.
 //
 // Composed as the stored toolbars compose theirs: a leading group, the
 // centre, a flexible middle that moves the window, a trailing group, and
@@ -183,7 +185,7 @@ func (t Toolbar) layout(gtx layout.Context, buttons, gutter int, lead []layout.W
 		if i > 0 {
 			children = append(children, attachment.PlacedRigid(pane.DragSpacer(m.ControlGap)))
 		}
-		children = append(children, attachment.PlacedRigid(ownWidth(w)))
+		children = append(children, attachment.PlacedRigid(w))
 	}
 	if t.Center != nil {
 		if len(group) > 0 {
@@ -201,7 +203,7 @@ func (t Toolbar) layout(gtx layout.Context, buttons, gutter int, lead []layout.W
 		if i > 0 {
 			children = append(children, attachment.PlacedRigid(pane.DragSpacer(m.ControlGap)))
 		}
-		children = append(children, attachment.PlacedRigid(ownWidth(w)))
+		children = append(children, attachment.PlacedRigid(w))
 	}
 	children = append(children, attachment.PlacedRigid(pane.DragSpacer(m.Trail)))
 	// The toolbar hands what stands in it ROOM and not a depth: a control
@@ -224,43 +226,37 @@ func ToolbarPair(controls ...layout.Widget) layout.Widget {
 			if i > 0 {
 				children = append(children, attachment.PlacedRigid(pane.DragSpacer(PlatformToolbar.PairGap)))
 			}
-			children = append(children, attachment.PlacedRigid(ownWidth(w)))
+			children = append(children, attachment.PlacedRigid(w))
 		}
 		return attachment.PlacingFlex(gtx, layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}, children...)
 	}
 }
 
-// ownWidth lays a toolbar control out at the width of its own content.
-//
-// The row gives each control the rest of the row as its maximum. A control
-// that fills the maximum it is given, as a push button does, would take the
-// whole rest of the row. So ownWidth first lays the control out with no room
-// at all, with its events held back and its drawing discarded. The width the
-// control reports there is the least it draws at: its text or symbol and its
-// insets. ownWidth then lays the control out with that width as its maximum.
-// A control that reports no width at no room sizes itself to the room it is
-// given, and it keeps the rest of the row as its maximum.
-func ownWidth(w layout.Widget) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		if own := widthAtNoRoom(gtx, w); own > 0 && own < gtx.Constraints.Max.X {
-			gtx.Constraints.Max.X = own
-			gtx.Constraints.Min.X = min(gtx.Constraints.Min.X, own)
-		}
-		return w(gtx)
-	}
+// ToolbarTitleInsetDp is the room a toolbar control titled with text leaves
+// between its edge and its text, on each side. PUBLISHED: Apple's Human
+// Interface Guidelines give about 8 pt beside a push button's text, the row
+// reference/macos/controls.md carries. No stored capture holds a toolbar
+// control titled with text, so no MEASURED row replaces it.
+const ToolbarTitleInsetDp unit.Dp = 8
+
+// ToolbarTitleWidth answers the width of a toolbar control titled with
+// text: the width of title set in style, and [ToolbarTitleInsetDp] each
+// side. The shaper sets the text alone; the control is not laid out. The
+// weight is font.Normal where style states none.
+func ToolbarTitleWidth(gtx layout.Context, sh *text.Shaper, style tokens.TextStyle, title string) int {
+	return typeset.LineWidth(gtx, sh, title, style, font.Normal) + 2*gtx.Dp(ToolbarTitleInsetDp)
 }
 
-// widthAtNoRoom answers the width w reports when it is given no room. The
-// pass receives no events and its drawing and its tooltip surfaces are
-// discarded, so it changes no state the real pass reads.
-func widthAtNoRoom(gtx layout.Context, w layout.Widget) int {
-	mgtx := gtx.Disabled()
-	mgtx.Constraints.Min.X, mgtx.Constraints.Max.X = 0, 0
-	mgtx, _ = attachment.WithSurfaces(mgtx)
-	m := op.Record(mgtx.Ops)
-	dims := w(mgtx)
-	m.Stop()
-	return dims.Size.X
+// ToolbarTitled lays control, a toolbar control titled with title, out once
+// at [ToolbarTitleWidth]. control draws its text in style through sh, so the
+// width it is given is the width its text needs. Where the row has less
+// room, control takes the room the row has.
+func ToolbarTitled(sh *text.Shaper, style tokens.TextStyle, title string, control layout.Widget) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		w := min(ToolbarTitleWidth(gtx, sh, style, title), gtx.Constraints.Max.X)
+		gtx.Constraints.Min.X, gtx.Constraints.Max.X = w, w
+		return control(gtx)
+	}
 }
 
 // ToolbarLead answers where a toolbar's own content may start, in pixels

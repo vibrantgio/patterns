@@ -56,6 +56,9 @@ func PaneMark(gtx layout.Context, c tokens.PlatformColors, click *widget.Clickab
 // in a toolbar rather than on a pane. checked is the persistent state of a
 // control that records a yes.
 //
+// Its width is the capsule's, whatever room the row gives it, so a toolbar
+// lays it out once.
+//
 // The shadow is cast AROUND the clickable and never inside it: it falls
 // outside the control's own box, and a clickable clips what it wraps to the
 // box it reports.
