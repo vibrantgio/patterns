@@ -68,7 +68,7 @@ func item(id int64, status toast.Status) notifications.Notification {
 
 // TestColumnGolden records or diffs the stored scenes. The status's leading
 // edge and the column ordering are the load-bearing visual signal and the
-// text carries the LabelMedium role; one scene stands the column on the
+// text carries the SmallSystemFont role; one scene stands the column on the
 // bottom edge's midpoint, where the design language puts a transient
 // confirmation. The scenes composite over the platform's chrome material,
 // so a toast fill that stops separating from real app backgrounds fails the
@@ -123,7 +123,7 @@ func TestColumnGolden(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := notifications.Render(shaper, tc.props, tc.items, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+			w := notifications.Render(shaper, tc.props, tc.items, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SmallSystemFont)
 			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
@@ -136,8 +136,8 @@ func TestEmptyAndPopulatedColumnsDiffer(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 	props := notifications.Props{Position: notifications.TopRight, Shaper: shaper}
 
-	empty := notifications.Render(shaper, props, nil, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
-	full := notifications.Render(shaper, props, []notifications.Notification{item(1, toast.Info)}, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+	empty := notifications.Render(shaper, props, nil, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SmallSystemFont)
+	full := notifications.Render(shaper, props, []notifications.Notification{item(1, toast.Info)}, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SmallSystemFont)
 
 	imgE := golden.Capture(t, frameSize, scene(empty, bg))
 	imgF := golden.Capture(t, frameSize, scene(full, bg))
@@ -154,8 +154,8 @@ func TestColumnPositionAnchoring(t *testing.T) {
 	bg := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 	items := []notifications.Notification{item(1, toast.Info)}
 
-	tr := notifications.Render(shaper, notifications.Props{Position: notifications.TopRight, Shaper: shaper}, items, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
-	bl := notifications.Render(shaper, notifications.Props{Position: notifications.BottomLeft, Shaper: shaper}, items, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelMedium)
+	tr := notifications.Render(shaper, notifications.Props{Position: notifications.TopRight, Shaper: shaper}, items, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SmallSystemFont)
+	bl := notifications.Render(shaper, notifications.Props{Position: notifications.BottomLeft, Shaper: shaper}, items, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SmallSystemFont)
 
 	imgTR := golden.Capture(t, frameSize, scene(tr, bg))
 	imgBL := golden.Capture(t, frameSize, scene(bl, bg))

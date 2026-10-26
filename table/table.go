@@ -153,7 +153,7 @@ const (
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	header  tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	header  tokens.TextStyle // the SystemFont role: typeface, weight, size, line height
 	density tokens.Density   // row/header height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 	// unemphasized draws the current row's fill the way the platform draws
@@ -175,7 +175,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 		sort = rx.Of(Sort{Column: -1})
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the LabelLarge text style for the
+	// typography emission supplies both the SystemFont text style for the
 	// header and the theme's cached shaper.
 	tokensObs := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -185,7 +185,7 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 				return resolvedTokens{
 					color:        n.First,
 					spacing:      n.Second,
-					header:       typ.LabelLarge,
+					header:       typ.SystemFont,
 					density:      n.Fourth,
 					shaper:       typ.Shaper(),
 					unemphasized: props.Unemphasized,
@@ -217,10 +217,10 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // demonstrations; production code should use Table, which reads both of the
 // parameters below off the theme.
 //
-// header is the LabelLarge role's whole text style — typeface, weight, size
+// header is the SystemFont role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the grid draws
 // at (header row and body rows are each exactly Density.RowHeight). Pass
-// tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the default
+// tokens.DefaultTypography.SystemFont and tokens.Comfortable for the default
 // desktop look. A zero header Weight falls back to bold, so a hand-built
 // size-only style still renders with the bold weight.
 func Render[T any](
@@ -562,9 +562,9 @@ func rowFill(tok resolvedTokens) color.NRGBA {
 // cellPadDp. Exported so consumers building their own Cell closures can
 // match the table's stock text style.
 //
-// body is the BodyMedium role's whole text style — typeface, weight, size
+// body is the SystemFont role's whole text style — typeface, weight, size
 // and line height all reach the shaper. Pass
-// tokens.DefaultTypography.BodyMedium for the default desktop look. There
+// tokens.DefaultTypography.SystemFont for the default desktop look. There
 // is no density parameter: the row that owns the cell is what density
 // sizes, and [Render] takes it there; a cell only fills the rectangle it
 // is handed.

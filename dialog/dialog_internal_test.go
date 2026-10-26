@@ -58,7 +58,7 @@ func TestTabCyclesFocusAmongDialogTags(t *testing.T) {
 		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
-		title:   tokens.DefaultTypography.TitleMedium,
+		title:   tokens.DefaultTypography.Title2,
 	}
 
 	// Build the live close button so &st.closeClick is registered as a focus

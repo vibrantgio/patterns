@@ -37,7 +37,7 @@ func TestTheDialogWearsNoRimAgainstTheWindowBehindIt(t *testing.T) {
 			props := dialog.Props{Title: decisionTitle, Body: fillRect(tc.colors.ControlAccent, 40), Shaper: shaper}
 			img := golden.Capture(t, frameSize, scene(
 				dialog.Render(shaper, props, true, tc.colors,
-					tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable),
+					tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable),
 				tc.colors.WindowBackground))
 
 			at := func(x, y int) color.NRGBA {

@@ -385,7 +385,7 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	title   tokens.TextStyle // the TitleMedium role: typeface, weight, size, line height
+	title   tokens.TextStyle // the Title2 role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -401,7 +401,7 @@ func Dialog(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 	}
 
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the TitleMedium text style and the
+	// typography emission supplies both the Title2 text style and the
 	// theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -412,7 +412,7 @@ func Dialog(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 					color:   n.First,
 					spacing: n.Second,
 					radius:  n.Third,
-					title:   typ.TitleMedium,
+					title:   typ.Title2,
 					shaper:  typ.Shaper(),
 				}
 			},
@@ -479,12 +479,12 @@ func Dialog(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // handling: pass open=true to render the scrim and surface, open=false to
 // render nothing (it consumes the constraints but paints no pixels).
 //
-// title is the TitleMedium role's whole text style — typeface, weight, size
+// title is the Title2 role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the close
 // button draws at. It is the one thing density sizes here: the surface
 // itself is content-sized, and the close affordance is an icon-only
 // components/button, which takes a density and no text style at all. Pass
-// tokens.DefaultTypography.TitleMedium and tokens.Comfortable for the
+// tokens.DefaultTypography.Title2 and tokens.Comfortable for the
 // default desktop look. On a decision dialog there is no close affordance to
 // size: the purpose removes it, here as on the live path, so the two render
 // the same header.

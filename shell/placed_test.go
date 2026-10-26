@@ -32,8 +32,8 @@ func squareTooltip(c tokens.PlatformColors) layout.Widget {
 		},
 	}
 	sh := tokens.DefaultTypography.DeterministicShaper()
-	shown := tooltip.Render(sh, props, true, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.LabelSmall)
-	hidden := tooltip.Render(sh, props, false, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.LabelSmall)
+	shown := tooltip.Render(sh, props, true, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
+	hidden := tooltip.Render(sh, props, false, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
 	return func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints = layout.Exact(image.Pt(roomTrigger, roomTrigger))
 		if gtx.Values[showTooltips] == true {
@@ -126,10 +126,10 @@ func TestTooltipPlacedAfterMeasuringIsInsideWindow(t *testing.T) {
 				shell.EmptyStateProps{Line: "No note selected", Actions: []layout.Widget{squareTooltip(c)}})
 		}},
 		{"stacked-page-section", page, shell.RenderStackedPage(sh, shell.Props{}, []layout.Widget{sectionTooltip(c)},
-			c, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)},
+			c, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)},
 		{"stacked-page-navbar-trailing-action", page, shell.RenderStackedPage(sh,
 			shell.Props{Navbar: navbar.Props{Actions: []layout.Widget{fillNothingSmall, squareTooltip(c)}, Shaper: sh}},
-			[]layout.Widget{fillNothingBand}, c, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)},
+			[]layout.Widget{fillNothingBand}, c, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assertTooltipInsideWindow(t, tc.size, tc.window)

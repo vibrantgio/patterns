@@ -347,7 +347,7 @@ const (
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the SystemFont role: typeface, weight, size, line height
 	section tokens.TextStyle // the role a section's heading is set in; see SectionStyle
 	density tokens.Density   // item/toggle height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
@@ -366,7 +366,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 		collapsed = rx.Of(false)
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the LabelLarge text style and the
+	// typography emission supplies both the SystemFont text style and the
 	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -376,7 +376,7 @@ func Sidebar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					title:   typ.LabelLarge,
+					title:   typ.SystemFont,
 					section: SectionStyle(typ),
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
@@ -435,11 +435,11 @@ type liveState struct {
 // the selected row wears the grey pill: [Props.Focused] is how a still asks
 // for the accent one instead.
 //
-// title is the LabelLarge role's whole text style — typeface, weight,
+// title is the SystemFont role's whole text style — typeface, weight,
 // size and line height all reach the shaper — section is the role a
 // section's heading is set in ([SectionStyle] names it), and d is the
 // density the column draws at (item rows and the collapse toggle are each
-// exactly Density.ControlHeight). Pass tokens.DefaultTypography.LabelLarge,
+// exactly Density.ControlHeight). Pass tokens.DefaultTypography.SystemFont,
 // SectionStyle(tokens.DefaultTypography) and tokens.Comfortable for the
 // default desktop look.
 func Render(

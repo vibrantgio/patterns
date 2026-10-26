@@ -60,7 +60,7 @@ func TestScrimLandsThePlatformsByteOverAPage(t *testing.T) {
 				paint.FillShape(gtx.Ops, color.NRGBA{R: 0x00, G: 0x7a, B: 0xff, A: 0xff},
 					clip.Rect(image.Rect(half, 0, frameW, frameH)).Op())
 				return dialog.Render(shaper, props, true, tc.colors,
-					tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)(gtx)
+					tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable)(gtx)
 			})
 			// Well clear of the dialog, which is centred and three quarters
 			// of the frame wide: one sample in each half, and one pixel

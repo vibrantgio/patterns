@@ -10,11 +10,11 @@
 // Layout: each Item renders as a rounded Surface card with a 1 dp strong
 // border and S5 padding on all sides. The card stacks (top to bottom) an
 // opening double-quotation symbol in the accent rendered from a clip.Path,
-// the Quote body in body-large typography in Text, and a horizontal
+// the Quote in the Body role in Label, and a horizontal
 // author block — the AuthorAvatar (or, when nil, a border-stroked
 // circular placeholder containing the first letter of AuthorName) sized
-// to S8 × S8, then a vertical stack of AuthorName in Text and
-// AuthorRole in the low-contrast neutral-700 step.
+// to S8 × S8, then a vertical stack of AuthorName in Label and
+// AuthorRole in SecondaryLabel.
 //
 // The Single variant renders Items[0] in a single card centered inside an
 // S6 outer inset; Grid lays the cards out as a horizontal row of equal-
@@ -61,15 +61,15 @@ const (
 
 // Item describes a single testimonial card.
 type Item struct {
-	// Quote is the body of the testimonial rendered in body-large
-	// typography in Text. Empty quotes collapse to zero height.
+	// Quote is the body of the testimonial, drawn in the Body role in
+	// Label. Empty quotes collapse to zero height.
 	Quote string
 
-	// AuthorName is rendered in body-medium SemiBold Text, above
+	// AuthorName is drawn in the Callout role, semibold, in Label, above
 	// AuthorRole inside the author block.
 	AuthorName string
 
-	// AuthorRole is rendered in body-small neutral 700, below
+	// AuthorRole is drawn in the Subheadline role in SecondaryLabel, below
 	// AuthorName inside the author block.
 	AuthorRole string
 
@@ -108,9 +108,9 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	quote   tokens.TextStyle // the BodyLarge role: typeface, weight, size, line height
-	body    tokens.TextStyle // the BodyMedium role (author name, placeholder letter)
-	small   tokens.TextStyle // the BodySmall role (author role)
+	quote   tokens.TextStyle // the Body role: typeface, weight, size, line height
+	body    tokens.TextStyle // the Callout role (author name, placeholder letter)
+	small   tokens.TextStyle // the Subheadline role (author role)
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -119,7 +119,7 @@ type resolvedTokens struct {
 // presentational — no interaction state is carried across emissions.
 func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies the BodyLarge/BodyMedium/BodySmall text
+	// typography emission supplies the Body/Callout/Subheadline text
 	// styles and the theme's cached shaper: the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -130,9 +130,9 @@ func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layou
 					color:   n.First,
 					spacing: n.Second,
 					radius:  n.Third,
-					quote:   typ.BodyLarge,
-					body:    typ.BodyMedium,
-					small:   typ.BodySmall,
+					quote:   typ.Body,
+					body:    typ.Callout,
+					small:   typ.Subheadline,
 					shaper:  typ.Shaper(),
 				}
 			},
@@ -155,8 +155,8 @@ func Testimonial(th rx.Observable[theme.Theme], props Props) rx.Observable[layou
 // production code should use Testimonial, which reads the same typography
 // off the theme.
 //
-// typo supplies the three roles the card draws — BodyLarge for the quote,
-// BodyMedium for the author name, BodySmall for the role line — whole, so
+// typo supplies the three roles the card draws — Body for the quote,
+// Callout for the author name, Subheadline for the role line — whole, so
 // typeface, weight and line height reach the shaper exactly as they do on
 // the live path. A pattern that spends more than one role takes the whole
 // tokens.Typography rather than a role's tokens.TextStyle each: the roles
@@ -175,9 +175,9 @@ func Render(
 		color:   colors,
 		spacing: sp,
 		radius:  rad,
-		quote:   typo.BodyLarge,
-		body:    typo.BodyMedium,
-		small:   typo.BodySmall,
+		quote:   typo.Body,
+		body:    typo.Callout,
+		small:   typo.Subheadline,
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawTestimonial(gtx, shaper, props, tok)
@@ -311,7 +311,7 @@ func appendComma(path *clip.Path, x, y, w, h int) {
 	path.Close()
 }
 
-// quoteBodyWidget renders the quote text in the BodyLarge role in
+// quoteBodyWidget renders the quote text in the Body role in
 // Text. Wrap to up to four lines so longer testimonials remain
 // readable without growing the card unboundedly.
 func quoteBodyWidget(shaper *text.Shaper, quote string, tok resolvedTokens) layout.Widget {

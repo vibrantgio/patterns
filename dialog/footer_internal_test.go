@@ -70,7 +70,7 @@ func TestAWiderTitleWidensItsOwnButtonAlone(t *testing.T) {
 	var short, long layout.Dimensions
 	action := func(title string, out *layout.Dimensions) layout.Widget {
 		w := button.Render(shaper, title, tokens.PlatformLight, tokens.Spacing,
-			tokens.Radius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable,
+			tokens.Radius, tokens.DefaultTypography.SystemFont, tokens.Comfortable,
 			button.RenderState{})
 		return func(gtx layout.Context) layout.Dimensions {
 			d := w(gtx)
@@ -179,7 +179,7 @@ func focusedTagAfterOpen(t *testing.T, shaper *text.Shaper, props Props) event.T
 		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
-		title:   tokens.DefaultTypography.TitleMedium,
+		title:   tokens.DefaultTypography.Title2,
 	}
 	closeW := liveCloseWidget(t, st, shaper)
 	r := new(gioinput.Router)

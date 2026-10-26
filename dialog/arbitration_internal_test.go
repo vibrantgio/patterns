@@ -160,7 +160,7 @@ func TestOnlyTheFrontDialogTakesPointerInput(t *testing.T) {
 		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
-		title:   tokens.DefaultTypography.TitleMedium,
+		title:   tokens.DefaultTypography.Title2,
 	}
 
 	var outerClosed, innerClosed int
@@ -267,7 +267,7 @@ func TestACoveredDialogDrawnLastTakesNoPointerInput(t *testing.T) {
 		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
-		title:   tokens.DefaultTypography.TitleMedium,
+		title:   tokens.DefaultTypography.Title2,
 	}
 
 	var frontClosed, coveredClosed int

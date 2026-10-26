@@ -249,7 +249,7 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	style   tokens.TextStyle // the LabelMedium role: typeface, weight, size, line height
+	style   tokens.TextStyle // the SmallSystemFont role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 	// fade is the trailing fade window, the motion scale's DurSlow stop.
 	// Zero (the Render path) disables fading: toasts paint fully opaque
@@ -265,7 +265,7 @@ type resolvedTokens struct {
 // message to take it out of the model.
 func Column(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the LabelMedium text style and the
+	// typography emission supplies both the SmallSystemFont text style and the
 	// theme's cached shaper; the motion emission supplies the fade window.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -276,7 +276,7 @@ func Column(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 					color:   n.First,
 					spacing: n.Second,
 					radius:  n.Third,
-					style:   typ.LabelMedium,
+					style:   typ.SmallSystemFont,
 					shaper:  typ.Shaper(),
 					fade:    n.Fifth.DurSlow,
 				}
@@ -307,9 +307,9 @@ func Column(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // shaper and the same text style off the theme. The returned layout.Widget
 // performs no input handling, no fading, and schedules no invalidation.
 //
-// style is the LabelMedium role's whole text style — typeface, weight,
+// style is the SmallSystemFont role's whole text style — typeface, weight,
 // size and line height all reach the shaper, exactly as they do on the
-// live path. Pass tokens.DefaultTypography.LabelMedium for the default
+// live path. Pass tokens.DefaultTypography.SmallSystemFont for the default
 // desktop look. There is no density parameter: a toast's height is a
 // legibility floor around its message, not a control height.
 func Render(

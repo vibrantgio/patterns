@@ -24,7 +24,7 @@ func TestToolbarBareButtonKeepsItsOwnWidth(t *testing.T) {
 	size := image.Pt(600, 120)
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	bare := button.Render(shaper, "Add", tokens.PlatformLight, tokens.Spacing,
-		tokens.Radius, tokens.DefaultTypography.LabelLarge, tokens.Comfortable,
+		tokens.Radius, tokens.DefaultTypography.SystemFont, tokens.Comfortable,
 		button.RenderState{})
 
 	// The button's content width: the width it reports when it is given

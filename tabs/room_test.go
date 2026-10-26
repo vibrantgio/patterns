@@ -40,7 +40,7 @@ func TestTooltipInContentIsInsideWindow(t *testing.T) {
 		},
 	}
 	window := func(show bool) layout.Widget {
-		tip := tooltip.Render(sh, props, show, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.LabelSmall)
+		tip := tooltip.Render(sh, props, show, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
 		content := func(gtx layout.Context) layout.Dimensions {
 			// The trigger is placed lift pixels above the content's foot:
 			// near enough that the window has no room for the tooltip
@@ -56,7 +56,7 @@ func TestTooltipInContentIsInsideWindow(t *testing.T) {
 			return layout.Dimensions{Size: gtx.Constraints.Max}
 		}
 		return tabs.Render(sh, tabs.Props{Tabs: []tabs.Tab{{Title: "One", Content: content}, {Title: "Two"}}},
-			0, c, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			0, c, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 	}
 	past := func(setRoom bool) int {
 		outer := size.Add(image.Pt(2*margin, 2*margin))

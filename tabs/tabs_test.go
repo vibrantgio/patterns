@@ -109,7 +109,7 @@ func TestTabsGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			props := tabs.Props{Tabs: tc.tabs, Shaper: shaper, Fill: contentPlane}
-			w := tabs.Render(shaper, props, tc.selected, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			w := tabs.Render(shaper, props, tc.selected, tc.colors, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
@@ -124,7 +124,7 @@ func TestTabsSelectionUnderlineIsVisible(t *testing.T) {
 
 	render := func(selected int) *image.RGBA {
 		props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Fill: contentPlane}
-		w := tabs.Render(shaper, props, selected, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		w := tabs.Render(shaper, props, selected, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
@@ -165,7 +165,7 @@ func TestTheStripStandsOnTheFillItIsGiven(t *testing.T) {
 			t.Run(sc.name+"-"+f.name, func(t *testing.T) {
 				props := tabs.Props{Tabs: threeTabs(), Shaper: shaper, Fill: f.pick}
 				w := tabs.Render(shaper, props, -1, sc.colors, tokens.Spacing,
-					tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+					tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 				img := golden.Capture(t, frameSize, scene(w, bg))
 				at := func(x, y int) [3]uint8 {
 					off := img.PixOffset(x, y)
@@ -215,7 +215,7 @@ func TestTheTabsContentIsDrawnOnTheStripsFill(t *testing.T) {
 			tt := []tabs.Tab{{Title: tabTitles[0], Content: empty}, {Title: tabTitles[1]}}
 			props := tabs.Props{Tabs: tt, Shaper: shaper, Fill: chrome}
 			w := tabs.Render(shaper, props, 0, sc.colors, tokens.Spacing,
-				tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+				tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 			img := golden.Capture(t, frameSize, scene(w, bg))
 			at := func(x, y int) [3]uint8 {
 				off := img.PixOffset(x, y)

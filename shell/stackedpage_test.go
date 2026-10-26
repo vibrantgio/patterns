@@ -82,7 +82,7 @@ func TestShellStackedPageGolden(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := shell.RenderStackedPage(shaper, tc.props, tc.sections, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			w := shell.RenderStackedPage(shaper, tc.props, tc.sections, tc.colors, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 			golden.Render(t, tc.name, stackedSize, scene(w, tc.bg))
 		})
 	}
@@ -118,7 +118,7 @@ func TestShellStackedPageContentMaxWidth(t *testing.T) {
 				ContentMaxWidth: tc.maxW,
 			}
 			w := shell.RenderStackedPage(shaper, props, []layout.Widget{section},
-				tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+				tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 			img := golden.Capture(t, stackedSize, w)
 			if gotMin != tc.wantW || gotMax != tc.wantW {
 				t.Fatalf("section width constraints: min %d max %d; want exactly %d", gotMin, gotMax, tc.wantW)

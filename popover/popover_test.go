@@ -58,7 +58,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 }
 
 // textContent returns the popover's content: a short line of real text in the
-// BodyMedium role.
+// Callout role.
 //
 // Popover, like card, carries no Shaper in its Props because it draws no text
 // of its own — Anchor and Content are both caller-supplied layout.Widget values, so the
@@ -76,12 +76,12 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // organization: a role's LineHeight is the CSS line box, and handing it to
 // gioui.org/widget.Label does not produce that box. A MaxLines:1 label is
 // exactly the case widget.Label measures identically at every line height,
-// so the content is BodyMedium and stands in its declared 20 dp box rather
-// than its 17 px of drawn glyphs, and the surface grows with it.
+// so the content is Callout in its declared 15 dp line box, and the
+// surface grows with it.
 func textContent(t *testing.T, fg color.NRGBA) layout.Widget {
 	t.Helper()
 	shaper := defaultShaper(t)
-	style := tokens.DefaultTypography.BodyMedium
+	style := tokens.DefaultTypography.Callout
 	return func(gtx layout.Context) layout.Dimensions {
 		m := op.Record(gtx.Ops)
 		paint.ColorOp{Color: fg}.Add(gtx.Ops)

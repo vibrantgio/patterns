@@ -96,10 +96,10 @@ type resolvedTokens struct {
 	color    tokens.PlatformColors
 	spacing  tokens.SpacingScale
 	radius   tokens.RadiusScale
-	eyebrow  tokens.TextStyle // the LabelSmall role the kicker is set in
-	title    tokens.TextStyle // the DisplaySmall role
-	subtitle tokens.TextStyle // the BodyLarge role
-	ctaTitle tokens.TextStyle // the LabelLarge role (CTA titles)
+	eyebrow  tokens.TextStyle // the SmallSystemFont role the kicker is set in
+	title    tokens.TextStyle // the LargeTitle role
+	subtitle tokens.TextStyle // the Body role
+	ctaTitle tokens.TextStyle // the SystemFont role (CTA titles)
 	density  tokens.Density   // CTA control height and inner padding
 	shaper   *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -110,8 +110,8 @@ type resolvedTokens struct {
 // per subscription inside the rx.Defer scope.
 func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies the LabelSmall/DisplaySmall/BodyLarge/
-	// LabelLarge text styles and the theme's cached shaper; the density
+	// typography emission supplies the SmallSystemFont/LargeTitle/Body/
+	// SystemFont text styles and the theme's cached shaper; the density
 	// sizes both CTAs.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -122,10 +122,10 @@ func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 					color:    n.First,
 					spacing:  n.Second,
 					radius:   n.Third,
-					eyebrow:  typ.LabelSmall,
-					title:    typ.DisplaySmall,
-					subtitle: typ.BodyLarge,
-					ctaTitle: typ.LabelLarge,
+					eyebrow:  typ.SmallSystemFont,
+					title:    typ.LargeTitle,
+					subtitle: typ.Body,
+					ctaTitle: typ.SystemFont,
 					density:  n.Fifth,
 					shaper:   typ.Shaper(),
 				}
@@ -161,9 +161,9 @@ func Hero(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // code should use Hero, which reads both of the parameters below off the
 // theme. No event work is performed: the CTAs render as inert visuals.
 //
-// typo supplies the four roles the hero draws — LabelSmall for the
-// eyebrow, DisplaySmall for the title, BodyLarge for the subtitle,
-// LabelLarge for the CTA titles — whole, so typeface, weight and line
+// typo supplies the four roles the hero draws — SmallSystemFont for the
+// eyebrow, LargeTitle for the title, Body for the subtitle,
+// SystemFont for the CTA titles — whole, so typeface, weight and line
 // height reach the shaper exactly as they do on the live path. A pattern
 // that spends more than one role takes the whole tokens.Typography rather
 // than a role's tokens.TextStyle each: the roles it picks stay its own
@@ -184,10 +184,10 @@ func Render(
 		color:    colors,
 		spacing:  sp,
 		radius:   rad,
-		eyebrow:  typo.LabelSmall,
-		title:    typo.DisplaySmall,
-		subtitle: typo.BodyLarge,
-		ctaTitle: typo.LabelLarge,
+		eyebrow:  typo.SmallSystemFont,
+		title:    typo.LargeTitle,
+		subtitle: typo.Body,
+		ctaTitle: typo.SystemFont,
 		density:  d,
 	}
 	return func(gtx layout.Context) layout.Dimensions {
@@ -247,7 +247,7 @@ func textColumn(
 }
 
 // eyebrowWidget renders the eyebrow: the kicker over the title, and pure
-// typography rather than a component. It is a run of LabelSmall text on the
+// typography rather than a component. It is a run of SmallSystemFont text on the
 // surface the hero stands on, less pronounced by its size and by its
 // foreground, and the S3 gap under it is the whole of what separates it from
 // the title.
@@ -259,13 +259,13 @@ func eyebrowWidget(shaper *text.Shaper, eyebrow string, tok resolvedTokens) layo
 	return textWidget(shaper, eyebrow, foreground, tok.eyebrow, font.Normal)
 }
 
-// titleWidget renders the DisplaySmall-role title in the platform's label.
+// titleWidget renders the LargeTitle-role title in the platform's label.
 // A zero style weight falls back to SemiBold.
 func titleWidget(shaper *text.Shaper, title string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, title, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
 }
 
-// subtitleWidget renders the BodyLarge-role subtitle in the low-contrast
+// subtitleWidget renders the Body-role subtitle in the low-contrast
 // text step (neutral 700).
 func subtitleWidget(shaper *text.Shaper, subtitle string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, subtitle, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.subtitle, font.Normal)

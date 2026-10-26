@@ -89,13 +89,13 @@ func TestRowFnCalledOnlyForVisibleItems(t *testing.T) {
 			Header: "ID",
 			Cell: func(item int) layout.Widget {
 				calls++
-				return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, strconv.Itoa(item))
+				return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.SystemFont, strconv.Itoa(item))
 			},
 		},
 	}
 
 	w := table.Render(shaper, cols, items, table.Sort{Column: -1},
-		tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 	var ops op.Ops
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
@@ -203,14 +203,14 @@ var rowNames = []string{"Tokens", "Density", "Elevation", "Motion"}
 // own padding and clamping.
 func textCell(shaper *text.Shaper, f func(int) string) func(int) layout.Widget {
 	return func(item int) layout.Widget {
-		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, f(item))
+		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.SystemFont, f(item))
 	}
 }
 
 // TestTableGolden records or diffs one golden per density through the
 // LIVE pipeline (the static Render path is frozen at tokens.Comfortable).
 // The sort chevron on the active column is a deterministic clip path; the
-// headers draw in the LabelLarge role and the cells in BodyMedium. The two
+// headers and the cells draw in the SystemFont role. The two
 // goldens differ only in the density snapshot: header and rows land at 36 dp
 // pitch Comfortable, 28 dp Compact.
 func TestTableGolden(t *testing.T) {
@@ -255,7 +255,7 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 
 func cellAs(shaper *text.Shaper) func(int) layout.Widget {
 	return func(v int) layout.Widget {
-		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, strconv.Itoa(v))
+		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.SystemFont, strconv.Itoa(v))
 	}
 }
 

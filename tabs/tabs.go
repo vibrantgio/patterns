@@ -116,7 +116,7 @@ const underlineDp = 2
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the SystemFont role: typeface, weight, size, line height
 	density tokens.Density   // strip height source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -131,7 +131,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 		selected = rx.Of(0)
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the LabelLarge text style and the
+	// typography emission supplies both the SystemFont text style and the
 	// theme's cached shaper; the theme owns the typeface.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -141,7 +141,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					title:   typ.LabelLarge,
+					title:   typ.SystemFont,
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
 				}
@@ -172,11 +172,11 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 // static demonstrations; production code should use Tabs, which reads
 // both of the parameters below off the theme.
 //
-// title is the LabelLarge role's whole text style — typeface, weight,
+// title is the SystemFont role's whole text style — typeface, weight,
 // size and line height all reach the shaper — and d is the density the
 // strip draws at (the strip is exactly Density.ControlHeight tall, with
 // Density.PaddingY around each tab title). Pass
-// tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
+// tokens.DefaultTypography.SystemFont and tokens.Comfortable for the
 // default desktop look.
 func Render(
 	shaper *text.Shaper,

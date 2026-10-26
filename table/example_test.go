@@ -25,7 +25,7 @@ func ExampleTable() {
 
 	shaper := tokens.DefaultTypography.DeterministicShaper()
 	textCell := func(s string) layout.Widget {
-		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.BodyMedium, s)
+		return table.RenderTextCell(shaper, tokens.PlatformLight, tokens.DefaultTypography.SystemFont, s)
 	}
 
 	columns := []table.Column[row]{

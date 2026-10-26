@@ -93,7 +93,7 @@ const (
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	style   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	style   tokens.TextStyle // the SystemFont role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -107,7 +107,7 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 		open = rx.Of(map[int]bool{})
 	}
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the LabelLarge text style and the
+	// typography emission supplies both the SystemFont text style and the
 	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -117,7 +117,7 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					style:   typ.LabelLarge,
+					style:   typ.SystemFont,
 					shaper:  typ.Shaper(),
 				}
 			},
@@ -145,9 +145,9 @@ func Accordion(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.
 // static demonstrations; production code should use Accordion, which
 // reads the shaper and the same text style off the theme.
 //
-// title is the LabelLarge role's whole text style — typeface, weight,
+// title is the SystemFont role's whole text style — typeface, weight,
 // size and line height all reach the shaper, exactly as they do on the
-// live path. Pass tokens.DefaultTypography.LabelLarge for the default
+// live path. Pass tokens.DefaultTypography.SystemFont for the default
 // desktop look. There is no density parameter: an accordion sizes its
 // header from the title and its own layout constants, not from a
 // control height.

@@ -115,7 +115,7 @@ const (
 //     answers it, and no X anywhere.
 //
 // The cross, scrim, surface, and action rectangles are deterministic clip
-// shapes; the title carries the TitleMedium role.
+// shapes; the title carries the Title2 role.
 func TestDialogGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
@@ -153,7 +153,7 @@ func TestDialogGolden(t *testing.T) {
 				Decision: tc.decision,
 				Shaper:   shaper,
 			}
-			w := dialog.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+			w := dialog.Render(shaper, props, tc.open, tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable)
 			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
@@ -167,8 +167,8 @@ func TestDialogOpenAndClosedDiffer(t *testing.T) {
 	body := fillRect(color.NRGBA{R: 200, G: 200, B: 200, A: 255}, 40)
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
-	open := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper}, true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
-	closed := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper}, false, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+	open := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper}, true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable)
+	closed := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper}, false, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable)
 
 	imgOpen := golden.Capture(t, frameSize, scene(open, bg))
 	imgClosed := golden.Capture(t, frameSize, scene(closed, bg))
@@ -946,7 +946,7 @@ func TestDecisionDrawsNoCloseAffordance(t *testing.T) {
 	render := func(p dialog.Props) layout.Widget {
 		p.Title, p.Body, p.Shaper = dialogTitle, body, shaper
 		return dialog.Render(shaper, p, true, tokens.PlatformLight, tokens.Spacing, sharpRadius,
-			tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+			tokens.DefaultTypography.Title2, tokens.Comfortable)
 	}
 
 	dismissible := golden.Capture(t, frameSize, scene(render(dialog.Props{}), bg))
@@ -971,9 +971,9 @@ func TestHideCloseStillWorksOnADismissibleDialog(t *testing.T) {
 	bg := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 
 	with := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper},
-		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable)
 	without := dialog.Render(shaper, dialog.Props{Title: dialogTitle, Body: body, Shaper: shaper, HideClose: true},
-		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+		true, tokens.PlatformLight, tokens.Spacing, sharpRadius, tokens.DefaultTypography.Title2, tokens.Comfortable)
 
 	if n := golden.PixelDiff(golden.Capture(t, frameSize, scene(with, bg)), golden.Capture(t, frameSize, scene(without, bg))); n == 0 {
 		t.Error("HideClose no longer hides a dismissible dialog's close button; the deprecation window must keep it working")

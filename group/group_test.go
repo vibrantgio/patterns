@@ -66,8 +66,8 @@ func content(t *testing.T, c tokens.PlatformColors) []layout.Widget {
 	shaper := defaultShaper(t)
 	typo := tokens.DefaultTypography
 	return []layout.Widget{
-		textSlot(shaper, typo.BodyMedium, vgcolor.Flatten(c.Label, c.ControlBackground), 1, "Comfortable"),
-		textSlot(shaper, typo.BodyMedium, vgcolor.Flatten(c.SecondaryLabel, c.ControlBackground), 2,
+		textSlot(shaper, typo.Callout, vgcolor.Flatten(c.Label, c.ControlBackground), 1, "Comfortable"),
+		textSlot(shaper, typo.Callout, vgcolor.Flatten(c.SecondaryLabel, c.ControlBackground), 2,
 			"Compact re-pitches every control on the page."),
 	}
 }

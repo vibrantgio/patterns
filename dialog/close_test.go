@@ -122,7 +122,7 @@ func captureDismissible(t *testing.T, c tokens.PlatformColors, bg color.NRGBA) (
 	// half of these tests drives rounds its corners, so measuring the same
 	// shape keeps the two halves talking about one dialog.
 	w := dialog.Render(shaper, markOnly(), true, c, tokens.Spacing, tokens.Radius,
-		tokens.DefaultTypography.TitleMedium, tokens.Comfortable)
+		tokens.DefaultTypography.Title2, tokens.Comfortable)
 	return golden.Capture(t, frameSize, scene(w, bg)), c.WindowBackground
 }
 

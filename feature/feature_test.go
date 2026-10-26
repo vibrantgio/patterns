@@ -58,7 +58,7 @@ func iconFill(c color.NRGBA) layout.Widget {
 
 // featureBody is the description every cell carries. It is long enough to
 // wrap onto more than one line in a three-up cell, which is the whole point:
-// the BodyMedium role's line height only shows in the gap between baselines,
+// the Callout role's line height only shows in the gap between baselines,
 // so a body that fits on one line would pin everything about the role except
 // that. ASCII only — both embedded faces carry every rune, so no
 // machine-dependent fallback face can reach a stored image.
@@ -148,16 +148,16 @@ func TestFeatureColumnsDefaultsToThree(t *testing.T) {
 
 // ---- typography ----
 
-// withBodyLineHeight returns a copy of the default typography whose BodyMedium
+// withBodyLineHeight returns a copy of the default typography whose Callout
 // role — the role the cell bodies draw in — is on a taller line box, and
 // nothing else changed.
 func withBodyLineHeight(lh float32) tokens.Typography {
 	typo := tokens.DefaultTypography
-	typo.BodyMedium.LineHeight = lh
+	typo.Callout.LineHeight = lh
 	return typo
 }
 
-// featureLineHeightWidget renders the three-up grid with BodyMedium on the
+// featureLineHeightWidget renders the three-up grid with Callout on the
 // given line height, on the light theme.
 func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 	t.Helper()
@@ -172,24 +172,24 @@ func featureLineHeightWidget(t *testing.T, lh float32) layout.Widget {
 //
 // typeset adds the missing first-line box as a deficit rather than a floor,
 // so this three-line body occupies exactly 3 × the line height instead of
-// two gaps plus one drawn line of glyphs. Measured on BodyMedium at 14 dp,
-// whose natural line draws 17 px: the run is 60 px at line height 20 and 96
-// px at 32, so the +12 this test applies lengthens it by 36 px.
+// two gaps plus one drawn line of glyphs. On Callout at 12 dp the run is
+// 45 px at line height 15 and 81 px at 27, so the +12 this test applies
+// lengthens it by 36 px.
 func TestFeatureLineHeightGolden(t *testing.T) {
 	golden.Render(t, "light-3-up-tall-body-lines", frameSize,
-		featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight+12))
+		featureLineHeightWidget(t, tokens.DefaultTypography.Callout.LineHeight+12))
 }
 
 // TestFeatureLineHeightIsDetectable proves the golden above is an instrument
-// and not decoration: raising only the BodyMedium role's line height has to
+// and not decoration: raising only the Callout role's line height has to
 // change pixels. If the property were dropped between tokens.TextStyle and
 // widget.Label the two renders would be identical, and this test — not a stale
 // image — says so.
 func TestFeatureLineHeightIsDetectable(t *testing.T) {
-	base := golden.Capture(t, frameSize, featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight))
-	tall := golden.Capture(t, frameSize, featureLineHeightWidget(t, tokens.DefaultTypography.BodyMedium.LineHeight+12))
+	base := golden.Capture(t, frameSize, featureLineHeightWidget(t, tokens.DefaultTypography.Callout.LineHeight))
+	tall := golden.Capture(t, frameSize, featureLineHeightWidget(t, tokens.DefaultTypography.Callout.LineHeight+12))
 	if n := golden.PixelDiff(base, tall); n == 0 {
-		t.Error("raising BodyMedium's line height changed no pixels; the role's line height never reaches the shaper")
+		t.Error("raising Callout's line height changed no pixels; the role's line height never reaches the shaper")
 	}
 }
 

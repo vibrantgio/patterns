@@ -104,7 +104,7 @@ type Props struct {
 // components/button model (widget.Clickable + semantic ops) per link.
 func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies both the LabelLarge text style and the
+	// typography emission supplies both the SystemFont text style and the
 	// theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -114,7 +114,7 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					title:   typ.LabelLarge,
+					title:   typ.SystemFont,
 					density: n.Fourth,
 					shaper:  typ.Shaper(),
 				}
@@ -147,10 +147,10 @@ func Navbar(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wid
 // and static demonstrations; production code should use Navbar, which
 // reads both of the parameters below off the theme.
 //
-// title is the LabelLarge role's whole text style — typeface, weight,
+// title is the SystemFont role's whole text style — typeface, weight,
 // size and line height all reach the shaper — and d is the density the
 // bar draws at (its vertical inset and the links' padding). Pass
-// tokens.DefaultTypography.LabelLarge and tokens.Comfortable for the
+// tokens.DefaultTypography.SystemFont and tokens.Comfortable for the
 // default desktop look.
 func Render(
 	shaper *text.Shaper,
@@ -168,7 +168,7 @@ func Render(
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the SystemFont role: typeface, weight, size, line height
 	density tokens.Density   // bar inset and link padding source
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }

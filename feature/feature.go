@@ -14,8 +14,8 @@
 // start on one line under the tallest title, so a wrapping title does
 // not shove its own body down alone. Each cell stacks (top to bottom)
 // an optional icon sized to an S8 × S8 square, the Title in
-// title-medium typography in Text, and the Body in body-medium
-// typography in the low-contrast neutral-700 step.
+// the Title2 role in Label, and the Body in the Callout role in
+// SecondaryLabel.
 //
 // The Icon slot is opaque — callers supply any layout.Widget. No
 // responsive collapse from `Columns` to a smaller column count on narrow
@@ -50,10 +50,10 @@ type Item struct {
 	// sized to an S8 × S8 square. nil omits the icon row entirely.
 	Icon layout.Widget
 
-	// Title is rendered in title-medium typography in Text.
+	// Title is drawn in the Title2 role in Label.
 	Title string
 
-	// Body is rendered in body-medium typography in neutral 700.
+	// Body is drawn in the Callout role in SecondaryLabel.
 	Body string
 }
 
@@ -82,8 +82,8 @@ type Props struct {
 type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
-	title   tokens.TextStyle // the TitleMedium role: typeface, weight, size, line height
-	body    tokens.TextStyle // the BodyMedium role
+	title   tokens.TextStyle // the Title2 role: typeface, weight, size, line height
+	body    tokens.TextStyle // the Callout role
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -97,7 +97,7 @@ func Feature(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 	}
 
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies the TitleMedium and BodyMedium text
+	// typography emission supplies the Title2 and Callout text
 	// styles and the theme's cached shaper.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
 		return rx.Map(
@@ -107,8 +107,8 @@ func Feature(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 				return resolvedTokens{
 					color:   n.First,
 					spacing: n.Second,
-					title:   typ.TitleMedium,
-					body:    typ.BodyMedium,
+					title:   typ.Title2,
+					body:    typ.Callout,
 					shaper:  typ.Shaper(),
 				}
 			},
@@ -133,8 +133,8 @@ func Feature(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 // production code should use Feature, which reads the same typography
 // off the theme.
 //
-// typo supplies the two roles the grid draws — TitleMedium for the item
-// titles, BodyMedium for their descriptions — whole, so typeface, weight
+// typo supplies the two roles the grid draws — Title2 for the item
+// titles, Callout for their descriptions — whole, so typeface, weight
 // and line height reach the shaper exactly as they do on the live path.
 // A pattern that spends more than one role takes the whole
 // tokens.Typography rather than a role's tokens.TextStyle each: the roles
@@ -154,8 +154,8 @@ func Render(
 	tok := resolvedTokens{
 		color:   colors,
 		spacing: sp,
-		title:   typo.TitleMedium,
-		body:    typo.BodyMedium,
+		title:   typo.Title2,
+		body:    typo.Callout,
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		return drawFeature(gtx, shaper, props, tok)
@@ -330,13 +330,13 @@ func iconCellWidget(icon layout.Widget, tok resolvedTokens) layout.Widget {
 	}
 }
 
-// titleWidget renders the title in the TitleMedium role in Text. A zero
+// titleWidget renders the title in the Title2 role in Text. A zero
 // style weight falls back to SemiBold.
 func titleWidget(shaper *text.Shaper, title string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, title, vgcolor.Flatten(tok.color.Label, tok.color.ControlBackground), tok.title, font.SemiBold)
 }
 
-// bodyWidget renders the body in the BodyMedium role in the low-contrast
+// bodyWidget renders the body in the Callout role in the low-contrast
 // text step (neutral 700).
 func bodyWidget(shaper *text.Shaper, body string, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, body, vgcolor.Flatten(tok.color.SecondaryLabel, tok.color.ControlBackground), tok.body, font.Normal)

@@ -93,10 +93,10 @@ func slots(t *testing.T, c tokens.PlatformColors) (header, body, footer layout.W
 	t.Helper()
 	shaper := defaultShaper(t)
 	typo := tokens.DefaultTypography
-	return textSlot(shaper, typo.TitleMedium, vgcolor.Flatten(c.Label, c.CardFill), 1, "Density"),
-		textSlot(shaper, typo.BodyMedium, vgcolor.Flatten(c.SecondaryLabel, c.CardFill), 3,
+	return textSlot(shaper, typo.Title2, vgcolor.Flatten(c.Label, c.CardFill), 1, "Density"),
+		textSlot(shaper, typo.Callout, vgcolor.Flatten(c.SecondaryLabel, c.CardFill), 3,
 			"Comfortable and Compact set the control height and the padding around it."),
-		textSlot(shaper, typo.LabelMedium, c.ControlAccent, 1, "Read the token")
+		textSlot(shaper, typo.SmallSystemFont, c.ControlAccent, 1, "Read the token")
 }
 
 // scene renders w into a frame-sized constraint. The optional margin

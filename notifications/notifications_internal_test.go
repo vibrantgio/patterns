@@ -28,7 +28,7 @@ func intTok() resolvedTokens {
 		color:   tokens.PlatformLight,
 		spacing: tokens.Spacing,
 		radius:  tokens.RadiusScale{},
-		style:   tokens.DefaultTypography.LabelMedium,
+		style:   tokens.DefaultTypography.SmallSystemFont,
 		fade:    tokens.Motion.DurSlow, // what the live path resolves from Theme.Motion
 	}
 }

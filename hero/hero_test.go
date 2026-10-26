@@ -42,7 +42,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 // symbol reaches a stored image.
 //
 // The title is short on purpose: with a Visual the text column is half of a
-// 480 px frame, and DisplaySmall is the largest role in the scale, so a
+// 480 px frame, and LargeTitle is the largest role in the scale, so a
 // longer title would wrap to three lines and push the subtitle off the bottom.
 const (
 	heroEyebrow  = "Design system"
@@ -102,8 +102,8 @@ func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 
 // TestHeroGolden records or diffs the four Measurable goldens. The structural
 // variations — Visual slot presence, eyebrow kicker, dual CTA backgrounds —
-// distinguish the cases; the four text roles (DisplaySmall title, BodyLarge
-// subtitle, LabelSmall eyebrow, LabelLarge CTA titles) carry the typography.
+// distinguish the cases; the four text roles (LargeTitle title, Body
+// subtitle, SmallSystemFont eyebrow, SystemFont CTA titles) carry the typography.
 func TestHeroGolden(t *testing.T) {
 	shaper := defaultShaper(t)
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}

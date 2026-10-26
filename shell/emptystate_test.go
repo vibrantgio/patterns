@@ -220,7 +220,7 @@ var (
 // TestEmptyStateLineAloneIsTheColumnsReading holds the grown pattern against
 // what the column had before it: a props value carrying nothing but the line
 // renders the same pixels as the line laid out by itself in the frame — the
-// Headline Medium role, no line height, TertiaryLabel over the
+// EmptyStateLine role, no line height, TertiaryLabel over the
 // fill, centred by the frame's own floor. Every pixel is compared, so a
 // group that moved the line by one row fails here.
 func TestEmptyStateLineAloneIsTheColumnsReading(t *testing.T) {
@@ -228,7 +228,7 @@ func TestEmptyStateLineAloneIsTheColumnsReading(t *testing.T) {
 	for _, tc := range emptyStateCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fill := tc.colors.TextBackground
-			style := tokens.DefaultTypography.HeadlineMedium
+			style := tokens.DefaultTypography.EmptyStateLine
 			style.LineHeight = 0
 			got := emptyStateImage(t, sh, tc.colors, fill, emptyStateFrame)
 			want := emptyStateLineOnly(t, sh, tc.colors, fill, style, emptyStateFrame)
@@ -248,7 +248,7 @@ func TestEmptyStateLineAloneIsTheColumnsReading(t *testing.T) {
 // the first comparison would be holding the pattern against itself.
 func TestPaneSizeSetsTheLineInTheRowsStyle(t *testing.T) {
 	sh := defaultShaper(t)
-	rows := tokens.DefaultTypography.BodyLarge
+	rows := tokens.DefaultTypography.Body
 	for _, tc := range emptyStateCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fill := tc.colors.TextBackground
@@ -287,7 +287,7 @@ func TestPaneSizeSetsTheLineInTheRowsStyle(t *testing.T) {
 // the growth and a block placed any other way does not.
 func TestEmptyStateCentresTheGroupItIsGiven(t *testing.T) {
 	sh := defaultShaper(t)
-	line := tokens.DefaultTypography.HeadlineMedium
+	line := tokens.DefaultTypography.EmptyStateLine
 	line.LineHeight = 0
 	for _, tc := range emptyStateCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -297,7 +297,7 @@ func TestEmptyStateCentresTheGroupItIsGiven(t *testing.T) {
 			large := emptyStateGroupImage(t, sh, tc.colors, fill, grown)
 
 			lineH := emptyStateHeightOf(t, sh, line, emptyStateText, emptyStateFrame, 1)
-			descH := emptyStateHeightOf(t, sh, tokens.DefaultTypography.BodyLarge,
+			descH := emptyStateHeightOf(t, sh, tokens.DefaultTypography.Body,
 				emptyStateDescription, emptyStateFrame, 0)
 			// The metric the captures are taken under is one pixel per dp,
 			// so the two gaps convert to their own numbers.

@@ -114,10 +114,10 @@ type resolvedTokens struct {
 	spacing  tokens.SpacingScale
 	radius   tokens.RadiusScale
 	popular  tokens.TextStyle // the badge type role the "Popular" title is set in, at the density
-	name     tokens.TextStyle // the TitleLarge role (tier name)
-	price    tokens.TextStyle // the DisplaySmall role (price)
-	body     tokens.TextStyle // the BodyMedium role (cadence suffix, features)
-	ctaTitle tokens.TextStyle // the LabelLarge role (CTA title)
+	name     tokens.TextStyle // the Title2 role (tier name)
+	price    tokens.TextStyle // the Title1 role (price)
+	body     tokens.TextStyle // the Callout role (cadence suffix, features)
+	ctaTitle tokens.TextStyle // the SystemFont role (CTA title)
 	density  tokens.Density   // CTA control height and inner padding
 	shaper   *text.Shaper     // the theme's shaper; nil in the Render path
 }
@@ -128,8 +128,8 @@ type resolvedTokens struct {
 // once per subscription inside the rx.Defer scope.
 func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
 	// Flatten the nested theme observables into a concrete snapshot. The
-	// typography emission supplies the badge/TitleLarge/DisplaySmall/
-	// BodyMedium/LabelLarge text styles and the theme's cached shaper — the
+	// typography emission supplies the badge/Title2/Title1/
+	// Callout/SystemFont text styles and the theme's cached shaper — the
 	// theme owns the typeface; the density sizes the CTA and picks the
 	// badge's own type role.
 	resolved := rx.SwitchMap(th, func(t theme.Theme) rx.Observable[resolvedTokens] {
@@ -142,10 +142,10 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 					spacing:  n.Second,
 					radius:   n.Third,
 					popular:  badge.Style(typ, n.Fifth),
-					name:     typ.TitleLarge,
-					price:    typ.DisplaySmall,
-					body:     typ.BodyMedium,
-					ctaTitle: typ.LabelLarge,
+					name:     typ.Title2,
+					price:    typ.Title1,
+					body:     typ.Callout,
+					ctaTitle: typ.SystemFont,
 					density:  n.Fifth,
 					shaper:   typ.Shaper(),
 				}
@@ -183,8 +183,8 @@ func Pricing(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Wi
 // inert visuals.
 //
 // typo supplies the five roles the row draws — the badge role at d for the
-// "Popular" mark, TitleLarge for the tier name, DisplaySmall for the
-// price, BodyMedium for the cadence suffix and feature lines, LabelLarge
+// "Popular" mark, Title2 for the tier name, Title1 for the
+// price, Callout for the cadence suffix and feature lines, SystemFont
 // for the CTA title — whole, so typeface, weight and line height reach
 // the shaper exactly as they do on the live path. A pattern that spends
 // more than one role takes the whole tokens.Typography rather than a
@@ -206,10 +206,10 @@ func Render(
 		spacing:  sp,
 		radius:   rad,
 		popular:  badge.Style(typo, d),
-		name:     typo.TitleLarge,
-		price:    typo.DisplaySmall,
-		body:     typo.BodyMedium,
-		ctaTitle: typo.LabelLarge,
+		name:     typo.Title2,
+		price:    typo.Title1,
+		body:     typo.Callout,
+		ctaTitle: typo.SystemFont,
 		density:  d,
 	}
 	return func(gtx layout.Context) layout.Dimensions {
@@ -401,7 +401,7 @@ func spacedCol(gtx layout.Context, ws []layout.Widget, gap float32) layout.Dimen
 // inset's right edge.
 //
 // Aligned on the baseline rather than the middle. The two are set in
-// different roles — TitleLarge and the badge's label role — so their boxes
+// different roles — Title2 and the badge's label role — so their boxes
 // are different heights around different faces, and centring the boxes puts
 // the two runs of type on two lines that are three pixels apart. Baseline
 // alignment is what "on the same line" means for text, and the badge reports
@@ -436,15 +436,15 @@ func popularBadgeWidget(shaper *text.Shaper, tier Tier, tok resolvedTokens) layo
 		tok.radius, tok.popular, badge.RenderState{Surface: tierFill(tok.color, tier)})
 }
 
-// tierNameWidget renders the tier name in the TitleLarge role in
+// tierNameWidget renders the tier name in the Title2 role in
 // Text. A zero style weight (the legacy Render path synthesizes
 // size-only styles) falls back to SemiBold.
 func tierNameWidget(shaper *text.Shaper, name string, tier Tier, tok resolvedTokens) layout.Widget {
 	return textWidget(shaper, name, vgcolor.Flatten(tok.color.Label, tierFill(tok.color, tier)), tok.name, font.SemiBold)
 }
 
-// priceRowWidget renders the price (DisplaySmall, the platform's label)
-// followed by the cadence (BodyMedium, its secondary label) in a horizontal
+// priceRowWidget renders the price (Title1, the platform's label)
+// followed by the cadence (Callout, its secondary label) in a horizontal
 // row with an S1 gap. Cross-axis Alignment.End approximates baseline
 // alignment for the prominent price next to its smaller cadence suffix.
 func priceRowWidget(shaper *text.Shaper, price, cadence string, tier Tier, tok resolvedTokens) layout.Widget {
@@ -461,7 +461,7 @@ func priceRowWidget(shaper *text.Shaper, price, cadence string, tier Tier, tok r
 }
 
 // featureRowWidget renders a single feature bullet: an accent checkmark
-// symbol followed by the feature's own text in BodyMedium, the platform's
+// symbol followed by the feature's own text in Callout, the platform's
 // label, joined by an S2 gap and centred vertically.
 func featureRowWidget(shaper *text.Shaper, feature string, tier Tier, tok resolvedTokens) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {

@@ -57,7 +57,7 @@ type EmptyStateProps struct {
 	Actions []layout.Widget
 
 	// LineStyle is the text style the line is set in. The zero value is the
-	// column's reading: the Headline Medium role, with no line height, which
+	// column's reading: the EmptyStateLine role, with no line height, which
 	// is what a content column stands. A pane's section or a
 	// sheet's field hands in the style of the rows it stands for instead, so
 	// that a line replacing four rows is set at the size those rows are.
@@ -182,7 +182,7 @@ func emptyStateGroup(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColor
 	})
 	if p.Description != "" {
 		stack(gtx.Dp(EmptyStateDescriptionGap), func(gtx layout.Context) layout.Dimensions {
-			return typeset.TextAligned(gtx, sh, p.Description, typ.BodyLarge,
+			return typeset.TextAligned(gtx, sh, p.Description, typ.Body,
 				vgcolor.Flatten(c.SecondaryLabel, fill), 0, font.Normal, text.Middle)
 		})
 	}
@@ -200,7 +200,7 @@ func emptyStateLineStyle(typ tokens.Typography, style tokens.TextStyle) tokens.T
 	if style.Size > 0 {
 		return style
 	}
-	style = typ.HeadlineMedium
+	style = typ.EmptyStateLine
 	// The line box is the text's own, so the group's own height is what
 	// centres it rather than a role's leading above and below the glyphs.
 	style.LineHeight = 0

@@ -23,6 +23,7 @@ import (
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 const (
@@ -87,7 +88,7 @@ func TestNavbarGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			props := navbar.Props{Links: tc.links, Shaper: shaper}
-			w := navbar.Render(shaper, props, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+			w := navbar.Render(shaper, props, tc.colors, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 			golden.Render(t, tc.name, frameSize, scene(w, tc.bg))
 		})
 	}
@@ -101,7 +102,7 @@ func TestNavbarActiveVsDefaultDiffer(t *testing.T) {
 
 	render := func(links []navbar.Link) *image.RGBA {
 		props := navbar.Props{Links: links, Shaper: shaper}
-		w := navbar.Render(shaper, props, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, tokens.Comfortable)
+		w := navbar.Render(shaper, props, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
 		return golden.Capture(t, frameSize, scene(w, bg))
 	}
 
@@ -316,17 +317,31 @@ func densityTheme(d tokens.Density) theme.Theme {
 }
 
 // barHeight is the height the navbar actually draws at density d: a link
-// cell is its title's line box plus the density's vertical padding above
-// and below plus the Active underline, and the bar insets that row by the
-// same PaddingY again.
+// cell is the line its title draws plus the density's vertical padding
+// above and below plus the Active underline, and the bar insets that row by
+// the same PaddingY again.
 //
 // It is computed rather than taken from Density.ControlHeight + 2·PaddingY:
 // that pin does not budget for the link cell's 2 dp Active underline, so a
 // window sized from it alone can squeeze the bottom padding to nothing and
 // leave the underline flush against the last pixel row.
-func barHeight(d tokens.Density, style tokens.TextStyle) int {
-	cell := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
+func barHeight(t *testing.T, d tokens.Density, style tokens.TextStyle) int {
+	t.Helper()
+	cell := drawnLine(t, style) + 2*int(d.PaddingY) + navbarUnderlineDp
 	return cell + 2*int(d.PaddingY)
+}
+
+// drawnLine is the height of the line a link's title draws in style. It is
+// read off the shaper, not off style.LineHeight: Roboto draws a 17 px line
+// at 13 sp, over the SystemFont role's 16 dp line box.
+func drawnLine(t *testing.T, style tokens.TextStyle) int {
+	t.Helper()
+	gtx := layout.Context{
+		Ops:         new(op.Ops),
+		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+		Constraints: layout.Constraints{Max: image.Pt(frameW, frameW)},
+	}
+	return typeset.Text(gtx, defaultShaper(t), linkLabels[0], style, color.NRGBA{A: 255}, 1).Size.Y
 }
 
 // navbarUnderlineDp mirrors the unexported underlineDp in the navbar
@@ -336,8 +351,8 @@ const navbarUnderlineDp = 2
 // TestNavbarCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline (the static Render path is frozen at
 // tokens.Comfortable): the bar's vertical inset and the link padding
-// drop to the Compact PaddingY (6 dp). The frame is [barHeight] at
-// Compact — 46 dp, not the shell's 40 dp pin; see barHeight for why.
+// drop to the Compact PaddingY (0 dp). The frame is [barHeight] at
+// Compact, 19 px, not the shell's pin; see barHeight for why.
 func TestNavbarCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
 	props := navbar.Props{
@@ -348,7 +363,7 @@ func TestNavbarCompactGolden(t *testing.T) {
 		Shaper: defaultShaper(t),
 	}
 	w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(tokens.Compact)), props))
-	h := barHeight(tokens.Compact, tokens.DefaultTypography.LabelLarge)
+	h := barHeight(t, tokens.Compact, tokens.DefaultTypography.SystemFont)
 	golden.Render(t, "light-compact", image.Pt(frameW, h), scene(w, lightBG))
 }
 
@@ -386,18 +401,19 @@ func colorBand(img *image.RGBA, c color.NRGBA) (int, int) {
 // Rows are compared doubled, so that a middle landing between two pixel rows
 // is one integer rather than a half that has to be tolerated: a slot of even
 // height on a bar of even height centres on a boundary, and the bar's own
-// middle is the boundary h/2.
+// middle is the boundary h/2. A slot of odd height on a bar of even height,
+// or the reverse, centres half a pixel off at best, and the test accepts it.
 func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	shaper := defaultShaper(t)
-	style := tokens.DefaultTypography.LabelLarge
+	style := tokens.DefaultTypography.SystemFont
 	d := tokens.Comfortable
 
 	brandColor := color.NRGBA{R: 0, G: 0, B: 255, A: 255}
 	actionColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
 	const brandH, actionH = 10, 20
-	// cellH is a link cell as linkWidget builds one: the title's line box,
-	// the density's padding above and below, and the Active underline.
-	cellH := int(style.LineHeight) + 2*int(d.PaddingY) + navbarUnderlineDp
+	// cellH is a link cell as linkWidget builds one: the line the title
+	// draws, the density's padding above and below, and the Active underline.
+	cellH := drawnLine(t, style) + 2*int(d.PaddingY) + navbarUnderlineDp
 
 	// A brand that fills the height it is offered and paints only the top of
 	// it, which is what a run of text in a column does.
@@ -407,7 +423,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	}
 
 	// The bar at its own height, and at two heights a caller might pin it to.
-	for _, h := range []int{barHeight(d, style), 64, 80} {
+	for _, h := range []int{barHeight(t, d, style), 64, 80} {
 		props := navbar.Props{
 			Brand:   brand,
 			Links:   []navbar.Link{{Title: linkLabels[0], Active: true}, {Title: linkLabels[1]}},
@@ -437,7 +453,11 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 			{"links", 2*cellTop + cellH - 1, cellTop, cellTop + cellH - 1},
 			{"actions", actionTop + actionBottom, actionTop, actionBottom},
 		} {
-			if c.centre2 != h-1 {
+			// A slot whose height and the bar's differ in parity cannot
+			// centre exactly: its middle lands half a pixel off, at most.
+			off := c.centre2 - (h - 1)
+			tol := (c.lastDrawn - c.firstDrawn + 1 + h) % 2
+			if off < -tol || off > tol {
 				t.Errorf("bar %d px: the %s slot occupies rows %d..%d and is centred on %.1f, want the bar's own middle %.1f",
 					h, c.what, c.firstDrawn, c.lastDrawn, float64(c.centre2)/2, float64(h-1)/2)
 			}
@@ -453,7 +473,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 // The navbar fills its constraints, so its reported Dimensions can never
 // report an overflow; only the pixels can. This reads them.
 func TestNavbarKeepsItsBottomPadding(t *testing.T) {
-	style := tokens.DefaultTypography.LabelLarge
+	style := tokens.DefaultTypography.SystemFont
 	mark := tokens.PlatformLight.SelectedContentBackground
 
 	for _, d := range []tokens.Density{tokens.Comfortable, tokens.Compact} {
@@ -462,7 +482,7 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 			Shaper: defaultShaper(t),
 		}
 		w := liveWidget(t, navbar.Navbar(rx.Of(densityTheme(d)), props))
-		h := barHeight(d, style)
+		h := barHeight(t, d, style)
 		img := golden.Capture(t, image.Pt(frameW, h), scene(w, color.NRGBA{R: 240, G: 240, B: 240, A: 255}))
 
 		lowest := -1

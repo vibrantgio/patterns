@@ -192,7 +192,7 @@ func (d *demo) body(gtx layout.Context) layout.Dimensions {
 	m := op.Record(gtx.Ops)
 	paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.SecondaryLabel, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
 	mat := m.Stop()
-	role := tokens.DefaultTypography.BodyLarge
+	role := tokens.DefaultTypography.Body
 	lbl := widget.Label{}
 	return lbl.Layout(gtx, d.shaper, typeset.Font(role, font.Normal), unit.Sp(role.Size),
 		"This is a decision dialog, so it has no close ×: the footer answers it. "+
@@ -224,7 +224,7 @@ func (d *demo) frame(gtx layout.Context) layout.Dimensions {
 				m := op.Record(gtx.Ops)
 				paint.ColorOp{Color: vgcolor.Flatten(tokens.PlatformLight.Label, tokens.PlatformLight.WindowBackground)}.Add(gtx.Ops)
 				mat := m.Stop()
-				role := tokens.DefaultTypography.BodyMedium
+				role := tokens.DefaultTypography.SystemFont
 				lbl := widget.Label{MaxLines: 1}
 				return lbl.Layout(gtx, d.shaper, typeset.Font(role, font.Normal), unit.Sp(role.Size),
 					fmt.Sprintf("Dismissed %d time(s)", n), mat)

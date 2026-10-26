@@ -117,7 +117,7 @@ func TestSidebarGolden(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			props := sidebar.Props{Items: navItems(3, tc.activeIdx), Shaper: shaper}
-			w := sidebar.Render(shaper, props, tc.collapsed, tc.colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+			w := sidebar.Render(shaper, props, tc.collapsed, tc.colors, tokens.Spacing, tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 			golden.Render(t, tc.name, tc.size, scene(w, tc.bg))
 		})
 	}
@@ -141,7 +141,7 @@ func TestSidebarActiveSelectionIsVisible(t *testing.T) {
 	render := func(t *testing.T, activeIdx int, colors tokens.PlatformColors) *image.RGBA {
 		t.Helper()
 		props := sidebar.Props{Items: navItems(2, activeIdx), Shaper: shaper}
-		w := sidebar.Render(shaper, props, false, colors, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+		w := sidebar.Render(shaper, props, false, colors, tokens.Spacing, tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 		return golden.Capture(t, expandedSize, scene(w, bg))
 	}
 
@@ -368,7 +368,7 @@ func TestSidebarActiveSeedsTheSelection(t *testing.T) {
 	// Active=1: the seed reaches the same highlight the Render path draws.
 	live := golden.Capture(t, expandedSize, scene(w, bg))
 	static := sidebar.Render(shaper, sidebar.Props{Items: navItems(3, 1), Shaper: shaper},
-		false, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+		false, tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 	want := golden.Capture(t, expandedSize, scene(static, bg))
 	if live != nil && want != nil {
 		if d := golden.PixelDiff(live, want); d != 0 {
@@ -568,7 +568,7 @@ func TestSidebarSectionGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			props := sidebar.Props{Items: sectionItems(), Shaper: shaper}
 			w := sidebar.Render(shaper, props, false, tc.colors, tokens.Spacing,
-				tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+				tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 			golden.Render(t, tc.name, expandedSize, scene(w, tc.bg))
 		})
 	}
@@ -589,7 +589,7 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 		Shaper: shaper,
 	}
 	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
-		tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+		tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 	img := golden.Capture(t, expandedSize, w)
 	if img == nil {
 		t.Skip("no capture backend")
@@ -645,7 +645,7 @@ func TestSidebarSectionIsPartedByAirAlone(t *testing.T) {
 	shaper := defaultShaper(t)
 	props := sidebar.Props{Items: sectionItems(), Shaper: shaper}
 	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
-		tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+		tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 	img := golden.Capture(t, expandedSize, w)
 	if img == nil {
 		t.Skip("no capture backend")
@@ -696,7 +696,7 @@ func TestSidebarSymbolWearsTheMeasuredColour(t *testing.T) {
 				Shaper: shaper,
 			}
 			w := sidebar.Render(shaper, props, false, tc.colors, tokens.Spacing,
-				tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+				tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 			img := golden.Capture(t, expandedSize, scene(w, tc.bg))
 			if img == nil {
 				t.Skip("no capture backend")
@@ -752,7 +752,7 @@ func TestSidebarDrawsNoTrailingLine(t *testing.T) {
 	shaper := defaultShaper(t)
 	props := sidebar.Props{Items: navItems(3, 1), Shaper: shaper}
 	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
-		tokens.DefaultTypography.LabelLarge, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+		tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 	img := golden.Capture(t, expandedSize, w)
 	if img == nil {
 		t.Skip("no capture backend")

@@ -45,8 +45,8 @@ func cornerTooltip(c tokens.PlatformColors) layout.Widget {
 		},
 	}
 	sh := tokens.DefaultTypography.DeterministicShaper()
-	shown := tooltip.Render(sh, props, true, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.LabelSmall)
-	hidden := tooltip.Render(sh, props, false, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.LabelSmall)
+	shown := tooltip.Render(sh, props, true, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
+	hidden := tooltip.Render(sh, props, false, c, tokens.Spacing, tokens.Radius, tokens.DefaultTypography.Caption1)
 	return func(gtx layout.Context) layout.Dimensions {
 		tip := hidden
 		if gtx.Values[showTooltips] == true {
