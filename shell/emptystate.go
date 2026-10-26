@@ -11,7 +11,6 @@ import (
 	"gioui.org/unit"
 
 	"github.com/vibrantgio/components/attachment"
-	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/components/scrollbar"
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/tokens"
@@ -86,9 +85,6 @@ type EmptyStateProps struct {
 // y 30–905, so both centres stand at 467.5, where a line centred on the row
 // below the toolbar would stand 26 px lower.
 //
-// A region whose rows would scroll under a bar that stands passes the frame
-// reduced by [EmptyStateFrame], which takes the bar's lane off it.
-//
 // The line's colour is TertiaryLabel over fill, the fill the region paints.
 // MEASURED off the same pair: the glyphs plateau at #bdbdbd light on
 // #ffffff and #595f62 dark on #232a2e, which is TertiaryLabel flattened
@@ -129,26 +125,10 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 }
 
 // EmptyStateFrame returns the frame an empty state centres in for a region
-// whose rows would scroll under bar: frame less the bar's lane on the
-// trailing side when the bar stands, and frame unchanged when it fades. The
-// frame an empty state centres in is the one the rows would occupy, and the
-// rows stop short of a standing bar's lane as the platform's clip view stops
-// short of its scroller.
-//
-// It takes the bar's style rather than the "Show scroll bars" setting
-// because the style is the one value that holds both facts: the lane's width
-// is [scrollbar.Style.Width], and whether the bar stands is what
-// [list.AnchorFor] returns for it, so the rows and a region's empty state
-// stop short of the same lane. The setting alone holds no width, and this
-// package would then need a second value to be told it.
-//
-// The lane is taken off the trailing edge only, so the frame's origin does
-// not move and the caller sets the result as its constraints' maximum.
+// whose rows would scroll under bar: the full frame. An empty region shows no
+// bar, and a lane exists only for a bar that is drawn, so the region takes no
+// lane whether bar stands or fades.
 func EmptyStateFrame(gtx layout.Context, frame image.Point, bar scrollbar.Style) image.Point {
-	if list.AnchorFor(bar) != list.Occupy {
-		return frame
-	}
-	frame.X = max(frame.X-gtx.Dp(bar.Width()), 0)
 	return frame
 }
 

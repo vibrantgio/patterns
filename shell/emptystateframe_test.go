@@ -8,62 +8,28 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 
-	"github.com/vibrantgio/components/list"
 	"github.com/vibrantgio/components/scrollbar"
 	"github.com/vibrantgio/patterns/shell"
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// TestEmptyStateFrameTakesAStandingBarsLane holds the frame an empty state
-// centres in against the bar the region's rows would scroll under: a bar
-// that stands takes its lane off the frame's trailing side and nothing else,
-// and a bar that fades takes nothing. Both densities are read, so the lane
-// is the bar's width in device pixels and not in dp.
-func TestEmptyStateFrameTakesAStandingBarsLane(t *testing.T) {
+// TestEmptyStateFrameTakesNoLane holds the frame an empty state centres in
+// against the bar the region's rows would scroll under: an empty region
+// shows no bar, so the frame is the full frame whether the bar stands or
+// fades. Both densities are read, so a lane in device pixels cannot hide.
+func TestEmptyStateFrameTakesNoLane(t *testing.T) {
 	c := tokens.PlatformLight
 	fading := scrollbar.FromTokens(c, c.ControlBackground)
-	standing := fading
-	standing.FadeDelay = 0
+	standing := fading.Always()
 	frame := image.Pt(600, 400)
 
 	for _, scale := range []float32{1, 2} {
 		gtx := layout.Context{Ops: new(op.Ops), Metric: unit.Metric{PxPerDp: scale, PxPerSp: scale}}
-		lane := gtx.Dp(standing.Width())
-		if lane <= 0 {
-			t.Fatalf("at %vx the bar's lane is %d px, want a lane to take off", scale, lane)
-		}
-		if got, want := shell.EmptyStateFrame(gtx, frame, standing), image.Pt(frame.X-lane, frame.Y); got != want {
-			t.Errorf("at %vx a standing bar leaves the frame %v, want %v — the lane off the trailing side only", scale, got, want)
-		}
-		if got := shell.EmptyStateFrame(gtx, frame, fading); got != frame {
-			t.Errorf("at %vx a fading bar leaves the frame %v, want the full frame %v", scale, got, frame)
-		}
-	}
-
-	// A frame narrower than the lane is left with no width rather than a
-	// negative one.
-	gtx := layout.Context{Ops: new(op.Ops), Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}
-	if got := shell.EmptyStateFrame(gtx, image.Pt(2, 50), standing); got != image.Pt(0, 50) {
-		t.Errorf("a frame narrower than the lane is left %v, want (0,50)", got)
-	}
-}
-
-// TestEmptyStateFrameAgreesWithTheRowsAnchor holds the empty state's frame
-// against the anchor the rows are laid out with: the frame loses a lane
-// exactly when list.AnchorFor returns Occupy, so the rows and the empty
-// state stop short of the same lane on every style.
-func TestEmptyStateFrameAgreesWithTheRowsAnchor(t *testing.T) {
-	c := tokens.PlatformLight
-	fading := scrollbar.FromTokens(c, c.ControlBackground)
-	standing := fading.Always()
-
-	gtx := layout.Context{Ops: new(op.Ops), Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}
-	frame := image.Pt(600, 400)
-	for _, bar := range []scrollbar.Style{standing, fading} {
-		takesLane := shell.EmptyStateFrame(gtx, frame, bar) != frame
-		if occupies := list.AnchorFor(bar) == list.Occupy; occupies != takesLane {
-			t.Errorf("with FadeDelay %v the anchor occupies a lane: %v, the empty state's frame loses one: %v; want them to agree",
-				bar.FadeDelay, occupies, takesLane)
+		for _, bar := range []scrollbar.Style{standing, fading} {
+			if got := shell.EmptyStateFrame(gtx, frame, bar); got != frame {
+				t.Errorf("at %vx with FadeDelay %v the frame is %v, want the full frame %v",
+					scale, bar.FadeDelay, got, frame)
+			}
 		}
 	}
 }
