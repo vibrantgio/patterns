@@ -14,7 +14,8 @@
 // CTA visuals: the Primary CTA reuses components/button's filled visual via
 // button.Render; the Secondary CTA is rendered locally as an outlined
 // variant matching components/button's geometry (Density.ControlHeight tall,
-// Density.PaddingX/PaddingY inside, Md corner radius). Click hit-testing is
+// Density.PaddingX beside the title, the title's line centred, Md corner
+// radius). Click hit-testing is
 // wired through widget.Clickable in Hero — Render is static and performs no
 // event work.
 package hero

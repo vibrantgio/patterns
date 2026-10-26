@@ -268,7 +268,7 @@ func TestNavbarTabTraversal(t *testing.T) {
 
 // TestNavbarLinkClickFiresOnClick verifies clicking a link invokes its
 // OnClick callback. With PxPerDp=1, frame 480×64, no brand, no actions, two
-// links: each cell is its title plus (S3, Density.PaddingY) padding and an
+// links: each cell is its title plus (S3, the navbar's inset) padding and an
 // underline, separated by an S2 spacer, and the row is centred at frame-mid.
 // "Docs" and "Components" measure 57 and 105 px, so the row is 57+8+105 = 170
 // wide and starts at x = 155; link 0 occupies x in [155, 212], y in [15, 49].
@@ -317,18 +317,19 @@ func densityTheme(d tokens.Density) theme.Theme {
 }
 
 // barHeight is the height the navbar actually draws at density d: a link
-// cell is the line its title draws plus the density's vertical padding
-// above and below plus the Active underline, and the bar insets that row by
-// the same PaddingY again.
+// cell is the line its title draws plus the navbar's vertical inset above
+// and below plus the Active underline, and the bar insets that row by the
+// same inset again.
 //
-// It is computed rather than taken from Density.ControlHeight + 2·PaddingY:
+// It is computed rather than taken from Density.ControlHeight + 2 × the inset:
 // that pin does not budget for the link cell's 2 dp Active underline, so a
 // window sized from it alone can squeeze the bottom padding to nothing and
 // leave the underline flush against the last pixel row.
 func barHeight(t *testing.T, d tokens.Density, style tokens.TextStyle) int {
 	t.Helper()
-	cell := drawnLine(t, style) + 2*int(d.PaddingY) + navbarUnderlineDp
-	return cell + 2*int(d.PaddingY)
+	inset := int(navbar.InsetDp(d))
+	cell := drawnLine(t, style) + 2*inset + navbarUnderlineDp
+	return cell + 2*inset
 }
 
 // drawnLine is the height of the line a link's title draws in style. It is
@@ -351,7 +352,7 @@ const navbarUnderlineDp = 2
 // TestNavbarCompactGolden records or diffs the compact-density golden
 // through the LIVE pipeline (the static Render path is frozen at
 // tokens.Comfortable): the bar's vertical inset and the link padding
-// drop to the Compact PaddingY (0 dp). The frame is [barHeight] at
+// drop to the navbar's Compact inset (0 dp). The frame is [barHeight] at
 // Compact, 19 px, not the shell's pin; see barHeight for why.
 func TestNavbarCompactGolden(t *testing.T) {
 	lightBG := color.NRGBA{R: 240, G: 240, B: 240, A: 255}
@@ -412,8 +413,8 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 	actionColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
 	const brandH, actionH = 10, 20
 	// cellH is a link cell as linkWidget builds one: the line the title
-	// draws, the density's padding above and below, and the Active underline.
-	cellH := drawnLine(t, style) + 2*int(d.PaddingY) + navbarUnderlineDp
+	// draws, the navbar's inset above and below, and the Active underline.
+	cellH := drawnLine(t, style) + 2*int(navbar.InsetDp(d)) + navbarUnderlineDp
 
 	// A brand that fills the height it is offered and paints only the top of
 	// it, which is what a run of text in a column does.
@@ -467,7 +468,7 @@ func TestNavbarPutsEverySlotOnOneCentreLine(t *testing.T) {
 
 // TestNavbarKeepsItsBottomPadding asserts that in a frame of [barHeight]
 // the Active underline — the lowest thing the bar draws — clears the
-// bottom PaddingY, so the bar keeps the breathing room its own inset asks
+// bottom inset, so the bar keeps the breathing room its own inset asks
 // for and is nowhere near the edge it would be clipped at.
 //
 // The navbar fills its constraints, so its reported Dimensions can never
@@ -498,9 +499,9 @@ func TestNavbarKeepsItsBottomPadding(t *testing.T) {
 		if lowest < 0 {
 			t.Fatalf("density %+v: no selection-coloured pixel in the bar; the Active underline did not draw, so this proves nothing", d)
 		}
-		if want := h - int(d.PaddingY); lowest >= want {
-			t.Errorf("density %+v: the underline reaches row %d of a %d px bar, inside the %d dp bottom padding",
-				d, lowest, h, int(d.PaddingY))
+		if want := h - int(navbar.InsetDp(d)); lowest >= want {
+			t.Errorf("density %+v: the underline reaches row %d of a %d px bar, inside the %d dp bottom inset",
+				d, lowest, h, int(navbar.InsetDp(d)))
 		}
 	}
 }

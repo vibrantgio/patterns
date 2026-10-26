@@ -29,9 +29,9 @@
 // collapsing to a menu affordance. The bar also fills the height it is
 // given — it reports gtx.Constraints.Max — so it needs a
 // height-constrained slot; patterns/shell pins it to the density's bar
-// height (ControlHeight + 2·PaddingY — 52 dp Comfortable, 40 dp Compact)
-// for you. The bar's own vertical inset is Density.PaddingY, so a
-// ControlHeight action (a components/button) fills a density-pinned slot
+// height (ControlHeight + 2 × the bar's vertical inset — 52 dp Comfortable,
+// 40 dp Compact) for you. The bar's own vertical inset is 2 dp at
+// Comfortable and 0 at Compact, so a ControlHeight action (a components/button) fills a density-pinned slot
 // exactly; the horizontal inset stays spacing S4.
 package navbar
 
@@ -176,6 +176,18 @@ type resolvedTokens struct {
 // underlineDp is the thickness of the Active link's indicator.
 const underlineDp = 2
 
+// insetDp is the navbar's vertical inset at density d, in dp: the bar's inset
+// above and below its slots, and a link cell's padding above and below its
+// title. It is 2 at Comfortable and 0 at every other density. No measurement
+// stands behind these values. theme/export states the same pair as
+// --navbar-inset.
+func insetDp(d tokens.Density) float32 {
+	if d == tokens.Compact {
+		return 0
+	}
+	return 2
+}
+
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.PlatformColors, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Max
 	// A navigation bar is chrome, so it wears the
@@ -184,12 +196,12 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 	// lighter than the content.
 	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: size}.Op())
 
-	// The vertical inset is the density's control padding, so a
-	// ControlHeight control in a density-pinned slot (ControlHeight +
-	// 2·PaddingY) fills it exactly; the horizontal inset stays spacing S4.
+	// The vertical inset is [insetDp], so a ControlHeight control in a
+	// density-pinned slot (ControlHeight + 2 × insetDp) fills it exactly; the
+	// horizontal inset stays spacing S4.
 	inset := layout.Inset{
-		Top:    unit.Dp(d.PaddingY),
-		Bottom: unit.Dp(d.PaddingY),
+		Top:    unit.Dp(insetDp(d)),
+		Bottom: unit.Dp(insetDp(d)),
 		Left:   unit.Dp(sp.S4),
 		Right:  unit.Dp(sp.S4),
 	}
@@ -383,8 +395,8 @@ func activeMark(colors tokens.PlatformColors, unemphasized bool) color.NRGBA {
 }
 
 // linkWidget renders a single link as its title centred inside
-// (S3, Density.PaddingY) padding — the horizontal 12 dp stays on the
-// spacing scale, the vertical padding follows density. The cell width is
+// (S3, insetDp) padding — the horizontal 12 dp stays on the spacing scale,
+// the vertical padding is the navbar's own inset for the density. The cell width is
 // at least 2×S3 so the Active underline is visible even when the title
 // rasterises to zero width, which an empty Link.Title does. Links are
 // adjacent cells in a row, so their hit area stays the cell bounds
@@ -394,7 +406,7 @@ func linkWidget(shaper *text.Shaper, l Link, click *widget.Clickable, mark color
 	return func(gtx layout.Context) layout.Dimensions {
 		inner := func(gtx layout.Context) layout.Dimensions {
 			padH := gtx.Dp(unit.Dp(sp.S3))
-			padV := gtx.Dp(unit.Dp(d.PaddingY))
+			padV := gtx.Dp(unit.Dp(insetDp(d)))
 			underlineH := gtx.Dp(unit.Dp(underlineDp))
 
 			titleGtx := gtx

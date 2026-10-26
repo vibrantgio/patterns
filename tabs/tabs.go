@@ -174,8 +174,7 @@ func Tabs(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widge
 //
 // title is the SystemFont role's whole text style — typeface, weight,
 // size and line height all reach the shaper — and d is the density the
-// strip draws at (the strip is exactly Density.ControlHeight tall, with
-// Density.PaddingY around each tab title). Pass
+// strip draws at (the strip is exactly Density.ControlHeight tall). Pass
 // tokens.DefaultTypography.SystemFont and tokens.Comfortable for the
 // default desktop look.
 func Render(
