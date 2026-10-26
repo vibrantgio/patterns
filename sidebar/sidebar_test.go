@@ -1,6 +1,7 @@
 package sidebar_test
 
 import (
+	"bytes"
 	"context"
 	"image"
 	"image/color"
@@ -983,5 +984,47 @@ func TestSectionDisclosureStandsInTheRailsTrailingColumn(t *testing.T) {
 	if abs(ow-ch) > 1 || abs(oh-cw) > 1 {
 		t.Errorf("the open mark measures %dx%d against the closed one's %dx%d; the turn is not about the square's own centre",
 			ow, oh, cw, ch)
+	}
+}
+
+// TestSectionDisclosureDrawsTheSetsChevrons compares the control that collapses
+// a section with the set's own marks, pixel for pixel: a closed section draws
+// chevron-right and an open one draws chevron-down, both in the box and at the
+// offset PaintDisclosure measures.
+func TestSectionDisclosureDrawsTheSetsChevrons(t *testing.T) {
+	m := tokens.PlatformLight.SidebarMaterial
+	fill := color.NRGBA{R: m.R, G: m.G, B: m.B, A: m.A}
+	fg := sidebar.DisclosureForeground(tokens.PlatformLight)
+	size := image.Pt(expandedW, int(sidebar.SectionHeight))
+
+	control := func(open bool) *image.RGBA {
+		return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
+			paint.FillShape(gtx.Ops, fill, clip.Rect{Max: size}.Op())
+			return sidebar.PaintDisclosure(gtx, open, size, fg)
+		})
+	}
+	set := func(name icons.Name) *image.RGBA {
+		return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
+			paint.FillShape(gtx.Ops, fill, clip.Rect{Max: size}.Op())
+			box := gtx.Dp(sidebar.DisclosureBox)
+			x := size.X - gtx.Dp(sidebar.DisclosureInset) - box
+			y := (gtx.Dp(sidebar.SectionCapTop)+gtx.Dp(sidebar.SectionBaseline))/2 - box/2
+			defer op.Offset(image.Pt(x, y)).Push(gtx.Ops).Pop()
+			icons.Mark(name)(gtx, box, fg)
+			return layout.Dimensions{Size: size}
+		})
+	}
+	for _, tc := range []struct {
+		open bool
+		name icons.Name
+	}{{false, icons.ChevronRight}, {true, icons.ChevronDown}} {
+		got := control(tc.open)
+		if got == nil {
+			t.Skip("no capture backend")
+		}
+		want := set(tc.name)
+		if !bytes.Equal(got.Pix, want.Pix) {
+			t.Errorf("a section with open=%v does not draw the set's %s", tc.open, tc.name)
+		}
 	}
 }

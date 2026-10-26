@@ -105,9 +105,7 @@ package sidebar
 import (
 	"image"
 	"image/color"
-	"math"
 
-	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/io/event"
@@ -927,10 +925,9 @@ func DisclosureForeground(colors tokens.PlatformColors) color.NRGBA {
 // belongs to. The line is the middle of [SectionCapTop] and
 // [SectionBaseline], which is where the heading's own cap band centres.
 //
-// There is one drawing and not two. The chevron is drawn as the section
-// stands CLOSED — pointing at the rows it would open — and an open section
-// turns it a quarter about the square's own centre, which is what the
-// platform does and what keeps the figure recognisable through the turn.
+// A closed section draws the set's chevron-right, pointing at the rows it
+// would open. An open section draws the set's chevron-down, which is the same
+// figure turned a quarter at the same extent.
 //
 // It reports the block it filled, so a caller lays the heading out
 // against the room the control leaves rather than writing the arithmetic
@@ -944,7 +941,11 @@ func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.N
 	if box <= 0 {
 		return layout.Dimensions{Size: image.Pt(0, size.Y)}
 	}
-	mark := icons.Mark(icons.ChevronRight)
+	name := icons.ChevronRight
+	if open {
+		name = icons.ChevronDown
+	}
+	mark := icons.Mark(name)
 	if mark == nil {
 		return layout.Dimensions{Size: image.Pt(box+gtx.Dp(DisclosureInset), size.Y)}
 	}
@@ -957,14 +958,7 @@ func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.N
 		y = (size.Y - box) / 2
 	}
 	stk := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
-	if open {
-		half := float32(box) / 2
-		turn := op.Affine(f32.Affine2D{}.Rotate(f32.Pt(half, half), math.Pi/2)).Push(gtx.Ops)
-		mark(gtx, box, fg)
-		turn.Pop()
-	} else {
-		mark(gtx, box, fg)
-	}
+	mark(gtx, box, fg)
 	stk.Pop()
 	return layout.Dimensions{Size: image.Pt(box+gtx.Dp(DisclosureInset), size.Y)}
 }
