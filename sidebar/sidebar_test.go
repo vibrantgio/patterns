@@ -1028,3 +1028,13 @@ func TestSectionDisclosureDrawsTheSetsChevrons(t *testing.T) {
 		}
 	}
 }
+
+// TestSidebarSectionIsTheSmallSectionHeadingRole pins the role a section's
+// heading is set in: the Small section heading role, whole, from the
+// typography it is given.
+func TestSidebarSectionIsTheSmallSectionHeadingRole(t *testing.T) {
+	typ := tokens.DefaultTypography
+	if got := sidebar.SectionStyle(typ); got != typ.SmallSectionHeading {
+		t.Errorf("SectionStyle = %+v, want the Small section heading role %+v", got, typ.SmallSectionHeading)
+	}
+}

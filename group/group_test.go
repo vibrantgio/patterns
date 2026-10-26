@@ -100,7 +100,7 @@ func TestGroupGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := group.Render(defaultShaper(t),
 				group.Props{Title: tc.title, Content: content(t, tc.colors)},
-				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
+				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
 			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.ControlBackground))
 		})
 	}
@@ -121,7 +121,7 @@ func TestGroupPaintsNothingInside(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			want := tc.colors.ControlBackground
 			w := group.Render(defaultShaper(t), group.Props{}, tc.colors,
-				tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
+				tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
 			img := golden.Capture(t, frameSize, scene(w, marginPx, want))
 			r, g, b, _ := img.At(frameW/2, frameH/2).RGBA()
 			if uint8(r>>8) != want.R || uint8(g>>8) != want.G || uint8(b>>8) != want.B {
@@ -147,7 +147,7 @@ func TestGroupHairlineIsTheSeam(t *testing.T) {
 			bg := tc.colors.ControlBackground
 			want := vgcolor.Flatten(tc.colors.Separator, bg)
 			w := group.Render(defaultShaper(t), group.Props{}, tc.colors,
-				tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
+				tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
 			img := golden.Capture(t, frameSize, scene(w, marginPx, bg))
 			// Sharp corners, so the leading edge is exactly one column of
 			// hairline at the margin and nothing is anti-aliased into it.
@@ -167,12 +167,21 @@ func TestGroupTitleChangesPixels(t *testing.T) {
 	c := tokens.PlatformLight
 	shaper := defaultShaper(t)
 	bare := group.Render(shaper, group.Props{Content: content(t, c)}, c,
-		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
+		tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
 	named := group.Render(shaper, group.Props{Title: "Density", Content: content(t, c)}, c,
-		tokens.Spacing, sharpRadius, tokens.DefaultTypography.LabelLarge)
+		tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
 	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.ControlBackground))
 	b := golden.Capture(t, frameSize, scene(named, marginPx, c.ControlBackground))
 	if n := golden.PixelDiff(a, b); n == 0 {
 		t.Error("groups with and without a title render identically; expected the title")
+	}
+}
+
+// TestGroupTitleIsTheSectionHeadingRole pins the role a group's title is set
+// in: the Section heading role, whole, from the typography it is given.
+func TestGroupTitleIsTheSectionHeadingRole(t *testing.T) {
+	typ := tokens.DefaultTypography
+	if got := group.TitleStyle(typ); got != typ.SectionHeading {
+		t.Errorf("TitleStyle = %+v, want the Section heading role %+v", got, typ.SectionHeading)
 	}
 }

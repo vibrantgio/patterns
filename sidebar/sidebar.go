@@ -835,13 +835,8 @@ func drawItem(
 }
 
 // SectionStyle reports the type role a section's heading is set in: the
-// smallest label role, which is what the platform's own heading measures as.
-//
-// MEASURED off voicememos-multi-folder-2026-09-18.png: the heading's cap band
-// is 8 px against a row title's 10, and at the shipped face's cap ratio those
-// are an 11 dp and a 14 dp role. The scale already carries both, so the
-// heading takes the role it matches rather than a size of its own.
-func SectionStyle(t tokens.Typography) tokens.TextStyle { return t.LabelSmall }
+// Small section heading role.
+func SectionStyle(t tokens.Typography) tokens.TextStyle { return t.SmallSectionHeading }
 
 // SectionForeground is what a section's heading is drawn in: the platform's
 // secondary label, which the heading in the reference capture flattens to on

@@ -88,7 +88,7 @@ type resolvedTokens struct {
 	color   tokens.PlatformColors
 	spacing tokens.SpacingScale
 	radius  tokens.RadiusScale
-	title   tokens.TextStyle // the LabelLarge role: typeface, weight, size, line height
+	title   tokens.TextStyle // the Section heading role: typeface, weight, size, line height
 	shaper  *text.Shaper     // the theme's shaper; nil in the Render path
 }
 
@@ -119,16 +119,15 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 	})
 }
 
-// TitleStyle reports the text style a group's title is set in: the
-// medium-weight LabelLarge style, because no role sets text that opens a
-// section in semibold.
-func TitleStyle(t tokens.Typography) tokens.TextStyle { return t.LabelLarge }
+// TitleStyle reports the text style a group's title is set in: the Section
+// heading role.
+func TitleStyle(t tokens.Typography) tokens.TextStyle { return t.SectionHeading }
 
 // Render produces a layout.Widget for a group with pre-resolved tokens.
 // Intended for golden-image testing and static demonstrations; production
 // code should use Group.
 //
-// title is the LabelLarge role's whole text style — typeface, weight, size
+// title is the Section heading role's whole text style — typeface, weight, size
 // and line height all reach the shaper, exactly as they do on the live
 // path. A group with no Title never asks the shaper anything, so a nil
 // shaper is only an error for a group that has one.
@@ -176,7 +175,7 @@ func draw(
 	return layout.Dimensions{Size: size}
 }
 
-// titleWidget draws the group's own title: the LabelLarge role in the
+// titleWidget draws the group's own title: the Section heading role in the
 // platform's secondary label, which is the strength this system's
 // understated text is set in. It is not the accent — a group is drawn in no
 // role — and not the full-strength label, which would give a section
