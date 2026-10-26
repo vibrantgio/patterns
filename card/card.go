@@ -3,7 +3,7 @@
 // stands on — with optional Header / Body / Footer slots.
 //
 // A card singles something out, and the box is the whole of how it does it:
-// no hairline of its own, never outlined, never wearing a role. What the
+// no hairline of its own, never outlined, never drawn in a role. What the
 // developer wants to say about a card is a badge in its header.
 //
 // A card is raised, not floating, so it casts no shadow: a shadow marks

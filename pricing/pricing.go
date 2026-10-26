@@ -6,9 +6,9 @@
 // hairline at the content's own level around what the tier holds, taking
 // the content's fill. The one tier that must stand apart from the row is
 // the recommended one, and that is a card: raised one step on the content,
-// wearing the "Popular" badge in its header. The recommendation is the
+// drawn with the "Popular" badge in its header. The recommendation is the
 // raise's work and the badge's word — never a role-coloured edge, which a
-// group does not wear and a card is never given.
+// group does not have and a card is never given.
 //
 // Pricing is a callable Go function consuming a components theme observable,
 // returning a stream of layout.Widget. The source is intentionally short and free of
@@ -85,7 +85,7 @@ type Tier struct {
 
 	// Recommended marks the one tier that stands apart from the row: it is
 	// drawn as a card, raised a step on the content the other tiers divide,
-	// and wears a "Popular" badge on the name row, trailing.
+	// and is drawn with a "Popular" badge on the name row, trailing.
 	Recommended bool
 }
 

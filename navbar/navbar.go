@@ -181,7 +181,7 @@ const underlineDp = 2
 
 func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []widget.Clickable, colors tokens.PlatformColors, sp tokens.SpacingScale, style tokens.TextStyle, d tokens.Density) layout.Dimensions {
 	size := gtx.Constraints.Constrain(image.Pt(gtx.Constraints.Max.X, gtx.Dp(unit.Dp(pane.BandDp))))
-	// A navigation bar is chrome, so it wears the
+	// A navigation bar is chrome, so it is drawn in the
 	// chrome material: the sidebar and toolbar fill, which in the light appearance
 	// is the content's white exactly and in the dark one a blue-grey
 	// lighter than the content.

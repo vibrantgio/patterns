@@ -9,7 +9,7 @@ import (
 	"github.com/vibrantgio/theme/tokens"
 )
 
-// TestTheDialogWearsNoRimAgainstTheWindowBehindIt pins the boundary the
+// TestTheDialogHasNoRimAgainstTheWindowBehindIt pins the boundary the
 // platform draws between a sheet and the window it interrupts.
 //
 // MEASURED, save-dialog-{light,dark}.png: the sheet runs x 165-534 and its
@@ -17,14 +17,14 @@ import (
 // own fill — x 164 reads #cccccc light and #191a1b dark, x 165 reads #ffffff
 // and #232a2f — with no stroke column of a third value on any of the four
 // sides, in either appearance. Its top and bottom rows read the same way
-// clear of the corners. So the sheet wears no rim, and what tells a dark
+// clear of the corners. So the sheet has no rim, and what tells a dark
 // dialog from the window beneath it is the scrim alone: the window keeps
 // 0.74 of itself under the measured dim while the dialog keeps all of it.
 //
 // The test walks the row through the dialog's vertical middle, clear of both
 // corners, and requires the surface's own fill on its first covered column
 // and the one beside it: a rim would land a third value there.
-func TestTheDialogWearsNoRimAgainstTheWindowBehindIt(t *testing.T) {
+func TestTheDialogHasNoRimAgainstTheWindowBehindIt(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		colors tokens.PlatformColors
@@ -59,7 +59,7 @@ func TestTheDialogWearsNoRimAgainstTheWindowBehindIt(t *testing.T) {
 				t.Fatalf("no column on row %d carries the dialog's fill %v", mid, fill)
 			}
 			if got := at(lead+1, mid); got != fill {
-				t.Errorf("the column beside the dialog's leading edge reads %v, want its own fill %v: the dialog wears no rim", got, fill)
+				t.Errorf("the column beside the dialog's leading edge reads %v, want its own fill %v: the dialog has no rim", got, fill)
 			}
 			// The same on the trailing side.
 			trail := -1
@@ -73,7 +73,7 @@ func TestTheDialogWearsNoRimAgainstTheWindowBehindIt(t *testing.T) {
 				t.Fatalf("the dialog's trailing edge came back at %d against a leading edge at %d", trail, lead)
 			}
 			if got := at(trail-1, mid); got != fill {
-				t.Errorf("the column beside the dialog's trailing edge reads %v, want its own fill %v: the dialog wears no rim", got, fill)
+				t.Errorf("the column beside the dialog's trailing edge reads %v, want its own fill %v: the dialog has no rim", got, fill)
 			}
 			// And the window behind it keeps the measured dim rather than
 			// meeting the dialog at some value of its own: the dialog is

@@ -9,7 +9,7 @@
 // a tenth laid over that fill, which is the understated line the platform
 // draws and not the 3:1 mark a graphic carrying meaning owes.
 //
-// A group wears no role. It is not operated, so it has no emphasis to
+// A group is drawn in no role. It is not operated, so it has no emphasis to
 // speak with, and a role-coloured hairline would borrow the accent's
 // grammar for something the user never chose.
 //
@@ -178,7 +178,7 @@ func draw(
 
 // titleWidget draws the group's own title: the LabelLarge role in the
 // platform's secondary label, which is the strength this system's
-// understated text is set in. It is not the accent — a group wears no
+// understated text is set in. It is not the accent — a group is drawn in no
 // role — and not the full-strength label, which would give a section
 // header the weight of the content it names.
 func titleWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground color.NRGBA) layout.Widget {

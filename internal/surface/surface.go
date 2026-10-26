@@ -3,7 +3,7 @@
 // on, so every pattern in this library spells that answer the same way.
 //
 // The first two live together because they are the two halves of one ruling
-// — a card singles something out by wearing the platform's box, a group
+// — a card singles something out by being drawn in the platform's box, a group
 // divides the page by drawing a line at the surface it is already on — and a
 // pattern that draws either by hand drifts from the other.
 package surface

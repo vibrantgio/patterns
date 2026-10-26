@@ -34,7 +34,7 @@
 // rounding is the window's own less the inset it stands at, which is what
 // [RadiusDp] is written as.
 //
-// THE PANE IS READ THROUGH ITS RIM AND ITS SHADOW. A pane wears the
+// THE PANE IS READ THROUGH ITS RIM AND ITS SHADOW. A pane is drawn in the
 // platform's chrome material in both schemes, which in the light appearance
 // is within two of 255 of the plane it stands on and in the dark appearance
 // within two of the content beside it — so neither boundary is a step of
@@ -175,7 +175,7 @@ const (
 	MarkGapDp = 18
 )
 
-// Buttons is where a window that wears this pattern stands its three
+// Buttons is where a window drawn with this pattern stands its three
 // control buttons, derived from [ButtonInsetDp] by the rule the platform's
 // own windows follow. Every number in it is the WINDOW's: no pane state, no
 // screen and no content enters into any of them, and dismissing the pane
@@ -183,7 +183,7 @@ const (
 // because a pane the reader dismissed used to be behind it.
 var Buttons = desktop.ButtonRunAt(ButtonInsetDp)
 
-// Surface is the fill the pane wears: the platform's chrome material, the
+// Surface is the fill the pane is drawn in: the platform's chrome material, the
 // fill every sidebar, toolbar and inspector on this platform carries. It is
 // a function of the set rather than a field, so that code holding a whole
 // set and code holding a frame-time snapshot can name the same fill.
@@ -191,7 +191,7 @@ func Surface(c tokens.PlatformColors) color.NRGBA {
 	return c.SidebarMaterial
 }
 
-// RimColor is the colour of the rim the pane wears just inside its own
+// RimColor is the colour of the rim the pane has just inside its own
 // edge: the platform's measured value, opaque in both appearances, so
 // nothing is flattened here.
 func RimColor(c tokens.PlatformColors) color.NRGBA {

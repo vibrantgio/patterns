@@ -93,7 +93,7 @@ type ToggleSidebar struct {
 	// Click is the one gesture source, held by the window across frames.
 	Click *widget.Clickable
 
-	// Mark is the figure both places wear, so the two read as one control
+	// Mark is the figure both places are drawn with, so the two read as one control
 	// and not as two. Nil draws no figure.
 	//
 	// It is one drawing that never morphs, as on the platform: a mark that

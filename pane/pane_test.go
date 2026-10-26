@@ -184,7 +184,7 @@ func TestRimAndShadowAreThePlatformsNames(t *testing.T) {
 	}
 }
 
-// TestSurfaceIsTheChromeMaterial: a pane is chrome, so it wears the
+// TestSurfaceIsTheChromeMaterial: a pane is chrome, so it is drawn in the
 // platform's chrome material in both appearances.
 func TestSurfaceIsTheChromeMaterial(t *testing.T) {
 	for _, tc := range themeCases {

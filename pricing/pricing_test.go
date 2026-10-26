@@ -89,7 +89,7 @@ func tier(i int, recommended bool) pricing.Tier {
 }
 
 // threeTiers returns the full row, with the middle tier recommended when
-// asked: that tier becomes a card and wears the "Popular" badge on its name
+// asked: that tier becomes a card and is drawn with the "Popular" badge on its name
 // row, while the other two stay groups.
 func threeTiers(recommendMiddle bool) []pricing.Tier {
 	return []pricing.Tier{tier(0, false), tier(1, recommendMiddle), tier(2, false)}
@@ -181,7 +181,7 @@ func TestRecommendedTierIsACardAndTheRestAreGroups(t *testing.T) {
 				what string
 			}{
 				{0, page, "a group tier takes the content's own fill"},
-				{1, box, "the recommended tier wears the platform's box"},
+				{1, box, "the recommended tier is drawn in the platform's box"},
 				{2, page, "a group tier takes the content's own fill"},
 			} {
 				if got := at(tc.col); got != tc.want {

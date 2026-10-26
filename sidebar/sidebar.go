@@ -15,7 +15,7 @@
 // voicememos-sidebar-{light,dark}.png and the second off
 // finder-sidebar-unfocused-{light,dark}.png, where the pill keeps the same
 // geometry in both states. The switch is gtx.Focused on the list's own tag
-// ([list.State.Focus]), so the rail wears the emphasized pill exactly while
+// ([list.State.Focus]), so the rail is drawn in the emphasized pill exactly while
 // the keys reach it, and no ring is drawn at all: the pill IS this place's
 // answer, and a band around the rail would be a second one.
 //
@@ -49,9 +49,9 @@
 // A row is a symbol, a title and, at the trailing end, a count when the
 // entry has one: [Item.Icon], [Item.Title] and [Item.Count], each drawn in
 // the column the platform draws it in ([SymbolInset], [TitleInset],
-// [CountInset]). The symbol wears [SymbolForeground] and the count
+// [CountInset]). The symbol is drawn in [SymbolForeground] and the count
 // [CountForeground], both measured values of the sidebar; on the selected
-// row's pill all three parts wear the foreground the platform pairs with
+// row's pill all three parts are drawn in the foreground the platform pairs with
 // that fill. A row with no symbol or no count draws without one and the
 // columns do not move, so the titles of a list whose entries differ still
 // line up. A run of rows may be headed by a small heading — [Item.Section] on
@@ -430,7 +430,7 @@ type liveState struct {
 // below off the theme.
 //
 // It processes no events, so the keyboard is never on the rail it draws and
-// the selected row wears the grey pill: [Props.Focused] is how a still asks
+// the selected row is drawn in the grey pill: [Props.Focused] is how a still asks
 // for the accent one instead.
 //
 // title is the SystemFont role's whole text style — typeface, weight,
@@ -563,7 +563,7 @@ func drawSidebar(
 	h := gtx.Constraints.Max.Y
 	size := image.Pt(w, h)
 
-	// A sidebar is chrome, so it wears the platform's chrome material: the
+	// A sidebar is chrome, so it is drawn in the platform's chrome material: the
 	// sidebar and toolbar fill, which in the light appearance is the
 	// content's white exactly and in the dark one a blue-grey lighter than
 	// the content.
@@ -594,7 +594,7 @@ func drawSidebar(
 	for i := range idx {
 		idx[i] = i
 	}
-	// Which of the platform's two pills the selected row wears: the accent
+	// Which of the platform's two pills the selected row is drawn in: the accent
 	// one while the list holds the keyboard, the grey one while it does
 	// not. A still render processes no events, so the keys are never on it
 	// and it draws the grey pill unless Props.Focused says otherwise.
@@ -612,7 +612,7 @@ func drawSidebar(
 // while it does not.
 //
 // Neither is SelectedContentBackground, which is what a content list's
-// selected row wears, and neither is ControlAccent: the platform lifts the
+// selected row is drawn in, and neither is ControlAccent: the platform lifts the
 // accent pill above the accent's own blue over the chrome material, and the
 // grey one is no name in the set at all. Both readings are recorded —
 // SidebarSelection, which follows the theme colour through
@@ -851,7 +851,7 @@ func SectionForeground(colors tokens.PlatformColors) color.NRGBA { return colors
 
 // SymbolForeground is what the symbol at a row's leading end is drawn in: the
 // sidebar's own measured symbol value, and the foreground the platform pairs
-// with the pill on the selected row — the symbol wears the pill's white like
+// with the pill on the selected row — the symbol is drawn in the pill's white like
 // the title beside it. The caller flattens it onto the fill.
 //
 // It is exported so an application drawing its own chrome rail draws the
@@ -866,7 +866,7 @@ func SymbolForeground(colors tokens.PlatformColors, selected, unemphasized bool)
 
 // CountForeground is what the count at a row's trailing end is drawn in: the
 // sidebar's own measured count value off the pill, and the foreground the
-// platform pairs with the pill on it — the count wears the selected row's
+// platform pairs with the pill on it — the count is drawn in the selected row's
 // white like the title beside it. The caller flattens it onto the fill.
 func CountForeground(colors tokens.PlatformColors, selected, unemphasized bool) color.NRGBA {
 	if selected {
@@ -975,7 +975,7 @@ func PaintDisclosure(gtx layout.Context, open bool, size image.Point, fg color.N
 // outside a chrome rail takes the columns and not the rail's measured symbol
 // foreground: that value was read off a rail, where the platform draws the
 // symbol stronger than the name beside it, and what a content row's symbol
-// wears is the caller's to hand in.
+// is drawn in is the caller's to hand in.
 //
 // The mark fills the square rather than being drawn at a mark-beside-text
 // size inside it: the set's axis-aligned keyline is 18 of 24, which draws 18

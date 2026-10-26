@@ -669,14 +669,14 @@ func TestSidebarSectionIsPartedByAirAlone(t *testing.T) {
 	}
 }
 
-// TestSidebarSymbolWearsTheMeasuredColour reads the row's symbol off a
+// TestSidebarSymbolIsDrawnInTheMeasuredColour reads the row's symbol off a
 // rendered rail and holds it to the platform's own reading: black in light
 // and white in dark, stronger than the title standing beside it, and the
 // pill's own foreground on the selected row.
 //
 // The mark is the icon set's folder — the very mark the reference capture
 // measures — so what is read is a drawn vector and not a test shape.
-func TestSidebarSymbolWearsTheMeasuredColour(t *testing.T) {
+func TestSidebarSymbolIsDrawnInTheMeasuredColour(t *testing.T) {
 	shaper := defaultShaper(t)
 	cases := []struct {
 		name   string
@@ -707,7 +707,7 @@ func TestSidebarSymbolWearsTheMeasuredColour(t *testing.T) {
 			// unselected one first, the selected one below it.
 			plain := extremeInSymbolBox(img, top, tc.colors.SidebarMaterial)
 			// A static render holds no focus, so the pill it draws is the
-			// grey one and the symbol on it wears that pill's foreground.
+			// grey one and the symbol on it is drawn in that pill's foreground.
 			onPill := extremeInSymbolBox(img, top+int(sidebar.RowHeight), sidebar.SelectionFill(tc.colors, true))
 			if plain != tc.want {
 				t.Errorf("the symbol reads %v, want the measured %v", plain, tc.want)

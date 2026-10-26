@@ -243,7 +243,7 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	r := gtx.Dp(unit.Dp(tok.radius.Lg))
 	rrect := clip.RRect{Rect: image.Rectangle{Max: image.Pt(width, height)}, SE: r, SW: r, NE: r, NW: r}
 
-	// A testimonial is a card, so it wears the platform's box: one step of
+	// A testimonial is a card, so it is drawn in the platform's box: one step of
 	// fill from the content it stands on, no hairline and no shadow.
 	paint.FillShape(gtx.Ops, tok.color.CardFill, rrect.Op(gtx.Ops))
 

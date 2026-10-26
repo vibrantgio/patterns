@@ -164,7 +164,7 @@ import (
 //     give it.
 //
 // Exposing those affordances as independent booleans would permit every
-// wrong combination — e.g. a "Discard changes?" dialog wearing a dismissible dialog's X
+// wrong combination — e.g. a "Discard changes?" dialog drawn with a dismissible dialog's X
 // over a backdrop that dismisses it. So there are no such booleans. The
 // purpose is declared once, by supplying [Props.Decision] or leaving it nil,
 // and every affordance is derived from it — which is why a decision dialog
@@ -721,7 +721,7 @@ func drawDialog(
 
 	// Surface — rounded rectangle, registered as a pointer absorber so
 	// presses on its area do not reach the scrim and dismiss the dialog.
-	// It floats, so it wears the window background under the platform's
+	// It floats, so it is drawn in the window background under the platform's
 	// shadow and no hairline: the sheet's boundary in the reference is one
 	// step from the dimmed window to the fill, on every side and in both
 	// appearances.
@@ -1103,7 +1103,7 @@ func focusTags(props Props, st *dialogState) (tags []event.Tag, bodyFirst int) {
 //
 // The first field holds the keyboard focus when a dialog opens, as the
 // platform's sheet shows: its save panel opens with the caret in "Save As:"
-// and that field wearing the focus ring, not with the keyboard on one of the
+// and that field having the focus ring, not with the keyboard on one of the
 // two answers in the footer. So a body that has a field is what the dialog
 // opens on, and only a body with nothing to focus — a question and two
 // answers, say — hands the keyboard to the header's close affordance or to
