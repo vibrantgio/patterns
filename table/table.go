@@ -132,8 +132,8 @@ type Props[T any] struct {
 	//
 	// A bar that stands takes a lane at the rows' trailing edge while the
 	// rows overflow. The columns then share the width short of the lane, so
-	// the header's titles stay over their columns. The header band spans the
-	// full width.
+	// the header's titles stay over their columns. The header band's fill
+	// spans the full width, and its hairline ends at the lane.
 	Scrollbar func(scrollbar.Style) scrollbar.Style
 
 	// Shaper is an explicit per-instance override of the text shaper. Leave
@@ -161,7 +161,7 @@ type Props[T any] struct {
 const (
 	cellPadDp     = 12
 	chevronSizeDp = 10
-	seamDp        = 1
+	hairlineDp    = 1
 	minColumnDp   = 64
 )
 
@@ -369,8 +369,8 @@ func drawTable[T any](
 		body = macro.Stop()
 	}
 
-	// Header row. The band spans the full width; its columns share the
-	// width the rows got, so each title stays over its column.
+	// Header row. The band's fill spans the full width. Its columns and its
+	// hairline end where the rows end, so each title stays over its column.
 	lane := 0
 	if bodyH > 0 {
 		lane = state.Lane()
@@ -379,7 +379,7 @@ func drawTable[T any](
 	hSize := image.Pt(size.X, headerH)
 	hGtx := gtx
 	hGtx.Constraints = layout.Exact(hSize)
-	drawHeaderRow(hGtx, shaper, columns, widths, sk, clicks, tok)
+	drawHeaderRow(hGtx, shaper, columns, widths, size.X-lane, sk, clicks, tok)
 
 	body.Add(gtx.Ops)
 	return layout.Dimensions{Size: size}
@@ -432,13 +432,16 @@ func columnWidths[T any](gtx layout.Context, columns []Column[T], totalW int) []
 }
 
 // drawHeaderRow renders the bold-weight header titles with optional sort
-// chevrons and clickable hit areas for sortable columns. The trailing
-// seam marks the boundary between the header and the body.
+// chevrons and clickable hit areas for sortable columns. The header's
+// hairline is its own edge, part of the table's structure, not a seam. It
+// runs from the leading edge to rowsW, where the header's rows end: the
+// lane of a standing bar is short of it, as Finder's header measures.
 func drawHeaderRow[T any](
 	gtx layout.Context,
 	shaper *text.Shaper,
 	columns []Column[T],
 	widths []int,
+	rowsW int,
 	sk Sort,
 	clicks []widget.Clickable,
 	tok resolvedTokens,
@@ -446,8 +449,8 @@ func drawHeaderRow[T any](
 	size := gtx.Constraints.Max
 	// The header band stands on the grid's own plane and takes no fill of
 	// its own: on this platform a table's header is the content's fill
-	// under the header text, closed by a separator along its foot. That
-	// hairline is the header's own and is drawn below.
+	// under the header text, closed by a hairline along its foot. That
+	// hairline is the header's own edge and is drawn below.
 	paint.FillShape(gtx.Ops, tok.color.ControlBackground, clip.Rect{Max: size}.Op())
 
 	x := 0
@@ -464,12 +467,12 @@ func drawHeaderRow[T any](
 		x += w
 	}
 
-	seamH := gtx.Dp(unit.Dp(seamDp))
-	if seamH < 1 {
-		seamH = 1
+	edgeH := gtx.Dp(unit.Dp(hairlineDp))
+	if edgeH < 1 {
+		edgeH = 1
 	}
-	seamRect := image.Rect(0, size.Y-seamH, size.X, size.Y)
-	paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.Separator, tok.color.ControlBackground), clip.Rect(seamRect).Op())
+	edgeRect := image.Rect(0, size.Y-edgeH, rowsW, size.Y)
+	paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.Separator, tok.color.ControlBackground), clip.Rect(edgeRect).Op())
 
 	return layout.Dimensions{Size: size}
 }
@@ -591,7 +594,7 @@ func drawRow[T any](
 		x += w
 	}
 
-	seamH := gtx.Dp(unit.Dp(seamDp))
+	seamH := gtx.Dp(unit.Dp(hairlineDp))
 	if seamH < 1 {
 		seamH = 1
 	}

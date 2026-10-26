@@ -362,8 +362,9 @@ func TestCurrentFillsTheChosenRow(t *testing.T) {
 // at the body's trailing edge and the columns share the width short of the
 // lane. When the rows fit, the bar draws nothing and the columns share the
 // full width. The sort chevron is drawn at the active column's trailing edge,
-// so its place proves that the header's titles stay over their columns.
-// PxPerDp is 1 here.
+// so its place proves that the header's titles stay over their columns. The
+// header's hairline ends where the rows end, and the header's fill spans the
+// lane. PxPerDp is 1 here.
 func TestTheBarStandsBesideTheRows(t *testing.T) {
 	shaper := defaultShaper(t)
 	size := image.Pt(360, 360)
@@ -380,6 +381,9 @@ func TestTheBarStandsBesideTheRows(t *testing.T) {
 	// the end of the last column.
 	const cellPad, chevron = 12, 10
 	chevronAt := func(colEnd int) image.Point { return image.Pt(colEnd-cellPad-chevron/2, rowH/2) }
+	// The header's hairline is the last pixel row of the header.
+	hairline := vgcolor.Flatten(c.Separator, c.ControlBackground)
+	footY := rowH - 1
 
 	render := func(rows int) *image.RGBA {
 		items := make([]int, rows)
@@ -410,6 +414,17 @@ func TestTheBarStandsBesideTheRows(t *testing.T) {
 		if p := chevronAt(size.X); pixelAt(img, p.X, p.Y) != c.ControlBackground {
 			t.Errorf("chevron at %v, over the lane; the header's columns must end where the rows end", p)
 		}
+		if got := pixelAt(img, size.X-lane-1, footY); got != hairline {
+			t.Errorf("header foot short of the lane = %v, want the hairline %v", got, hairline)
+		}
+		for _, x := range []int{size.X - lane, size.X - lane/2, size.X - 1} {
+			if got := pixelAt(img, x, footY); got != c.ControlBackground {
+				t.Errorf("header foot at x %d in the lane = %v, want the header's fill %v; the hairline ends at the lane", x, got, c.ControlBackground)
+			}
+		}
+		if got := pixelAt(img, size.X-lane/2, rowH/2); got != c.ControlBackground {
+			t.Errorf("header over the lane = %v, want the header's fill %v; the fill spans the lane", got, c.ControlBackground)
+		}
 	})
 	t.Run("rows fit", func(t *testing.T) {
 		img := render(4)
@@ -423,6 +438,11 @@ func TestTheBarStandsBesideTheRows(t *testing.T) {
 		}
 		if p := chevronAt(size.X - lane); pixelAt(img, p.X, p.Y) != c.ControlBackground {
 			t.Errorf("chevron at %v, short of a lane that rows that fit do not take", p)
+		}
+		for _, x := range []int{0, size.X - lane, size.X - 1} {
+			if got := pixelAt(img, x, footY); got != hairline {
+				t.Errorf("header foot at x %d = %v, want the hairline %v; rows that fit take the hairline to the trailing edge", x, got, hairline)
+			}
 		}
 	})
 }
