@@ -34,7 +34,7 @@ func BenchmarkTableLayout(b *testing.B) {
 		items := makeRows(n)
 		b.Run(fmt.Sprintf("N=%d", n), func(b *testing.B) {
 			w := table.Render(shaper, cols, items, table.Sort{Column: 1, Asc: true},
-				tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
+				tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable, nil)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -67,7 +67,7 @@ func TestBenchmarkConfirmsConstantCost(t *testing.T) {
 	measure := func(n int) int64 {
 		items := makeRows(n)
 		w := table.Render(shaper, cols, items, table.Sort{Column: 1, Asc: true},
-			tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
+			tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable, nil)
 		result := testing.Benchmark(func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {

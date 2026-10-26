@@ -96,7 +96,7 @@ func TestRowFnCalledOnlyForVisibleItems(t *testing.T) {
 	}
 
 	w := table.Render(shaper, cols, items, table.Sort{Column: -1},
-		tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable)
+		tokens.PlatformLight, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable, nil)
 	var ops op.Ops
 	gtx := layout.Context{
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
@@ -425,6 +425,39 @@ func TestTheBarStandsBesideTheRows(t *testing.T) {
 			t.Errorf("chevron at %v, short of a lane that rows that fit do not take", p)
 		}
 	})
+}
+
+// TestRenderDrawsTheBarItIsGiven pins the bar parameter of Render. With rows
+// that overflow, a nil bar fades and takes no lane. A bar at Always stands in
+// a lane at the body's trailing edge, and the track shows at the foot of the
+// lane. PxPerDp is 1 here.
+func TestRenderDrawsTheBarItIsGiven(t *testing.T) {
+	shaper := defaultShaper(t)
+	size := image.Pt(360, 360)
+	c := tokens.PlatformLight
+	standing := scrollbar.FromTokens(c, c.ControlBackground).Always()
+	lane := int(standing.Width())
+	rowH := int(tokens.Comfortable.RowHeight)
+	cols := []table.Column[int]{
+		{Header: "ID", Cell: textCell(shaper, func(i int) string { return strconv.Itoa(i + 1) })},
+	}
+	items := make([]int, 30)
+	for i := range items {
+		items[i] = i
+	}
+	render := func(bar func(scrollbar.Style) scrollbar.Style) *image.RGBA {
+		w := table.Render(shaper, cols, items, table.Sort{Column: -1},
+			c, tokens.Spacing, tokens.DefaultTypography.SystemFont, tokens.Comfortable, bar)
+		return golden.Capture(t, size, scene(w, color.NRGBA{R: 255, G: 0, B: 255, A: 255}))
+	}
+	foot := image.Pt(size.X-lane/2, size.Y-rowH)
+
+	if got, want := pixelAt(render(func(s scrollbar.Style) scrollbar.Style { return s.Always() }), foot.X, foot.Y), standing.TrackColor; got != want {
+		t.Errorf("lane at Always = %v, want the standing track %v", got, want)
+	}
+	if got := pixelAt(render(nil), foot.X, foot.Y); got == standing.TrackColor {
+		t.Errorf("lane with a nil bar = %v, want no standing track", got)
+	}
 }
 
 // pixelAt reads one pixel as the opaque NRGBA every token in the set is.

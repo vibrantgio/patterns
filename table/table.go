@@ -243,8 +243,9 @@ func Table[T any](th rx.Observable[theme.Theme], props Props[T]) rx.Observable[l
 // Render produces a layout.Widget for a table with a fixed dataset and
 // pre-resolved tokens. Intended for golden-image testing and static
 // demonstrations; production code should use Table, which reads both of the
-// parameters below off the theme. The rows scroll under the theme's bar,
-// which fades; [Props.Scrollbar] is the way to a bar that stands.
+// parameters below off the theme. The rows scroll under the theme's bar.
+// A nil bar draws the bar that fades; a non-nil bar receives the theme's bar
+// and returns the one to draw, as [Props.Scrollbar] does.
 //
 // header is the SystemFont role's whole text style — typeface, weight, size
 // and line height all reach the shaper — and d is the density the grid draws
@@ -261,8 +262,9 @@ func Render[T any](
 	sp tokens.SpacingScale,
 	header tokens.TextStyle,
 	d tokens.Density,
+	bar func(scrollbar.Style) scrollbar.Style,
 ) layout.Widget {
-	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, bar: rowsBar(colors, nil)}
+	tok := resolvedTokens{color: colors, spacing: sp, header: header, density: d, bar: rowsBar(colors, bar)}
 	state := list.NewState()
 	rows := &rowIndex{}
 	return func(gtx layout.Context) layout.Dimensions {
