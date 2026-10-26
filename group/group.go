@@ -104,7 +104,7 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 					color:   n.First,
 					spacing: n.Second,
 					radius:  n.Third,
-					title:   typ.LabelLarge,
+					title:   TitleStyle(typ),
 					shaper:  typ.Shaper(),
 				}
 			},
@@ -118,6 +118,11 @@ func Group(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widg
 		return Render(shaper, props, tok.color, tok.spacing, tok.radius, tok.title)
 	})
 }
+
+// TitleStyle reports the text style a group's title is set in: the
+// medium-weight LabelLarge style, because no role sets text that opens a
+// section in semibold.
+func TitleStyle(t tokens.Typography) tokens.TextStyle { return t.LabelLarge }
 
 // Render produces a layout.Widget for a group with pre-resolved tokens.
 // Intended for golden-image testing and static demonstrations; production
