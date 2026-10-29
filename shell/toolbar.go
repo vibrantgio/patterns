@@ -233,11 +233,14 @@ func ToolbarPair(controls ...layout.Widget) layout.Widget {
 }
 
 // ToolbarTitleInsetDp is the room a toolbar control titled with text leaves
-// between its edge and its text, on each side. PUBLISHED: Apple's Human
-// Interface Guidelines give about 8 pt beside a push button's text, the row
-// reference/macos/controls.md carries. No stored capture holds a toolbar
-// control titled with text, so no MEASURED row replaces it.
-const ToolbarTitleInsetDp unit.Dp = 8
+// between its edge and its text, on each side. components/button draws that
+// control, and a push button never draws narrower than its title and the
+// regular push button's title inset each side: 13 px, MEASURED in
+// save-panel-untinted-{light,dark}.png and
+// save-panel-footer-untinted-{light,dark}.png. A slot narrower than that
+// floor makes the control overflow it. Calendar's Today button, a toolbar
+// control, measures 15 px each side in reference/macos/controls.md.
+const ToolbarTitleInsetDp unit.Dp = 13
 
 // ToolbarTitleWidth answers the width of a toolbar control titled with
 // text: the width of title set in style, and [ToolbarTitleInsetDp] each
