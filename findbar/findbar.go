@@ -195,9 +195,9 @@ type bar struct {
 	opens int
 }
 
-// FindBar returns the find bar as a stream of widgets. The widget draws the
-// bar across the width it is given while [State.Open] is true, and takes no
-// room while it is false. Lay the widget out on every frame, open or closed,
+// FindBar returns the find bar as a stream of layout.Widget values. The bar
+// draws across the width it is given while [State.Open] is true, and takes no
+// room while it is false. Lay it out on every frame, open or closed,
 // so that it sees the caller close it: [Over] does this.
 //
 // Both integration paths are supported: the callbacks for FRP, and the

@@ -74,7 +74,7 @@ func window(c tokens.PlatformColors, bar, column layout.Widget) layout.Widget {
 }
 
 // liveBar is a live bar in a window under test: the state it is given, the
-// latest widget it emitted, and what its callbacks saw.
+// latest layout.Widget it emitted, and what its callbacks saw.
 type liveBar struct {
 	t       *testing.T
 	send    rx.Observer[findbar.State]
