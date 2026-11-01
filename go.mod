@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	gioui.org v0.10.2
 	github.com/reactivego/rx v0.3.0
-	github.com/vibrantgio/components v1.7.1-0.20261101162540-c8f40a26da02
+	github.com/vibrantgio/components v1.7.1-0.20261101165417-7360c990cd42
 	github.com/vibrantgio/effects v0.5.0
 	github.com/vibrantgio/mvu v1.1.5
 	github.com/vibrantgio/mvu/desktop v1.1.5

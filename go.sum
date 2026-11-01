@@ -15,6 +15,8 @@ github.com/reactivego/scheduler v0.2.0 h1:XCg1M2L/ejSOI8v5Q0K5xJt+W204+F0AJsjpTP
 github.com/reactivego/scheduler v0.2.0/go.mod h1:Kw99rMXR1WJr/FgeqQfGAWClsWWlVKXZCUwJ+iCXUtQ=
 github.com/vibrantgio/components v1.7.1-0.20261101162540-c8f40a26da02 h1:VYIfeAEp6bPH5XPxAJLbYyOx2Khu+2JXhwB9fZyYw1U=
 github.com/vibrantgio/components v1.7.1-0.20261101162540-c8f40a26da02/go.mod h1:n/T4nF43DIpYGMyDZDX6Xa+wgJ1BG4HBpzayM9dy4Gc=
+github.com/vibrantgio/components v1.7.1-0.20261101165417-7360c990cd42 h1:xZMt4kOvwYNB0q85oSuvR4/9D7wa3+ipRnI7rWqn2GA=
+github.com/vibrantgio/components v1.7.1-0.20261101165417-7360c990cd42/go.mod h1:n/T4nF43DIpYGMyDZDX6Xa+wgJ1BG4HBpzayM9dy4Gc=
 github.com/vibrantgio/effects v0.5.0 h1:bKZgemcLbHYYJxy7LDaXSqSLeqAzXjLf3tPVM3eReiY=
 github.com/vibrantgio/effects v0.5.0/go.mod h1:KcO1kouFlk2AvH7dts6vno/K26p9EzFx2+rkexQVtuE=
 github.com/vibrantgio/font v0.4.5 h1:yrzB+tMDJNhQ6bf4uR/uRLBIrcmB+1grRqU+V5RhvkY=

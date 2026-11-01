@@ -17,6 +17,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"gioui.org/widget"
 
 	"github.com/reactivego/rx"
 
@@ -250,6 +251,23 @@ func TestTheBarOpensHoldingAGivenQuery(t *testing.T) {
 	b.open("")
 	if got := b.changes[before:]; len(got) != 0 {
 		t.Errorf("a request with no query changed the field's text: %q", got)
+	}
+}
+
+// The bar opens holding the query selected whole, with the caret at its
+// end, as a platform field selects its text when it takes the keyboard.
+func TestTheBarOpensHoldingTheQuerySelectedWhole(t *testing.T) {
+	b := newLiveBar(t)
+	b.open("Gio")
+	ed, ok := b.field.(*widget.Editor)
+	if !ok {
+		t.Fatalf("the field's focus tag is %T, want its editor", b.field)
+	}
+	if got := ed.SelectedText(); got != "Gio" {
+		t.Errorf("the bar opened with %q selected, want the whole query \"Gio\"", got)
+	}
+	if caret, _ := ed.Selection(); caret != 3 {
+		t.Errorf("the caret stands at %d, want 3, the end of the query", caret)
 	}
 }
 
