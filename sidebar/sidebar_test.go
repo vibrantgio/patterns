@@ -5,9 +5,11 @@ import (
 	"context"
 	"image"
 	"image/color"
+	"math"
 	"testing"
 
 	"gioui.org/f32"
+	"gioui.org/font"
 	gioinput "gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -22,8 +24,11 @@ import (
 	"github.com/vibrantgio/components/golden"
 	"github.com/vibrantgio/components/icons"
 	"github.com/vibrantgio/patterns/sidebar"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
+	"golang.org/x/image/math/fixed"
 )
 
 const (
@@ -578,11 +583,20 @@ func TestSidebarSectionGolden(t *testing.T) {
 // TestSidebarRowStandsInTheMeasuredColumns reads the three parts of a row off
 // a rendered rail and holds each to the column the platform draws it in:
 // the symbol's square at SymbolInset, the title's first column at TitleInset,
-// and the count's trailing edge CountInset in from the rail's.
+// and the count's advance edge CountAdvanceInset in from the rail's.
 //
 // The symbol is a flat blue square, so its own columns are told from the text
-// by colour rather than by position; the title and the count are read as the
-// drawn columns either side of it.
+// by colour rather than by position. The title is read as the first drawn
+// column past it.
+//
+// The count is found by its pixels and measured by its advance. The test
+// draws the count alone on the rail's fill and finds the shift at which the
+// row's pixels match that drawing exactly, with no coverage floor. The shift
+// plus the run's advance is the count's advance edge, and that edge is what
+// the test holds to the column. The test does not hold the drawn digits'
+// last covered column. The widened face's outline grows with the stem
+// weight, so its pixels can run a fraction of a pixel past the column. That
+// is the stem and not the count's place.
 func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	shaper := defaultShaper(t)
 	props := sidebar.Props{
@@ -607,14 +621,12 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 			}
 		}
 	}
-	// A text column counts from golden.ColumnCoverageFloor. The title is
-	// read past the symbol's square and the count in the rail's trailing
-	// half, so each is read against its own colour. The rail draws nothing
-	// down its trailing edge, so the count's scan runs to the rail's edge.
+	// A title column counts from golden.ColumnCoverageFloor, read past the
+	// symbol's square.
 	fill := color.RGBA(tokens.PlatformLight.SidebarMaterial)
 	titleFrom := int(sidebar.SymbolInset + sidebar.SymbolBox)
 	textMin, titleOK := golden.FirstTextColumn(img, fill, titleFrom, expandedW/2, top, bottom)
-	textMax, countOK := lastTextColumn(img, fill, expandedW/2, expandedW, top, bottom)
+	countX, countOK := countOrigin(t, shaper, img, "46", top, bottom)
 	if symMax < 0 || !titleOK || !countOK {
 		t.Fatalf("nothing drawn: symbol %d–%d, title %v, count %v", symMin, symMax, titleOK, countOK)
 	}
@@ -630,12 +642,114 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	if textMin > int(sidebar.TitleInset)+2 {
 		t.Errorf("the title starts at x=%d, want TitleInset %v or the glyph's own bearing past it", textMin, sidebar.TitleInset)
 	}
-	// The count is placed by its DRAWN pixels: its last covered column is
-	// CountInset in from the rail's trailing edge exactly, the face's own
-	// trailing side bearing read off the shaped run and spent.
-	if want := expandedW - int(sidebar.CountInset) - 1; textMax != want {
-		t.Errorf("the count's last covered column is x=%d, want %d — CountInset %v in from the rail's %d, the bearing subtracted",
-			textMax, want, sidebar.CountInset, expandedW)
+	// The count's advance edge falls in the column CountAdvanceInset in from
+	// the rail's trailing edge, and within half a column of that place.
+	target := float64(expandedW) - float64(sidebar.CountAdvanceInset)
+	edge := float64(countX) + countAdvance(shaper, "46")
+	if int(math.Floor(edge)) != int(math.Floor(target)) || math.Abs(edge-target) > 0.5 {
+		t.Errorf("the count's advance edge is x=%.3f, want %.3f in column %d — CountAdvanceInset %v in from the rail's %d",
+			edge, target, int(math.Floor(target)), sidebar.CountAdvanceInset, expandedW)
+	}
+}
+
+// countFill and countForeground are the fill and the colour of an unselected
+// row's count in the light rail.
+func countFill() color.NRGBA { return tokens.PlatformLight.SidebarMaterial }
+
+func countForeground() color.NRGBA {
+	return vgcolor.Flatten(sidebar.CountForeground(tokens.PlatformLight, false, false), countFill())
+}
+
+// countOrigin draws txt alone on the light rail's fill, as an unselected row
+// draws its count, and finds the column at which the rows top to bottom of
+// img match that drawing exactly. It reports the column of the drawing's
+// origin, and false when no shift or more than one shift matches.
+func countOrigin(t *testing.T, shaper *text.Shaper, img *image.RGBA, txt string, top, bottom int) (int, bool) {
+	t.Helper()
+	style := tokens.DefaultTypography.SystemFont
+	size := image.Pt(expandedW/2, int(sidebar.RowHeight))
+	alone := golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
+		paint.FillShape(gtx.Ops, countFill(), clip.Rect{Max: size}.Op())
+		gtx = typeset.WithFill(gtx, countFill())
+		gtx.Constraints.Min = image.Point{}
+		return typeset.Text(gtx, shaper, txt, style, countForeground(), 1)
+	})
+	if alone == nil {
+		return 0, false
+	}
+	bg := color.RGBA(countFill())
+	box := image.Rectangle{Min: size}
+	for y := range size.Y {
+		for x := range size.X {
+			if alone.RGBAAt(x, y) != bg {
+				box = box.Union(image.Rect(x, y, x+1, y+1))
+			}
+		}
+	}
+	if box.Empty() {
+		return 0, false
+	}
+	found, n := 0, 0
+	for dy := top - box.Min.Y; dy+box.Max.Y <= bottom+1; dy++ {
+		for dx := expandedW / 2; dx+box.Max.X <= expandedW; dx++ {
+			match := true
+			for y := box.Min.Y; y < box.Max.Y && match; y++ {
+				for x := box.Min.X; x < box.Max.X; x++ {
+					if img.RGBAAt(x+dx, y+dy) != alone.RGBAAt(x, y) {
+						match = false
+						break
+					}
+				}
+			}
+			if match {
+				found, n = dx, n+1
+			}
+		}
+	}
+	return found, n == 1
+}
+
+// countAdvance is the advance of txt from its origin, in px, laid out in the
+// font the light rail draws an unselected row's count in.
+func countAdvance(shaper *text.Shaper, txt string) float64 {
+	style := tokens.DefaultTypography.SystemFont
+	gtx := typeset.WithFill(layout.Context{Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}, countFill())
+	shaper.LayoutString(text.Parameters{
+		Font:     typeset.FontOn(gtx, style, font.Normal, countForeground()),
+		PxPerEm:  fixed.I(int(style.Size)),
+		MaxLines: 1,
+		MaxWidth: 1 << 20,
+	}, txt)
+	var end fixed.Int26_6
+	for {
+		g, ok := shaper.NextGlyph()
+		if !ok {
+			break
+		}
+		end = max(end, g.X+g.Advance)
+	}
+	return float64(end) / 64
+}
+
+// TestCountBearingIsRobotoAsShipped holds CountAdvanceInset's bearing to the
+// face: the "2" of Roboto Regular as shipped, at the System font role's
+// size, leaves 0.482 px between its drawing and the end of its advance.
+func TestCountBearingIsRobotoAsShipped(t *testing.T) {
+	shaper := defaultShaper(t)
+	style := tokens.DefaultTypography.SystemFont
+	shaper.LayoutString(text.Parameters{
+		Font:     typeset.Font(style, font.Normal),
+		PxPerEm:  fixed.I(int(style.Size)),
+		MaxLines: 1,
+		MaxWidth: 1 << 20,
+	}, "2")
+	g, ok := shaper.NextGlyph()
+	if !ok {
+		t.Fatal("the shaper laid out no glyph for \"2\"")
+	}
+	bearing := float64(g.Advance-g.Bounds.Max.X) / 64
+	if want := float64(sidebar.CountInset - sidebar.CountAdvanceInset); math.Abs(bearing-want) > 1.0/64 {
+		t.Errorf("the shipped \"2\" leaves %.3f px after its drawing, want %.3f — the bearing CountAdvanceInset subtracts", bearing, want)
 	}
 }
 
@@ -1038,17 +1152,4 @@ func TestSidebarSectionIsTheSmallSectionHeadingRole(t *testing.T) {
 	if got := sidebar.SectionStyle(typ); got != typ.SmallSectionHeading {
 		t.Errorf("SectionStyle = %+v, want the Small section heading role %+v", got, typ.SmallSectionHeading)
 	}
-}
-
-// lastTextColumn answers the last column in [x0, x1) that
-// golden.FirstTextColumn counts as covered, read from the trailing side.
-func lastTextColumn(img *image.RGBA, fill color.RGBA, x0, x1, y0, y1 int) (int, bool) {
-	mirror := image.NewRGBA(img.Bounds())
-	for y := y0; y <= y1; y++ {
-		for x := x0; x < x1; x++ {
-			mirror.SetRGBA(x0+x1-1-x, y, img.RGBAAt(x, y))
-		}
-	}
-	col, ok := golden.FirstTextColumn(mirror, fill, x0, x1, y0, y1)
-	return x0 + x1 - 1 - col, ok
 }

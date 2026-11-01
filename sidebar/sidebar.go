@@ -105,6 +105,7 @@ package sidebar
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"gioui.org/font"
 	"gioui.org/gesture"
@@ -300,6 +301,21 @@ const (
 	SectionCapTop   unit.Dp = 22
 	SectionBaseline unit.Dp = 30
 )
+
+// CountAdvanceInset is where a count's advance edge stands, in from the
+// rail's trailing edge. [PaintCount] places the count by its advance box,
+// and no position reads a glyph's outline bound, because a glyph's outline
+// in a widened face grows with the stem weight.
+//
+// DERIVED from the measured column and the typeface's bearing. The platform
+// draws each count's last column [CountInset] (17) in from the pane's
+// trailing edge. Roboto Regular as shipped leaves 76 of its 2048 units
+// between the drawing of "2" and the end of its advance. "2" is the digit
+// the reference measures in the dark rail. At the System font role's 13 pt
+// that bearing is 13 × 76 / 2048 = 0.482 px, so the advance edge stands
+// 17 − 0.482 = 16.518 in. The other digits leave between 46 and 135 units,
+// except "1" at 422, so a count's drawn column follows its last digit.
+const CountAdvanceInset unit.Dp = CountInset - 13*76.0/2048
 
 // DisclosureBox and DisclosureInset are where the control that collapses a
 // section stands: at the trailing end of the section's own heading block,
@@ -1023,17 +1039,10 @@ func paintSymbolAt(gtx layout.Context, mark icons.Painter, size image.Point, x i
 // It is exported so an application drawing its own chrome rail puts its
 // counts in the platform's column.
 //
-// What is placed is the count's LAST COVERED COLUMN, [CountInset] in from the
-// rail's trailing edge, not the trailing edge of its layout box: the platform
-// draws every count in the reference to x 266 or 267 against a pane rim at
-// x 283, and those are drawn pixels. A face leaves a trailing side bearing
-// between its last stem and the end of its advance, so a box placed by its
-// own edge lands the digits that much short of the measured column. The run's
-// own covered width is read off the shaper and the placement spends that,
-// which is the rule components/internal/control spends a text origin by,
-// mirrored to the other end of the line.
+// The count's advance edge stands [CountAdvanceInset] in from the trailing
+// edge of size, rounded to the nearest whole column. The text's width does
+// not follow its colour or its fill, so neither does the count's place.
 func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, size image.Point, fg color.NRGBA) int {
-	covered := coveredWidth(gtx, shaper, txt, style, size.X, fg)
 	cGtx := gtx
 	cGtx.Constraints.Min = image.Point{}
 	cGtx.Constraints.Max = image.Pt(size.X, size.Y)
@@ -1041,8 +1050,9 @@ func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style token
 	dims := typeset.Text(cGtx, shaper, txt, style, fg, 1)
 	call := rec.Stop()
 	x := size.X - gtx.Dp(CountInset) - dims.Size.X
-	if covered > 0 {
-		x = size.X - gtx.Dp(CountInset) - covered
+	if adv := advanceWidth(gtx, shaper, txt, style, size.X, fg); adv > 0 {
+		edge := float64(size.X) - float64(gtx.Metric.PxPerDp)*float64(CountAdvanceInset)
+		x = int(math.Round(edge - adv))
 	}
 	if x < 0 {
 		x = 0
@@ -1053,18 +1063,15 @@ func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style token
 	return dims.Size.X
 }
 
-// coveredWidth reports how far a one-line run's drawn pixels reach from the
-// line's own origin, in whole columns, or 0 when the run cannot be measured.
-// It is the glyphs' covered extent rather than the advance they spend, which
-// is the width [typeset.LineWidth] answers and the reason this is not that
-// call: a face leaves a trailing side bearing between its last stem and the
-// end of the advance, and the platform's own column is a drawn pixel.
+// advanceWidth reports the advance a one-line run spends from the line's own
+// origin, in px, or 0 when the run cannot be measured. It is the sum that
+// the shaper answers before the width is rounded to whole columns.
 //
 // It shapes the run with the parameters the paint pass will, the font for fg
-// on the fill gtx carries included, so it is a hit in the shaper's cache rather than a second shaping. A shaper lays one
-// document out at a time, so this runs to completion before the paint pass
-// shapes anything.
-func coveredWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, maxWidth int, fg color.NRGBA) int {
+// on the fill gtx carries included, so it is a hit in the shaper's cache
+// rather than a second shaping. A shaper lays one document out at a time, so
+// this runs to completion before the paint pass shapes anything.
+func advanceWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, maxWidth int, fg color.NRGBA) float64 {
 	if shaper == nil || txt == "" || style.Size <= 0 {
 		return 0
 	}
@@ -1079,15 +1086,13 @@ func coveredWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tok
 		MaxWidth:   maxWidth,
 		Locale:     gtx.Locale,
 	}, txt)
-	var covered fixed.Int26_6
+	var end fixed.Int26_6
 	for {
 		g, ok := shaper.NextGlyph()
 		if !ok {
 			break
 		}
-		if right := g.X + g.Bounds.Max.X; right > covered {
-			covered = right
-		}
+		end = max(end, g.X+g.Advance)
 	}
-	return covered.Ceil()
+	return float64(end) / 64
 }
