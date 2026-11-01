@@ -9,7 +9,7 @@ require (
 	github.com/vibrantgio/effects v0.5.0
 	github.com/vibrantgio/mvu v1.1.5
 	github.com/vibrantgio/mvu/desktop v1.1.5
-	github.com/vibrantgio/theme v1.6.1-0.20261101222502-abb32a8d88e7
+	github.com/vibrantgio/theme v1.6.1-0.20261101224235-79942a278c64
 	golang.org/x/image v0.44.0
 )
 
