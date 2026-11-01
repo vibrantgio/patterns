@@ -583,7 +583,9 @@ func TestSidebarSectionGolden(t *testing.T) {
 // TestSidebarRowStandsInTheMeasuredColumns reads the three parts of a row off
 // a rendered rail and holds each to the column the platform draws it in:
 // the symbol's square at SymbolInset, the title's first column at TitleInset,
-// and the count's advance edge CountAdvanceInset in from the rail's.
+// and the count's advance edge CountAdvanceInset at the row's size in from
+// the rail's. The row is drawn at the System font role and at Title 2, so a
+// count in another style keeps the measured column.
 //
 // The symbol is a flat blue square, so its own columns are told from the text
 // by colour rather than by position. The title is read as the first drawn
@@ -598,13 +600,25 @@ func TestSidebarSectionGolden(t *testing.T) {
 // weight, so its pixels can run a fraction of a pixel past the column. That
 // is the stem and not the count's place.
 func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		style tokens.TextStyle
+	}{
+		{"system font", tokens.DefaultTypography.SystemFont},
+		{"title 2", tokens.DefaultTypography.Title2},
+	} {
+		t.Run(tc.name, func(t *testing.T) { rowStandsInTheMeasuredColumns(t, tc.style) })
+	}
+}
+
+func rowStandsInTheMeasuredColumns(t *testing.T, style tokens.TextStyle) {
 	shaper := defaultShaper(t)
 	props := sidebar.Props{
 		Items:  []sidebar.Item{{Icon: testIcon(), Title: "Tokens", Count: "46", OnClick: func(_ layout.Context) {}}},
 		Shaper: shaper,
 	}
 	w := sidebar.Render(shaper, props, false, tokens.PlatformLight, tokens.Spacing,
-		tokens.DefaultTypography.SystemFont, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
+		style, sidebar.SectionStyle(tokens.DefaultTypography), tokens.Comfortable)
 	img := golden.Capture(t, expandedSize, w)
 	if img == nil {
 		t.Skip("no capture backend")
@@ -626,7 +640,7 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	fill := color.RGBA(tokens.PlatformLight.SidebarMaterial)
 	titleFrom := int(sidebar.SymbolInset + sidebar.SymbolBox)
 	textMin, titleOK := golden.FirstTextColumn(img, fill, titleFrom, expandedW/2, top, bottom)
-	countX, countOK := countOrigin(t, shaper, img, "46", top, bottom)
+	countX, countOK := countOrigin(t, shaper, img, "46", style, top, bottom)
 	if symMax < 0 || !titleOK || !countOK {
 		t.Fatalf("nothing drawn: symbol %d–%d, title %v, count %v", symMin, symMax, titleOK, countOK)
 	}
@@ -642,13 +656,17 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	if textMin > int(sidebar.TitleInset)+2 {
 		t.Errorf("the title starts at x=%d, want TitleInset %v or the glyph's own bearing past it", textMin, sidebar.TitleInset)
 	}
-	// The count's advance edge falls in the column CountAdvanceInset in from
-	// the rail's trailing edge, and within half a column of that place.
-	target := float64(expandedW) - float64(sidebar.CountAdvanceInset)
-	edge := float64(countX) + countAdvance(shaper, "46")
-	if int(math.Floor(edge)) != int(math.Floor(target)) || math.Abs(edge-target) > 0.5 {
-		t.Errorf("the count's advance edge is x=%.3f, want %.3f in column %d — CountAdvanceInset %v in from the rail's %d",
-			edge, target, int(math.Floor(target)), sidebar.CountAdvanceInset, expandedW)
+	// The count's advance edge falls within half a column of the place
+	// CountAdvanceInset at the style's size gives, in from the rail's
+	// trailing edge. The count stands at a whole column, so the edge cannot
+	// come nearer at every size. The platform's own counts end in two
+	// adjacent columns, x 266 or 267.
+	inset := sidebar.CountAdvanceInset(style.Size)
+	target := float64(expandedW) - float64(inset)
+	edge := float64(countX) + countAdvance(shaper, "46", style)
+	if math.Abs(edge-target) > 0.5 {
+		t.Errorf("the count's advance edge is x=%.3f, want %.3f within half a column — CountAdvanceInset %v in from the rail's %d",
+			edge, target, inset, expandedW)
 	}
 }
 
@@ -664,9 +682,8 @@ func countForeground() color.NRGBA {
 // draws its count, and finds the column at which the rows top to bottom of
 // img match that drawing exactly. It reports the column of the drawing's
 // origin, and false when no shift or more than one shift matches.
-func countOrigin(t *testing.T, shaper *text.Shaper, img *image.RGBA, txt string, top, bottom int) (int, bool) {
+func countOrigin(t *testing.T, shaper *text.Shaper, img *image.RGBA, txt string, style tokens.TextStyle, top, bottom int) (int, bool) {
 	t.Helper()
-	style := tokens.DefaultTypography.SystemFont
 	size := image.Pt(expandedW/2, int(sidebar.RowHeight))
 	alone := golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, countFill(), clip.Rect{Max: size}.Op())
@@ -710,9 +727,8 @@ func countOrigin(t *testing.T, shaper *text.Shaper, img *image.RGBA, txt string,
 }
 
 // countAdvance is the advance of txt from its origin, in px, laid out in the
-// font the light rail draws an unselected row's count in.
-func countAdvance(shaper *text.Shaper, txt string) float64 {
-	style := tokens.DefaultTypography.SystemFont
+// font the light rail draws an unselected row's count in at style.
+func countAdvance(shaper *text.Shaper, txt string, style tokens.TextStyle) float64 {
 	gtx := typeset.WithFill(layout.Context{Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}}, countFill())
 	shaper.LayoutString(text.Parameters{
 		Font:     typeset.FontOn(gtx, style, font.Normal, countForeground()),
@@ -731,25 +747,35 @@ func countAdvance(shaper *text.Shaper, txt string) float64 {
 	return float64(end) / 64
 }
 
-// TestCountBearingIsRobotoAsShipped holds CountAdvanceInset's bearing to the
-// face: the "2" of Roboto Regular as shipped, at the System font role's
-// size, leaves 0.482 px between its drawing and the end of its advance.
+// TestCountBearingIsRobotoAsShipped holds CountBearing to the face: the "2"
+// of Roboto Regular as shipped leaves 76 of its 2048 units between its
+// drawing and the end of its advance, at the System font role's size and at
+// Title 2's.
 func TestCountBearingIsRobotoAsShipped(t *testing.T) {
 	shaper := defaultShaper(t)
-	style := tokens.DefaultTypography.SystemFont
-	shaper.LayoutString(text.Parameters{
-		Font:     typeset.Font(style, font.Normal),
-		PxPerEm:  fixed.I(int(style.Size)),
-		MaxLines: 1,
-		MaxWidth: 1 << 20,
-	}, "2")
-	g, ok := shaper.NextGlyph()
-	if !ok {
-		t.Fatal("the shaper laid out no glyph for \"2\"")
-	}
-	bearing := float64(g.Advance-g.Bounds.Max.X) / 64
-	if want := float64(sidebar.CountInset - sidebar.CountAdvanceInset); math.Abs(bearing-want) > 1.0/64 {
-		t.Errorf("the shipped \"2\" leaves %.3f px after its drawing, want %.3f — the bearing CountAdvanceInset subtracts", bearing, want)
+	for _, style := range []tokens.TextStyle{tokens.DefaultTypography.SystemFont, tokens.DefaultTypography.Title2} {
+		shaper.LayoutString(text.Parameters{
+			Font:     typeset.Font(style, font.Normal),
+			PxPerEm:  fixed.I(int(style.Size)),
+			MaxLines: 1,
+			MaxWidth: 1 << 20,
+		}, "2")
+		g, ok := shaper.NextGlyph()
+		if !ok {
+			t.Fatal("the shaper laid out no glyph for \"2\"")
+		}
+		for {
+			if _, more := shaper.NextGlyph(); !more {
+				break
+			}
+		}
+		bearing := float64(g.Advance-g.Bounds.Max.X) / 64
+		if want := float64(style.Size) * sidebar.CountBearing; math.Abs(bearing-want) > 1.0/64 {
+			t.Errorf("at %v pt the shipped \"2\" leaves %.3f px after its drawing, want %.3f — CountBearing at that size", style.Size, bearing, want)
+		}
+		if got, want := float64(sidebar.CountInset-sidebar.CountAdvanceInset(style.Size)), float64(style.Size)*sidebar.CountBearing; math.Abs(got-want) > 1e-4 {
+			t.Errorf("CountAdvanceInset(%v) stands %.4f in from CountInset, want %.4f", style.Size, got, want)
+		}
 	}
 }
 

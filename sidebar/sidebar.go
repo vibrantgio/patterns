@@ -302,20 +302,29 @@ const (
 	SectionBaseline unit.Dp = 30
 )
 
-// CountAdvanceInset is where a count's advance edge stands, in from the
-// rail's trailing edge. [PaintCount] places the count by its advance box,
-// and no position reads a glyph's outline bound, because a glyph's outline
-// in a widened face grows with the stem weight.
+// CountBearing is the space between the drawing of a count's last digit and
+// the end of the count's advance, as a fraction of the count's size.
+// [PaintCount] places the count by its advance box, and no position reads a
+// glyph's outline bound, because a glyph's outline in a widened face grows
+// with the stem weight.
 //
 // DERIVED from the measured column and the typeface's bearing. The platform
 // draws each count's last column [CountInset] (17) in from the pane's
 // trailing edge. Roboto Regular as shipped leaves 76 of its 2048 units
 // between the drawing of "2" and the end of its advance. "2" is the digit
-// the reference measures in the dark rail. At the System font role's 13 pt
-// that bearing is 13 × 76 / 2048 = 0.482 px, so the advance edge stands
-// 17 − 0.482 = 16.518 in. The other digits leave between 46 and 135 units,
-// except "1" at 422, so a count's drawn column follows its last digit.
-const CountAdvanceInset unit.Dp = CountInset - 13*76.0/2048
+// the reference measures in the dark rail. The bearing scales with the
+// count's size: at the System font role's 13 pt it is 13 × 76 / 2048 =
+// 0.482 px, so the advance edge stands 17 − 0.482 = 16.518 in. The other
+// digits leave between 46 and 135 units, except "1" at 422, so a count's
+// drawn column follows its last digit.
+const CountBearing = 76.0 / 2048
+
+// CountAdvanceInset returns where the advance edge of a count set at size pt
+// stands, in from the rail's trailing edge: [CountInset] less the count's
+// [CountBearing] at that size. A pt is a dp at the library's scale.
+func CountAdvanceInset(size float32) unit.Dp {
+	return CountInset - unit.Dp(size*CountBearing)
+}
 
 // DisclosureBox and DisclosureInset are where the control that collapses a
 // section stands: at the trailing end of the section's own heading block,
@@ -1039,8 +1048,9 @@ func paintSymbolAt(gtx layout.Context, mark icons.Painter, size image.Point, x i
 // It is exported so an application drawing its own chrome rail puts its
 // counts in the platform's column.
 //
-// The count's advance edge stands [CountAdvanceInset] in from the trailing
-// edge of size, rounded to the nearest whole column. The text's width does
+// The count's advance edge stands [CountAdvanceInset] at the style's size in
+// from the trailing edge of size, rounded to the nearest whole column, so a
+// count in any style keeps the measured column. The text's width does
 // not follow its colour or its fill, so neither does the count's place.
 func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, size image.Point, fg color.NRGBA) int {
 	cGtx := gtx
@@ -1051,7 +1061,8 @@ func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style token
 	call := rec.Stop()
 	x := size.X - gtx.Dp(CountInset) - dims.Size.X
 	if adv := advanceWidth(gtx, shaper, txt, style, size.X, fg); adv > 0 {
-		edge := float64(size.X) - float64(gtx.Metric.PxPerDp)*float64(CountAdvanceInset)
+		bearing := float64(gtx.Metric.PxPerSp) * float64(style.Size) * CountBearing
+		edge := float64(size.X) - float64(gtx.Metric.PxPerDp)*float64(CountInset) + bearing
 		x = int(math.Round(edge - adv))
 	}
 	if x < 0 {

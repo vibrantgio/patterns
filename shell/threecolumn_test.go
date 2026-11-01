@@ -2,6 +2,7 @@ package shell_test
 
 import (
 	"image"
+	"image/color"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/vibrantgio/patterns/shell"
 	"github.com/vibrantgio/patterns/splitter"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // threeColSize is the window every three-column test here measures: wide
@@ -78,6 +80,42 @@ func TestThreeColumnColumnsAndSeam(t *testing.T) {
 	}
 	if got, want := g.ToolbarFillAt(g.ContentX+1), g.ContentFill; got != want {
 		t.Errorf("a control over the content flattens onto %v, want the content column's fill %v", got, want)
+	}
+}
+
+// TestThreeColumnToolbarTextStandsOnTheColumnFill holds what each toolbar
+// share tells the text laid out in it: the fill of the column under that
+// share, so a title in the toolbar draws at that fill's stem weight.
+func TestThreeColumnToolbarTextStandsOnTheColumnFill(t *testing.T) {
+	c := tokens.PlatformDark
+	var overList, overContent color.NRGBA
+	var listOK, contentOK bool
+	read := func(got *color.NRGBA, ok *bool) layout.Widget {
+		return func(gtx layout.Context) layout.Dimensions {
+			*got, *ok = typeset.Fill(gtx)
+			return layout.Dimensions{Size: image.Pt(20, 20)}
+		}
+	}
+	f := shell.ThreeColumn{
+		PaneWidth:   200,
+		ListWidth:   240,
+		Surface:     c.WindowBackground,
+		ListFill:    c.ControlBackground,
+		ContentFill: c.TextBackground,
+		List:        shell.ListColumn{Rows: fillNothing},
+		ListToolbar: shell.Toolbar{Lead: 20, Leading: []layout.Widget{read(&overList, &listOK)}},
+		Toolbar:     shell.Toolbar{Lead: 16, Leading: []layout.Widget{read(&overContent, &contentOK)}},
+		Main:        fillNothing,
+	}
+	golden.Capture(t, image.Pt(900, 400), func(gtx layout.Context) layout.Dimensions {
+		dims, _ := f.Layout(gtx, c)
+		return dims
+	})
+	if !listOK || overList != c.ControlBackground {
+		t.Errorf("the toolbar's share over the list tells its text the fill %v (set %v), want the list column's %v", overList, listOK, c.ControlBackground)
+	}
+	if !contentOK || overContent != c.TextBackground {
+		t.Errorf("the toolbar's share over the content tells its text the fill %v (set %v), want the content column's %v", overContent, contentOK, c.TextBackground)
 	}
 }
 

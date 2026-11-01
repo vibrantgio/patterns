@@ -507,12 +507,14 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	// The toolbar's two shares, in column order. Only the list's share
 	// leads past the window's control buttons, and only while the pane is
 	// away: the pane carries them otherwise, and the content's share never
-	// stands at the window's leading edge.
+	// stands at the window's leading edge. Each share's text stands on the
+	// fill of the column under it.
 	if !g.ListToolbar.Empty() {
 		lead := f.listToolbar()
 		buttons, gutter := ToolbarLead(gtx, g.ListX, lead.Lead, f.buttonsEnd(), lead.ButtonFallback)
 		st := op.Offset(g.ListToolbar.Min).Push(gtx.Ops)
 		bgtx := attachment.AvailableRoomAt(gtx, g.ListToolbar.Min)
+		bgtx = onFill(bgtx, g.ListFill)
 		bgtx.Constraints = layout.Exact(g.ListToolbar.Size())
 		lead.layout(bgtx, buttons, gutter, f.toolbarLead(c))
 		st.Pop()
@@ -520,6 +522,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	if !g.Toolbar.Empty() {
 		st := op.Offset(g.Toolbar.Min).Push(gtx.Ops)
 		bgtx := attachment.AvailableRoomAt(gtx, g.Toolbar.Min)
+		bgtx = onFill(bgtx, g.ContentFill)
 		bgtx.Constraints = layout.Exact(g.Toolbar.Size())
 		f.Toolbar.layout(bgtx, 0, gtx.Dp(f.Toolbar.Lead), nil)
 		st.Pop()
