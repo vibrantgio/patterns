@@ -96,7 +96,7 @@ func fillRect(c color.NRGBA, heightDp float32) layout.Widget {
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
-		return w(gtx)
+		return golden.On(bgColor, w)(gtx)
 	}
 }
 

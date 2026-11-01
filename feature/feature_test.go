@@ -40,7 +40,7 @@ func defaultShaper(t *testing.T) *text.Shaper {
 func scene(w layout.Widget, bgColor color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, bgColor, clip.Rect{Max: gtx.Constraints.Max}.Op())
-		return layout.UniformInset(unit.Dp(float32(marginPx))).Layout(gtx, w)
+		return layout.UniformInset(unit.Dp(float32(marginPx))).Layout(gtx, golden.On(bgColor, w))
 	}
 }
 
@@ -232,5 +232,5 @@ func drawOnce(t *testing.T, size image.Point, w layout.Widget) layout.Dimensions
 		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
 		Ops:         &ops,
 	}
-	return w(gtx)
+	return golden.OnWindow(tokens.PlatformLight, w)(gtx)
 }

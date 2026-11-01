@@ -143,6 +143,7 @@ func emptyStateImage(t *testing.T, sh *text.Shaper, c tokens.PlatformColors,
 	t.Helper()
 	return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		gtx = typeset.WithFill(gtx, fill)
 		return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill,
 			shell.EmptyStateProps{Line: emptyStateText})
 	})
@@ -254,6 +255,7 @@ func TestPaneSizeSetsTheLineInTheRowsStyle(t *testing.T) {
 			fill := tc.colors.TextBackground
 			got := golden.Capture(t, emptyStateFrame, func(gtx layout.Context) layout.Dimensions {
 				paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+				gtx = typeset.WithFill(gtx, fill)
 				return shell.EmptyState(gtx, sh, tc.colors, tokens.DefaultTypography, fill,
 					shell.EmptyStateProps{Line: emptyStateText, LineStyle: rows})
 			})
@@ -343,6 +345,7 @@ func emptyStateGroupImage(t *testing.T, sh *text.Shaper, c tokens.PlatformColors
 	}
 	return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		gtx = typeset.WithFill(gtx, fill)
 		return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill, shell.EmptyStateProps{
 			Line:        emptyStateText,
 			Description: emptyStateDescription,
@@ -359,6 +362,7 @@ func emptyStateLineOnly(t *testing.T, sh *text.Shaper, c tokens.PlatformColors,
 	t.Helper()
 	return golden.Capture(t, size, func(gtx layout.Context) layout.Dimensions {
 		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		gtx = typeset.WithFill(gtx, fill)
 		gtx.Constraints = layout.Exact(size)
 		typeset.TextAligned(gtx, sh, emptyStateText, style,
 			vgcolor.Flatten(c.TertiaryLabel, fill), 0, font.Normal, text.Middle)
@@ -373,12 +377,12 @@ func emptyStateHeightOf(t *testing.T, sh *text.Shaper, style tokens.TextStyle,
 	txt string, frame image.Point, maxLines int) int {
 	t.Helper()
 	h := 0
-	golden.Capture(t, frame, func(gtx layout.Context) layout.Dimensions {
+	golden.Capture(t, frame, golden.OnWindow(tokens.PlatformLight, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints = layout.Constraints{Min: image.Pt(frame.X, 0), Max: frame}
 		h = typeset.TextAligned(gtx, sh, txt, style, color.NRGBA{A: 0xff}, maxLines,
 			font.Normal, text.Middle).Size.Y
 		return layout.Dimensions{Size: frame}
-	})
+	}))
 	return h
 }
 
@@ -418,6 +422,7 @@ func TestALineWiderThanTheFrameIsSetOnMoreLines(t *testing.T) {
 	render := func(line string) *image.RGBA {
 		return golden.Capture(t, frame, func(gtx layout.Context) layout.Dimensions {
 			paint.FillShape(gtx.Ops, fill, clip.Rect{Max: gtx.Constraints.Max}.Op())
+			gtx = typeset.WithFill(gtx, fill)
 			return shell.EmptyState(gtx, sh, c, tokens.DefaultTypography, fill,
 				shell.EmptyStateProps{Line: line})
 		})

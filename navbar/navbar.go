@@ -186,6 +186,7 @@ func drawNavbar(gtx layout.Context, shaper *text.Shaper, props Props, clicks []w
 	// is the content's white exactly and in the dark one a blue-grey
 	// lighter than the content.
 	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, colors.SidebarMaterial)
 
 	// The bar has no vertical inset: centredRow centres each slot in the
 	// band. The horizontal inset is spacing S4.

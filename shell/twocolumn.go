@@ -378,6 +378,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	if f.Main != nil && f.MainFirst && g.RowH > 0 && mainW > 0 {
 		macro := op.Record(gtx.Ops)
 		mgtx := attachment.AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
+		mgtx = onFill(mgtx, f.ContentFill)
 		mgtx.Constraints = layout.Exact(image.Pt(mainW, g.RowH))
 		f.Main(mgtx)
 		mainCall = macro.Stop()
@@ -401,6 +402,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	case f.Main != nil && g.RowH > 0 && mainW > 0:
 		st := op.Offset(image.Pt(g.ContentX, g.RowTop)).Push(gtx.Ops)
 		mgtx := attachment.AvailableRoomAt(gtx, image.Pt(g.ContentX, g.RowTop))
+		mgtx = onFill(mgtx, f.ContentFill)
 		mgtx.Constraints = layout.Exact(image.Pt(mainW, g.RowH))
 		f.Main(mgtx)
 		st.Pop()
@@ -409,6 +411,7 @@ func (f TwoColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout.D
 	if f.Inspector != nil && insp > 0 && g.RowH > 0 {
 		st := op.Offset(image.Pt(inspX, g.RowTop)).Push(gtx.Ops)
 		agtx := attachment.AvailableRoomAt(gtx, image.Pt(inspX, g.RowTop))
+		agtx = onFill(agtx, f.InspectorFill)
 		agtx.Constraints = layout.Exact(image.Pt(insp, g.RowH))
 		f.Inspector(agtx)
 		st.Pop()

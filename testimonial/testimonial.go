@@ -230,7 +230,7 @@ func drawCard(gtx layout.Context, shaper *text.Shaper, item Item, tok resolvedTo
 	pad := gtx.Dp(unit.Dp(tok.spacing.S5))
 	width := gtx.Constraints.Max.X
 
-	inner := gtx
+	inner := typeset.WithFill(gtx, tok.color.CardFill)
 	inner.Constraints.Min = image.Point{}
 	inner.Constraints.Max.X = max(0, width-2*pad)
 	inner.Constraints.Max.Y = math.MaxInt32

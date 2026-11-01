@@ -77,6 +77,7 @@ import (
 	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // Placement is the side of the anchor on which the popover surface sits.
@@ -479,7 +480,9 @@ func drawSurface(
 		contentMax = image.Pt(max(min(frame.X/2, wide-2*pad-lane), 0), unboundedContent)
 	}
 	contentMacro := op.Record(gtx.Ops)
-	contentGtx := gtx
+	// The content is laid out on the surface, which is painted in the window
+	// background.
+	contentGtx := typeset.WithFill(gtx, tok.color.WindowBackground)
 	contentGtx.Constraints = layout.Constraints{Max: contentMax}
 	var contentDims layout.Dimensions
 	if props.Content != nil {

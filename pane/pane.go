@@ -101,6 +101,7 @@ import (
 	"github.com/vibrantgio/effects/depth"
 	"github.com/vibrantgio/mvu/desktop"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // The pane's geometry. Every number here is stated once and derived from
@@ -279,6 +280,7 @@ func Layout(gtx layout.Context, c tokens.PlatformColors, bounds image.Rectangle,
 	defer inner.Push(gtx.Ops).Pop()
 	defer op.Offset(bounds.Min).Push(gtx.Ops).Pop()
 	gtx = attachment.AvailableRoomAt(gtx, bounds.Min)
+	gtx = typeset.WithFill(gtx, Surface(c))
 	gtx.Constraints = layout.Exact(bounds.Size())
 	contents(gtx)
 }

@@ -269,6 +269,7 @@ func drawTabs(
 	// it rather than relying on the caller, so a caller that painted
 	// nothing still gets the strip and the tab's content on that fill.
 	paint.FillShape(gtx.Ops, fill, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, fill)
 
 	stripH := gtx.Dp(unit.Dp(d.ControlHeight))
 	if stripH > size.Y {

@@ -334,6 +334,7 @@ func drawTable[T any](
 	// The grid is printed on the platform's content fill, which is what a
 	// list, a table and a text view all stand on there.
 	paint.FillShape(gtx.Ops, tok.color.ControlBackground, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, tok.color.ControlBackground)
 
 	// The header is a row in the grid, so its height is exactly
 	// Density.RowHeight, like the body rows below it.
@@ -452,6 +453,7 @@ func drawHeaderRow[T any](
 	// under the header text, closed by a hairline along its foot. That
 	// hairline is the header's own edge and is drawn below.
 	paint.FillShape(gtx.Ops, tok.color.ControlBackground, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, tok.color.ControlBackground)
 
 	x := 0
 	for i, col := range columns {
@@ -567,13 +569,16 @@ func drawRow[T any](
 	totalW := gtx.Constraints.Max.X
 	rowSize := image.Pt(totalW, rowH)
 
+	fill := tok.color.ControlBackground
 	if odd {
-		paint.FillShape(gtx.Ops, vgcolor.Flatten(tok.color.AlternatingContentBackground, tok.color.ControlBackground),
-			clip.Rect{Max: rowSize}.Op())
+		fill = vgcolor.Flatten(tok.color.AlternatingContentBackground, tok.color.ControlBackground)
+		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: rowSize}.Op())
 	}
 	if current {
-		paint.FillShape(gtx.Ops, rowFill(tok), clip.Rect{Max: rowSize}.Op())
+		fill = rowFill(tok)
+		paint.FillShape(gtx.Ops, fill, clip.Rect{Max: rowSize}.Op())
 	}
+	gtx = typeset.WithFill(gtx, fill)
 
 	x := 0
 	for i, col := range columns {

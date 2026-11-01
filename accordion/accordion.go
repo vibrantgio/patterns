@@ -235,6 +235,7 @@ func drawAccordion(
 	// An accordion holds content, so its own plane is the content's fill
 	// and what shows between and behind its header rows is that.
 	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, colors.ControlBackground)
 
 	headerH := gtx.Dp(unit.Dp(headerHDp))
 	bodyH := gtx.Dp(unit.Dp(bodyHDp))

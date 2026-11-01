@@ -16,6 +16,7 @@ import (
 	"github.com/vibrantgio/patterns/navbar"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 func stackedPageObservable(th rx.Observable[theme.Theme], props Props) rx.Observable[layout.Widget] {
@@ -111,6 +112,7 @@ func drawStackedPage(
 
 	// Page fill behind content shorter than the viewport.
 	paint.FillShape(gtx.Ops, colors.ControlBackground, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, colors.ControlBackground)
 
 	// Navbar pinned across the full width; sections scroll beneath it. The
 	// navbar centres what it holds in rows of its own, which place their

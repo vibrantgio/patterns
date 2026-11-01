@@ -40,6 +40,7 @@ import (
 	"github.com/vibrantgio/patterns/internal/surface"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // Props configures a Card. All slot fields are optional; nil slots are
@@ -93,6 +94,7 @@ func drawCard(gtx layout.Context, props Props, colors tokens.PlatformColors, sp 
 	// stands on, darker in light and lighter in dark, with no hairline and
 	// no shadow.
 	surface.Card(gtx, bounds, r, colors.CardFill)
+	gtx = typeset.WithFill(gtx, colors.CardFill)
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return stack(gtx, gap, props.Header, props.Body, props.Footer)

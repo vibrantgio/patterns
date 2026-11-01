@@ -598,24 +598,25 @@ func TestSidebarRowStandsInTheMeasuredColumns(t *testing.T) {
 	// The one row sits under the toggle, whose height is the density's
 	// control height; read the band the row occupies.
 	top := int(tokens.Comfortable.ControlHeight)
+	bottom := top + int(sidebar.RowHeight) - 1
 	var symMin, symMax = expandedW, -1
-	var textMin, textMax = expandedW, -1
-	// The rail draws nothing down its trailing edge, so the scan runs the
-	// whole width.
-	for y := top; y < top+int(sidebar.RowHeight); y++ {
+	for y := top; y <= bottom; y++ {
 		for x := 0; x < expandedW; x++ {
-			c := img.RGBAAt(x, y)
-			if c.B > c.R+0x40 && c.G > c.R {
+			if c := img.RGBAAt(x, y); c.B > c.R+0x40 && c.G > c.R {
 				symMin, symMax = min(symMin, x), max(symMax, x)
-				continue
-			}
-			if int(c.R)+int(c.G)+int(c.B) < 3*0xf0 {
-				textMin, textMax = min(textMin, x), max(textMax, x)
 			}
 		}
 	}
-	if symMax < 0 || textMax < 0 {
-		t.Fatalf("nothing drawn: symbol %d–%d, text %d–%d", symMin, symMax, textMin, textMax)
+	// A text column counts from golden.ColumnCoverageFloor. The title is
+	// read past the symbol's square and the count in the rail's trailing
+	// half, so each is read against its own colour. The rail draws nothing
+	// down its trailing edge, so the count's scan runs to the rail's edge.
+	fill := color.RGBA(tokens.PlatformLight.SidebarMaterial)
+	titleFrom := int(sidebar.SymbolInset + sidebar.SymbolBox)
+	textMin, titleOK := golden.FirstTextColumn(img, fill, titleFrom, expandedW/2, top, bottom)
+	textMax, countOK := lastTextColumn(img, fill, expandedW/2, expandedW, top, bottom)
+	if symMax < 0 || !titleOK || !countOK {
+		t.Fatalf("nothing drawn: symbol %d–%d, title %v, count %v", symMin, symMax, titleOK, countOK)
 	}
 	// The 16 px test symbol is centred in the 24 dp square.
 	wantSym := int(sidebar.SymbolInset) + (int(sidebar.SymbolBox)-16)/2
@@ -1037,4 +1038,17 @@ func TestSidebarSectionIsTheSmallSectionHeadingRole(t *testing.T) {
 	if got := sidebar.SectionStyle(typ); got != typ.SmallSectionHeading {
 		t.Errorf("SectionStyle = %+v, want the Small section heading role %+v", got, typ.SmallSectionHeading)
 	}
+}
+
+// lastTextColumn answers the last column in [x0, x1) that
+// golden.FirstTextColumn counts as covered, read from the trailing side.
+func lastTextColumn(img *image.RGBA, fill color.RGBA, x0, x1, y0, y1 int) (int, bool) {
+	mirror := image.NewRGBA(img.Bounds())
+	for y := y0; y <= y1; y++ {
+		for x := x0; x < x1; x++ {
+			mirror.SetRGBA(x0+x1-1-x, y, img.RGBAAt(x, y))
+		}
+	}
+	col, ok := golden.FirstTextColumn(mirror, fill, x0, x1, y0, y1)
+	return x0 + x1 - 1 - col, ok
 }

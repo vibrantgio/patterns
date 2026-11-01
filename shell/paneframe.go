@@ -14,6 +14,7 @@ import (
 	"github.com/vibrantgio/patterns/pane"
 	"github.com/vibrantgio/patterns/sidebar"
 	"github.com/vibrantgio/theme/tokens"
+	"github.com/vibrantgio/theme/typeset"
 )
 
 // PaneWidthDp is the width a leading pane takes when a caller names none:
@@ -167,6 +168,8 @@ func (f PaneFrame) Layout(gtx layout.Context, c tokens.PlatformColors) layout.Di
 	if f.Band != nil && band > 0 {
 		st := op.Offset(image.Pt(x, 0)).Push(gtx.Ops)
 		bgtx := attachment.AvailableRoomAt(gtx, image.Pt(x, 0))
+		bgtx = onFill(bgtx, f.ContentFill)
+		bgtx = onFill(bgtx, f.BandFill)
 		bgtx.Constraints = layout.Exact(image.Pt(w, band))
 		f.Band(bgtx)
 		st.Pop()
@@ -174,10 +177,21 @@ func (f PaneFrame) Layout(gtx layout.Context, c tokens.PlatformColors) layout.Di
 	if f.Main != nil && size.Y-band > 0 {
 		st := op.Offset(image.Pt(x, band)).Push(gtx.Ops)
 		mgtx := attachment.AvailableRoomAt(gtx, image.Pt(x, band))
+		mgtx = onFill(mgtx, f.ContentFill)
 		mgtx.Constraints = layout.Exact(image.Pt(w, size.Y-band))
 		f.Main(mgtx)
 		st.Pop()
 	}
 	pane.PaintShadow(gtx, c, bounds)
 	return layout.Dimensions{Size: size}
+}
+
+// onFill returns gtx with fill as the fill its text stands on,
+// [typeset.WithFill], or gtx as it is when fill is zero: a zero fill is a
+// region that paints nothing of its own.
+func onFill(gtx layout.Context, fill color.NRGBA) layout.Context {
+	if fill.A == 0 {
+		return gtx
+	}
+	return typeset.WithFill(gtx, fill)
 }

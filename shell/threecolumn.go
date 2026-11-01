@@ -497,6 +497,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	if f.Main != nil && f.MainFirst && !g.Main.Empty() {
 		macro := op.Record(gtx.Ops)
 		mgtx := attachment.AvailableRoomAt(gtx, g.Main.Min)
+		mgtx = onFill(mgtx, f.ContentFill)
 		mgtx.Constraints = layout.Exact(g.Main.Size())
 		f.Main(mgtx)
 		mainCall = macro.Stop()
@@ -527,6 +528,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	if !g.List.Empty() {
 		st := op.Offset(g.List.Min).Push(gtx.Ops)
 		lgtx := attachment.AvailableRoomAt(gtx, g.List.Min)
+		lgtx = onFill(lgtx, f.listFill())
 		lgtx.Constraints = layout.Exact(g.List.Size())
 		_, cl := f.List.Layout(lgtx, c)
 		for _, r := range []*image.Rectangle{&cl.Rows, &cl.Footer} {
@@ -546,6 +548,7 @@ func (f ThreeColumn) Layout(gtx layout.Context, c tokens.PlatformColors) (layout
 	case f.Main != nil && !g.Main.Empty():
 		st := op.Offset(g.Main.Min).Push(gtx.Ops)
 		mgtx := attachment.AvailableRoomAt(gtx, g.Main.Min)
+		mgtx = onFill(mgtx, f.ContentFill)
 		mgtx.Constraints = layout.Exact(g.Main.Size())
 		f.Main(mgtx)
 		st.Pop()

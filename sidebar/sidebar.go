@@ -568,6 +568,7 @@ func drawSidebar(
 	// content's white exactly and in the dark one a blue-grey lighter than
 	// the content.
 	paint.FillShape(gtx.Ops, colors.SidebarMaterial, clip.Rect{Max: size}.Op())
+	gtx = typeset.WithFill(gtx, colors.SidebarMaterial)
 
 	// Toggle affordance at the top: a row like the items, so it shares
 	// the density's control height.
@@ -788,6 +789,7 @@ func drawItem(
 		if selected {
 			PaintSelection(gtx, size, colors, unemphasized)
 		}
+		gtx = typeset.WithFill(gtx, rowFill)
 
 		drawSymbol(gtx, item.Icon, size, collapsed, symbolFG)
 
@@ -1031,7 +1033,7 @@ func paintSymbolAt(gtx layout.Context, mark icons.Painter, size image.Point, x i
 // which is the rule components/internal/control spends a text origin by,
 // mirrored to the other end of the line.
 func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, size image.Point, fg color.NRGBA) int {
-	covered := coveredWidth(gtx, shaper, txt, style, size.X)
+	covered := coveredWidth(gtx, shaper, txt, style, size.X, fg)
 	cGtx := gtx
 	cGtx.Constraints.Min = image.Point{}
 	cGtx.Constraints.Max = image.Pt(size.X, size.Y)
@@ -1058,17 +1060,17 @@ func PaintCount(gtx layout.Context, shaper *text.Shaper, txt string, style token
 // call: a face leaves a trailing side bearing between its last stem and the
 // end of the advance, and the platform's own column is a drawn pixel.
 //
-// It shapes the run with the parameters the paint pass will, so it is a hit
-// in the shaper's cache rather than a second shaping. A shaper lays one
+// It shapes the run with the parameters the paint pass will, the font for fg
+// on the fill gtx carries included, so it is a hit in the shaper's cache rather than a second shaping. A shaper lays one
 // document out at a time, so this runs to completion before the paint pass
 // shapes anything.
-func coveredWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, maxWidth int) int {
+func coveredWidth(gtx layout.Context, shaper *text.Shaper, txt string, style tokens.TextStyle, maxWidth int, fg color.NRGBA) int {
 	if shaper == nil || txt == "" || style.Size <= 0 {
 		return 0
 	}
 	lbl := typeset.Label(style, 1)
 	shaper.LayoutString(text.Parameters{
-		Font:       typeset.Font(style, font.Normal),
+		Font:       typeset.FontOn(gtx, style, font.Normal, fg),
 		PxPerEm:    fixed.I(gtx.Sp(unit.Sp(style.Size))),
 		MaxLines:   lbl.MaxLines,
 		Truncator:  lbl.Truncator,

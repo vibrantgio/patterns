@@ -108,6 +108,7 @@ func EmptyState(gtx layout.Context, sh *text.Shaper, c tokens.PlatformColors, ty
 	// laid out: the group is laid out with an [attachment.Surfaces] set, and the
 	// tooltip surfaces in it are placed once the group is placed.
 	ggtx, surfaces := attachment.WithSurfaces(gtx)
+	ggtx = typeset.WithFill(ggtx, fill)
 	ggtx.Constraints = layout.Constraints{Min: image.Pt(frame.X, 0), Max: frame}
 	rec := op.Record(gtx.Ops)
 	height := emptyStateGroup(ggtx, sh, c, typ, fill, p)

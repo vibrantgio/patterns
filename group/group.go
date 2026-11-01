@@ -166,7 +166,7 @@ func draw(
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		ws := make([]layout.Widget, 0, len(props.Content)+1)
 		if props.Title != "" {
-			ws = append(ws, titleWidget(shaper, props.Title, title, vgcolor.Flatten(colors.SecondaryLabel, plane)))
+			ws = append(ws, titleWidget(shaper, props.Title, title, vgcolor.Flatten(colors.SecondaryLabel, plane), plane))
 		}
 		ws = append(ws, props.Content...)
 		return stack(gtx, gap, ws...)
@@ -180,13 +180,13 @@ func draw(
 // understated text is set in. It is not the accent — a group is drawn in no
 // role — and not the full-strength label, which would give a section
 // header the weight of the content it names.
-func titleWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground color.NRGBA) layout.Widget {
+func titleWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground, plane color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		// Min is dropped so the text reports what it drew rather than the
 		// group's own minimum, which is what keeps the S3 gap under it the
 		// gap and not the rest of the column.
 		gtx.Constraints.Min = image.Point{}
-		return typeset.Text(gtx, shaper, s, style, foreground, 1)
+		return typeset.Text(typeset.WithFill(gtx, plane), shaper, s, style, foreground, 1)
 	}
 }
 

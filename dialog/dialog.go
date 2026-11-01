@@ -672,6 +672,10 @@ func drawDialog(
 	collect := attachment.HasSurfaces(gtx) || attachment.HasAvailableRoom(gtx)
 	var contentSurfaces, bandSurfaces *attachment.Surfaces
 
+	// The content and the footer's band are laid out on the sheet, which is
+	// painted in the window background.
+	gtx = typeset.WithFill(gtx, tok.color.WindowBackground)
+
 	// The decision footer's own band, laid out before the content so the room
 	// left for the content is what the band does not take. Its actions are
 	// stateful components, so it is laid out ONCE into a macro and replayed

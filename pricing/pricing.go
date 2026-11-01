@@ -307,7 +307,9 @@ func drawTier(
 	width := gtx.Constraints.Max.X
 	minH := gtx.Constraints.Min.Y
 
-	inner := gtx
+	// The tier's text is flattened onto the tier's fill, so it is told that
+	// fill as the one it stands on.
+	inner := typeset.WithFill(gtx, tierFill(tok.color, tier))
 	inner.Constraints.Min = image.Point{}
 	inner.Constraints.Max.X = max(0, width-2*pad)
 	if minH > 2*pad {
