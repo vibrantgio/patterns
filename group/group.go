@@ -38,6 +38,7 @@ import (
 	"image/color"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
 
@@ -61,6 +62,16 @@ type Props struct {
 	// the fieldset legend's idiom, which has no native counterpart here
 	// and does not survive a Lg corner radius.
 	Title string
+
+	// Count is the number of things the group holds, as the text to show
+	// after the title, an S2 gap apart. Empty shows no count, and a group
+	// without a Title shows no count either.
+	//
+	// The count is set in the title's style at the regular weight, and in
+	// the title's secondary label colour. The
+	// weight alone tells the count from the title. A title too long for the
+	// row is cut short before the count, so the count always shows.
+	Count string
 
 	// Content is what the group holds, stacked top to bottom under the
 	// title with S3 gaps. Nil entries are dropped.
@@ -166,7 +177,7 @@ func draw(
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		ws := make([]layout.Widget, 0, len(props.Content)+1)
 		if props.Title != "" {
-			ws = append(ws, titleWidget(shaper, props.Title, title, vgcolor.Flatten(colors.SecondaryLabel, plane), plane))
+			ws = append(ws, titleWidget(shaper, props.Title, props.Count, title, gtx.Dp(unit.Dp(sp.S2)), vgcolor.Flatten(colors.SecondaryLabel, plane), plane))
 		}
 		ws = append(ws, props.Content...)
 		return stack(gtx, gap, ws...)
@@ -180,13 +191,38 @@ func draw(
 // understated text is set in. It is not the accent — a group is drawn in no
 // role — and not the full-strength label, which would give a section
 // header the weight of the content it names.
-func titleWidget(shaper *text.Shaper, s string, style tokens.TextStyle, foreground, plane color.NRGBA) layout.Widget {
+//
+// A non-empty count follows the title after gapPx, at the regular weight.
+// The count is measured first, and the title gets the width that is left.
+func titleWidget(shaper *text.Shaper, s, count string, style tokens.TextStyle, gapPx int, foreground, plane color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		// Min is dropped so the text reports what it drew rather than the
 		// group's own minimum, which is what keeps the S3 gap under it the
 		// gap and not the rest of the column.
 		gtx.Constraints.Min = image.Point{}
-		return typeset.Text(typeset.WithFill(gtx, plane), shaper, s, style, foreground, 1)
+		gtx = typeset.WithFill(gtx, plane)
+		if count == "" {
+			return typeset.Text(gtx, shaper, s, style, foreground, 1)
+		}
+		countStyle := style
+		countStyle.Weight = tokens.WeightRegular
+		record := func(gtx layout.Context, txt string, st tokens.TextStyle, maxX int) (op.CallOp, image.Point) {
+			gtx.Constraints.Max.X = max(maxX, 0)
+			rec := op.Record(gtx.Ops)
+			dims := typeset.Text(gtx, shaper, txt, st, foreground, 1)
+			return rec.Stop(), dims.Size
+		}
+		countOp, countSize := record(gtx, count, countStyle, gtx.Constraints.Max.X)
+		titleOp, titleSize := record(gtx, s, style, gtx.Constraints.Max.X-countSize.X-gapPx)
+		h := max(titleSize.Y, countSize.Y)
+		place := func(call op.CallOp, x int, sz image.Point) {
+			defer op.Offset(image.Pt(x, (h-sz.Y)/2)).Push(gtx.Ops).Pop()
+			call.Add(gtx.Ops)
+		}
+		place(titleOp, 0, titleSize)
+		x := titleSize.X + gapPx
+		place(countOp, x, countSize)
+		return layout.Dimensions{Size: image.Pt(x+countSize.X, h)}
 	}
 }
 

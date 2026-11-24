@@ -90,16 +90,19 @@ func TestGroupGolden(t *testing.T) {
 		name   string
 		colors tokens.PlatformColors
 		title  string
+		count  string
 	}{
 		{name: "light-with-title", colors: tokens.PlatformLight, title: "Density"},
 		{name: "dark-with-title", colors: tokens.PlatformDark, title: "Density"},
 		{name: "light-without-title", colors: tokens.PlatformLight},
 		{name: "dark-without-title", colors: tokens.PlatformDark},
+		{name: "light-with-count", colors: tokens.PlatformLight, title: "Density", count: "2"},
+		{name: "dark-with-count", colors: tokens.PlatformDark, title: "Density", count: "2"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := group.Render(defaultShaper(t),
-				group.Props{Title: tc.title, Content: content(t, tc.colors)},
+				group.Props{Title: tc.title, Count: tc.count, Content: content(t, tc.colors)},
 				tc.colors, tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
 			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.ControlBackground))
 		})
@@ -174,6 +177,24 @@ func TestGroupTitleChangesPixels(t *testing.T) {
 	b := golden.Capture(t, frameSize, scene(named, marginPx, c.ControlBackground))
 	if n := golden.PixelDiff(a, b); n == 0 {
 		t.Error("groups with and without a title render identically; expected the title")
+	}
+}
+
+// TestGroupCountAlwaysShows confirms that a title too long for the row is
+// cut short before the count: the row with the count differs from the row
+// without it, so the count reached the frame.
+func TestGroupCountAlwaysShows(t *testing.T) {
+	c := tokens.PlatformLight
+	shaper := defaultShaper(t)
+	long := "A title much longer than the row of this group can show"
+	bare := group.Render(shaper, group.Props{Title: long}, c,
+		tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
+	counted := group.Render(shaper, group.Props{Title: long, Count: "12"}, c,
+		tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
+	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.ControlBackground))
+	b := golden.Capture(t, frameSize, scene(counted, marginPx, c.ControlBackground))
+	if n := golden.PixelDiff(a, b); n == 0 {
+		t.Error("a long title with and without a count render identically; expected the count")
 	}
 }
 
