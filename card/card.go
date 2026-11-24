@@ -31,6 +31,7 @@ package card
 
 import (
 	"image"
+	"image/color"
 
 	"gioui.org/layout"
 	"gioui.org/unit"
@@ -38,6 +39,7 @@ import (
 	"github.com/reactivego/rx"
 	pllayout "github.com/vibrantgio/components/layout"
 	"github.com/vibrantgio/patterns/internal/surface"
+	vgcolor "github.com/vibrantgio/theme/color"
 	"github.com/vibrantgio/theme/theme"
 	"github.com/vibrantgio/theme/tokens"
 	"github.com/vibrantgio/theme/typeset"
@@ -49,6 +51,22 @@ type Props struct {
 	Header layout.Widget
 	Body   layout.Widget
 	Footer layout.Widget
+	// Selected draws the card as the card chosen among the cards around
+	// it: the content list selection over the card's own fill, within the
+	// card's shape. The look is the same whether or not the card holds the
+	// keyboard.
+	Selected bool
+}
+
+// Fill is the fill a card with props is drawn in: the card's own fill, or
+// the content list selection flattened over it when the card is selected.
+// A caller draws the text in a slot over this fill, so the text keeps the
+// card's own text colour on a selected card too.
+func Fill(props Props, colors tokens.PlatformColors) color.NRGBA {
+	if props.Selected {
+		return vgcolor.Flatten(colors.ContentListSelection, colors.CardFill)
+	}
+	return colors.CardFill
 }
 
 // Card returns an rx.Observable[layout.Widget] that emits a new one
@@ -92,9 +110,11 @@ func drawCard(gtx layout.Context, props Props, colors tokens.PlatformColors, sp 
 
 	// The platform's box: a small step of fill from the surface the card
 	// stands on, darker in light and lighter in dark, with no hairline and
-	// no shadow.
-	surface.Card(gtx, bounds, r, colors.CardFill)
-	gtx = typeset.WithFill(gtx, colors.CardFill)
+	// no shadow. A selected card has the content list selection over that
+	// fill, in the same shape.
+	fill := Fill(props, colors)
+	surface.Card(gtx, bounds, r, fill)
+	gtx = typeset.WithFill(gtx, fill)
 
 	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return stack(gtx, gap, props.Header, props.Body, props.Footer)

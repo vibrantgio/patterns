@@ -203,3 +203,61 @@ func TestCardLightDarkDiffer(t *testing.T) {
 		t.Error("light and dark cards render identically; expected colour differences")
 	}
 }
+
+// TestSelectedCardGolden records or diffs a selected card in both schemes,
+// inset so the surface the card stands on shows around it.
+func TestSelectedCardGolden(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		colors tokens.PlatformColors
+	}{
+		{"light-selected", tokens.PlatformLight},
+		{"dark-selected", tokens.PlatformDark},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			header, body, footer := slots(t, tc.colors)
+			props := card.Props{Header: header, Body: body, Footer: footer, Selected: true}
+			w := card.Render(props, tc.colors, tokens.Spacing, sharpRadius)
+			golden.Render(t, tc.name, frameSize, scene(w, marginPx, tc.colors.ControlBackground))
+		})
+	}
+}
+
+// TestSelectedCardFillStaysInItsShape reads a selected card with the
+// theme's own corner radius: inside the card the pixel is the content list
+// selection over the card's fill, and at the card's corner, outside its
+// rounded shape, the pixel is the surface the card stands on.
+func TestSelectedCardFillStaysInItsShape(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		colors tokens.PlatformColors
+	}{
+		{"light", tokens.PlatformLight},
+		{"dark", tokens.PlatformDark},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := tc.colors
+			props := card.Props{Body: fillRect(color.NRGBA{R: 60, G: 110, B: 200, A: 255}, 24), Selected: true}
+			want := vgcolor.Flatten(c.ContentListSelection, c.CardFill)
+			if got := card.Fill(props, c); got != want {
+				t.Fatalf("Fill = %v, want %v", got, want)
+			}
+			if got := card.Fill(card.Props{}, c); got != c.CardFill {
+				t.Fatalf("Fill of a card that is not selected = %v, want the card fill %v", got, c.CardFill)
+			}
+			w := card.Render(props, c, tokens.Spacing, tokens.Radius)
+			img := golden.Capture(t, frameSize, scene(w, marginPx, c.ControlBackground))
+			read := func(x, y int, want color.NRGBA, what string) {
+				t.Helper()
+				got := img.RGBAAt(x, y)
+				if got.R != want.R || got.G != want.G || got.B != want.B {
+					t.Errorf("pixel (%d, %d) = %v, want %s %v", x, y, got, what, want)
+				}
+			}
+			read(marginPx+2, frameH/2, want, "the selected fill")
+			read(frameW/2, frameH-marginPx-2, want, "the selected fill")
+			read(marginPx, marginPx, c.ControlBackground, "the surface the card stands on")
+			read(frameW-marginPx-1, frameH-marginPx-1, c.ControlBackground, "the surface the card stands on")
+		})
+	}
+}
