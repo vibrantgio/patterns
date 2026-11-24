@@ -184,17 +184,97 @@ func TestGroupTitleChangesPixels(t *testing.T) {
 // cut short before the count: the row with the count differs from the row
 // without it, so the count reached the frame.
 func TestGroupCountAlwaysShows(t *testing.T) {
+	// The title and the count are told apart by hue, so the test reads
+	// where each one is drawn.
 	c := tokens.PlatformLight
-	shaper := defaultShaper(t)
+	c.Label = color.NRGBA{B: 0xff, A: 0xff}
+	c.SecondaryLabel = color.NRGBA{R: 0xff, A: 0xff}
 	long := "A title much longer than the row of this group can show"
-	bare := group.Render(shaper, group.Props{Title: long}, c,
+	counted := group.Render(defaultShaper(t), group.Props{Title: long, Count: "12"}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
-	counted := group.Render(shaper, group.Props{Title: long, Count: "12"}, c,
+	img := golden.Capture(t, frameSize, scene(counted, marginPx, c.ControlBackground))
+
+	// The row inside the group's padding.
+	left := marginPx + int(tokens.Spacing.S4)
+	right := frameW - marginPx - int(tokens.Spacing.S4)
+	countMin, countMax, titleMax := frameW, -1, -1
+	for y := range frameH {
+		for x := range frameW {
+			p := img.RGBAAt(x, y)
+			switch {
+			case p.R > 200 && p.G < 100 && p.B < 100:
+				countMin, countMax = min(countMin, x), max(countMax, x)
+			case p.B > 200 && p.R < 100 && p.G < 100:
+				titleMax = max(titleMax, x)
+			}
+		}
+	}
+	if countMax < 0 {
+		t.Fatal("no count pixels drawn; expected the count after a long title")
+	}
+	if titleMax < 0 {
+		t.Fatal("no title pixels drawn in the label colour")
+	}
+	if countMin < left || countMax >= right {
+		t.Errorf("count drawn at x %d-%d; expected it inside the row at x %d-%d", countMin, countMax, left, right-1)
+	}
+	if countMin <= titleMax {
+		t.Errorf("count starts at x %d, at or before the title's end at x %d; expected it after the title", countMin, titleMax)
+	}
+}
+
+// TestGroupScrollFrameReachesTheEdge checks the frame the group gives its
+// scrolled content: it starts under the title, it reaches the hairline on the
+// trailing side and at the bottom, it never covers the hairline, and its pad
+// is the group's padding with the S3 gap on top.
+func TestGroupScrollFrameReachesTheEdge(t *testing.T) {
+	c := tokens.PlatformLight
+	mark := color.NRGBA{R: 0xff, A: 0xff}
+	var got layout.Inset
+	scroll := func(gtx layout.Context, pad layout.Inset) layout.Dimensions {
+		got = pad
+		paint.FillShape(gtx.Ops, mark, clip.Rect{Max: gtx.Constraints.Max}.Op())
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	}
+	g := group.Render(defaultShaper(t), group.Props{Title: "Things", Count: "3", Scroll: scroll}, c,
 		tokens.Spacing, sharpRadius, tokens.DefaultTypography.SectionHeading)
-	a := golden.Capture(t, frameSize, scene(bare, marginPx, c.ControlBackground))
-	b := golden.Capture(t, frameSize, scene(counted, marginPx, c.ControlBackground))
-	if n := golden.PixelDiff(a, b); n == 0 {
-		t.Error("a long title with and without a count render identically; expected the count")
+	img := golden.Capture(t, frameSize, scene(g, marginPx, c.ControlBackground))
+
+	want := layout.Inset{
+		Top:    unit.Dp(tokens.Spacing.S3),
+		Bottom: unit.Dp(tokens.Spacing.S4),
+		Left:   unit.Dp(tokens.Spacing.S4),
+		Right:  unit.Dp(tokens.Spacing.S4),
+	}
+	if got != want {
+		t.Errorf("pad = %+v; expected %+v", got, want)
+	}
+	isMark := func(x, y int) bool { return img.RGBAAt(x, y) == color.RGBA{R: 0xff, A: 0xff} }
+	// The group's box is the frame less the scene's margin; its hairline is
+	// the box's outermost pixel.
+	x0, y0, x1, y1 := marginPx, marginPx, frameW-marginPx-1, frameH-marginPx-1
+	top := -1
+	for y := y0; y <= y1 && top < 0; y++ {
+		if isMark(x1-1, y) {
+			top = y
+		}
+	}
+	titleFoot := y0 + int(tokens.Spacing.S4) + int(tokens.DefaultTypography.SectionHeading.LineHeight)
+	if top < titleFoot {
+		t.Errorf("frame starts at y %d; expected it under the title, at y %d or below", top, titleFoot)
+	}
+	if !isMark(x1-1, y1-1) || !isMark(x0+1, y1-1) {
+		t.Error("frame does not reach the pixel inside the hairline at the bottom corners")
+	}
+	for y := y0; y <= y1; y++ {
+		if isMark(x1, y) || isMark(x0, y) {
+			t.Fatalf("frame covers the hairline at y %d", y)
+		}
+	}
+	for x := x0; x <= x1; x++ {
+		if isMark(x, y1) {
+			t.Fatalf("frame covers the bottom hairline at x %d", x)
+		}
 	}
 }
 

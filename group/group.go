@@ -39,6 +39,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/text"
 	"gioui.org/unit"
 
@@ -67,15 +68,26 @@ type Props struct {
 	// after the title, an S2 gap apart. Empty shows no count, and a group
 	// without a Title shows no count either.
 	//
-	// The count is set in the title's style at the regular weight, and in
-	// the title's secondary label colour. The
-	// weight alone tells the count from the title. A title too long for the
-	// row is cut short before the count, so the count always shows.
+	// The count is set in the title's style at the regular weight, in the
+	// platform's secondary label colour. A title too long for the row is
+	// cut short before the count, so the count always shows.
 	Count string
 
 	// Content is what the group holds, stacked top to bottom under the
 	// title with S3 gaps. Nil entries are dropped.
 	Content []layout.Widget
+
+	// Scroll is content that scrolls, laid out under the title and the
+	// Content slots. Its frame runs from there to the group's bottom edge,
+	// across the group's full width, and the group clips it inside the
+	// hairline. A bar that Scroll draws at its frame's trailing edge thus
+	// stands at the group's edge, beside the scrolled content only.
+	//
+	// pad is the group's padding around the frame's content. Scroll insets
+	// what it scrolls by pad, so the padding is inside the scrolled content
+	// and moves with it, and the group insets everything it holds the same.
+	// Nil is no scrolled content.
+	Scroll func(gtx layout.Context, pad layout.Inset) layout.Dimensions
 
 	// Shaper is an explicit per-instance override of the text shaper.
 	// Leave it nil in normal use: the group then shapes its title with the
@@ -174,27 +186,55 @@ func draw(
 	plane := surface.Or(props.Surface, colors.ControlBackground)
 	surface.Group(gtx, image.Rectangle{Max: size}, r, vgcolor.Flatten(colors.Separator, plane))
 
-	layout.UniformInset(unit.Dp(sp.S4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		ws := make([]layout.Widget, 0, len(props.Content)+1)
-		if props.Title != "" {
-			ws = append(ws, titleWidget(shaper, props.Title, props.Count, title, gtx.Dp(unit.Dp(sp.S2)), vgcolor.Flatten(colors.SecondaryLabel, plane), plane))
-		}
-		ws = append(ws, props.Content...)
-		return stack(gtx, gap, ws...)
-	})
+	ws := make([]layout.Widget, 0, len(props.Content)+1)
+	if props.Title != "" {
+		fg := vgcolor.Flatten(colors.Label, plane)
+		countFg := vgcolor.Flatten(colors.SecondaryLabel, plane)
+		ws = append(ws, titleWidget(shaper, props.Title, props.Count, title, gtx.Dp(unit.Dp(sp.S2)), fg, countFg, plane))
+	}
+	ws = append(ws, props.Content...)
+
+	pad := unit.Dp(sp.S4)
+	if props.Scroll == nil {
+		layout.UniformInset(pad).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return stack(gtx, gap, ws...)
+		})
+		return layout.Dimensions{Size: size}
+	}
+
+	// The scrolled frame starts under what the group holds above it. Its
+	// top padding is the S3 gap under that, or the group's own padding when
+	// nothing stands above it.
+	top, scrollPad := 0, layout.UniformInset(pad)
+	if len(ws) > 0 {
+		in := layout.Inset{Top: pad, Left: pad, Right: pad}
+		dims := in.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min = image.Point{}
+			return stack(gtx, gap, ws...)
+		})
+		top = min(dims.Size.Y, size.Y)
+		scrollPad.Top = unit.Dp(sp.S3)
+	}
+	defer surface.GroupInside(gtx, image.Rectangle{Max: size}, r).Push(gtx.Ops).Pop()
+	frame := image.Rect(0, top, size.X, size.Y)
+	defer clip.Rect(frame).Push(gtx.Ops).Pop()
+	defer op.Offset(frame.Min).Push(gtx.Ops).Pop()
+	sgtx := gtx
+	sgtx.Constraints = layout.Exact(frame.Size())
+	props.Scroll(sgtx, scrollPad)
 
 	return layout.Dimensions{Size: size}
 }
 
 // titleWidget draws the group's own title: the Section heading role in the
-// platform's secondary label, which is the strength this system's
-// understated text is set in. It is not the accent — a group is drawn in no
-// role — and not the full-strength label, which would give a section
-// header the weight of the content it names.
+// platform's label colour, MEASURED in reference/macos/controls.md from
+// System Settings' group titles. It is not the accent, because a group is
+// drawn in no role.
 //
-// A non-empty count follows the title after gapPx, at the regular weight.
-// The count is measured first, and the title gets the width that is left.
-func titleWidget(shaper *text.Shaper, s, count string, style tokens.TextStyle, gapPx int, foreground, plane color.NRGBA) layout.Widget {
+// A non-empty count follows the title after gapPx, at the regular weight
+// and in countFg. The count is measured first, and the title gets the width
+// that is left.
+func titleWidget(shaper *text.Shaper, s, count string, style tokens.TextStyle, gapPx int, foreground, countFg, plane color.NRGBA) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		// Min is dropped so the text reports what it drew rather than the
 		// group's own minimum, which is what keeps the S3 gap under it the
@@ -206,14 +246,14 @@ func titleWidget(shaper *text.Shaper, s, count string, style tokens.TextStyle, g
 		}
 		countStyle := style
 		countStyle.Weight = tokens.WeightRegular
-		record := func(gtx layout.Context, txt string, st tokens.TextStyle, maxX int) (op.CallOp, image.Point) {
+		record := func(gtx layout.Context, txt string, st tokens.TextStyle, fg color.NRGBA, maxX int) (op.CallOp, image.Point) {
 			gtx.Constraints.Max.X = max(maxX, 0)
 			rec := op.Record(gtx.Ops)
-			dims := typeset.Text(gtx, shaper, txt, st, foreground, 1)
+			dims := typeset.Text(gtx, shaper, txt, st, fg, 1)
 			return rec.Stop(), dims.Size
 		}
-		countOp, countSize := record(gtx, count, countStyle, gtx.Constraints.Max.X)
-		titleOp, titleSize := record(gtx, s, style, gtx.Constraints.Max.X-countSize.X-gapPx)
+		countOp, countSize := record(gtx, count, countStyle, countFg, gtx.Constraints.Max.X)
+		titleOp, titleSize := record(gtx, s, style, foreground, gtx.Constraints.Max.X-countSize.X-gapPx)
 		h := max(titleSize.Y, countSize.Y)
 		place := func(call op.CallOp, x int, sz image.Point) {
 			defer op.Offset(image.Pt(x, (h-sz.Y)/2)).Push(gtx.Ops).Pop()

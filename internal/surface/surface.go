@@ -47,6 +47,15 @@ func Group(gtx layout.Context, bounds image.Rectangle, r int, seam color.NRGBA) 
 	area.Pop()
 }
 
+// GroupInside is the region that [Group] encloses: bounds inside the
+// hairline, with the corner radius that keeps it parallel to the line.
+// Content clipped to it never paints over the hairline.
+func GroupInside(gtx layout.Context, bounds image.Rectangle, r int) clip.RRect {
+	w := hairline(gtx)
+	ri := max(r-w, 0)
+	return clip.RRect{Rect: bounds.Inset(w), SE: ri, SW: ri, NE: ri, NW: ri}
+}
+
 // Or returns the surface the caller stated, or plane — the fill the pattern
 // stands on unless the caller moved it — when it stated none.
 //
